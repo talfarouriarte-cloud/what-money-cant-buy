@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What money can't buy</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif}</style>
+</head>
+<body>
+<div id="root"><div style="padding:40px;text-align:center;color:#888">Loading...</div></div>
+<script type="text/babel">
+var useState = React.useState;
+var useMemo = React.useMemo;
+var useEffect = React.useEffect;
+var RC = Recharts;
+
+var NAVY="#1A3A6B",BLU="#2E75B6",ORA="#D4772C",GRN="#2E8B57",RED="#C0392B";
+var TC=["#2E75B6","#D4772C","#2E8B57"];
+var S = function(z){return 1/(1+Math.exp(-z));};
+var D = null;
+
+// Error boundary
+function ErrBound(props) {
+  var [err, setErr] = useState(null);
+  if (err) return <div style={{padding:20,color:"red"}}><h3>Error</h3><pre>{err}</pre></div>;
+  try { return props.children; } catch(e) { setErr(e.message); return null; }
+}
+
+function Root() {
+  var [data, setData] = useState(null);
+  var [err, setErr] = useState(null);
+
+  useEffect(function(){
+    fetch('data.json')
+      .then(function(r){
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(d){ setData(d); })
+      .catch(function(e){ setErr(e.message); });
+  }, []);
+
+  if (err) return <div style={{padding:40,textAlign:"center"}}><h2>Loading error</h2><p>Make sure data.json is in the same folder</p><p style={{color:"red"}}>{err}</p></div>;
+  if (!data) return <div style={{padding:40,textAlign:"center",color:"#888"}}>Loading data...</div>;
+  D = data;
+  return <App/>;
+}
+
+function LP({lg, set}) {
+  return (
+    <div className="flex gap-1.5 mb-4">
+      {[["ll","La Liga"],["pl","Premier League"]].map(function(p){
+        return <button key={p[0]} onClick={function(){set(p[0]);}}
+          className={"px-3 py-1.5 rounded-full text-sm font-semibold "+(lg===p[0]?"text-white":"text-gray-500 bg-gray-100")}
+          style={lg===p[0]?{background:NAVY}:{}}>{p[1]}</button>;
+      })}
+    </div>
+  );
+}
+
+function Tracker() {
+  var [lg, setLg] = useState("ll");
+  var [season, setSeason] = useState("25/26");
+  var [sel, setSel] = useState(["Barcelona"]);
+
+  var seasonList = useMemo(function(){ return Object.keys(D.seasons[lg]).sort(); }, [lg]);
+  var isCurrent = season === "25/26";
+  var sData = D.seasons[lg][season] || {};
+  var multi = sel.length > 1;
+
+  var st = useMemo(function(){
+    return Object.entries(sData).map(function(e){
+      var n=e[0],d=e[1];
+      return {n:n, pts:d.a[d.a.length-1]||0, np:d.a.length, w:d.w,
+              exp:d.e[d.e.length-1]||0, op: Math.round((d.a[d.a.length-1]||0)-(d.e[d.e.length-1]||0))};
+    }).sort(function(a,b){return b.pts-a.pts;});
+  }, [sData]);
+
+  // Reset selection when changing league/season
+  useEffect(function(){
+    var teams = Object.keys(sData);
+    if (teams.length > 0) {
+      var first = teams.sort(function(a,b){
+        return (sData[b].a[sData[b].a.length-1]||0)-(sData[a].a[sData[a].a.length-1]||0);
+      })[0];
+      setSel([first]);
+    }
+  }, [lg, season]);
+
+  function toggle(n) {
+    setSel(function(p){
+      if(p.indexOf(n)>=0) return p.filter(function(x){return x!==n;});
+      if(p.length>=3) return [p[1],p[2],n];
+      return p.concat([n]);
+    });
+  }
+
+  var primary = sData[sel[0]];
+  if (!primary) return <div className="text-gray-400 p-8 text-center">Select a team</div>;
+  var nP = primary.a.length;
+  var bands = (isCurrent && !multi && D.bands[lg][sel[0]]) ? D.bands[lg][sel[0]] : null;
+  var pre = (isCurrent && !multi && D.pre[lg][sel[0]]) ? D.pre[lg][sel[0]] : null;
+  var tGW = bands ? bands.p50.length : nP;
+
+  var cd = useMemo(function(){
+    var rows = [];
+    var maxGW = tGW;
+    if (multi) {
+      sel.forEach(function(n){ var t=sData[n]; if(t && t.a.length>maxGW) maxGW=t.a.length; });
+    }
+    for (var i=0; i<maxGW; i++) {
+      var r = {gw: i+1};
+      if (!multi) {
+        if (i < nP) { r.actual = primary.a[i]; r.exp = primary.e[i]; }
+        if (bands) {
+          r.base = bands.p10[i]; r.band = bands.p90[i]-bands.p10[i]; r.med = bands.p50[i];
+        }
+        if (pre) {
+          r.preBase = pre.p10[i]||0; r.preBand = (pre.p90[i]||0)-(pre.p10[i]||0); r.preMed = pre.p50[i]||0;
+        }
+        // For completed seasons without MC bands, show expected as area
+        if (!bands && i < nP) { r.exp = primary.e[i]; }
+      } else {
+        for (var j=0; j<sel.length; j++) {
+          var t = sData[sel[j]];
+          if (t && i < t.a.length) { r["a"+j] = t.a[i]; r["e"+j] = t.e[i]; }
+        }
+      }
+      rows.push(r);
+    }
+    return rows;
+  }, [sel, sData, multi, nP, bands, pre, tGW]);
+
+  var ops = sel.map(function(name,i){
+    var t=sData[name]; if(!t) return {name:name,op:"0",pts:0};
+    var ap=t.a[t.a.length-1]||0, ep=t.e[t.e.length-1]||0;
+    return {name:name, op:(ap-ep).toFixed(1), pts:ap};
+  });
+
+  var multiAreas = [];
+  if (multi) {
+    for (var j=0; j<sel.length; j++) {
+      multiAreas.push(
+        <RC.Area key={"e"+j} dataKey={"e"+j} stroke={TC[j]} strokeDasharray="4 3" strokeWidth={1} fill="none" strokeOpacity={0.4} isAnimationActive={false}/>,
+        <RC.Area key={"a"+j} dataKey={"a"+j} stroke={TC[j]} strokeWidth={2.5} fill="none" isAnimationActive={false}/>
+      );
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-3 items-end mb-4">
+        <LP lg={lg} set={function(v){setLg(v);}} />
+        <select value={season} onChange={function(e){setSeason(e.target.value);}}
+          className="border rounded px-2 py-1 text-sm mb-4">
+          {seasonList.map(function(s){ return <option key={s} value={s}>{s}{s==="25/26"?" (current)":""}</option>; })}
+        </select>
+      </div>
+      <div className="flex gap-4">
+        <div className="w-48 shrink-0 overflow-y-auto rounded bg-gray-50 p-1 text-xs" style={{maxHeight:420}}>
+          <table className="w-full">
+            <thead><tr className="text-gray-400"><th className="text-left">#</th><th className="text-left">Team</th><th className="text-right">Pts</th><th className="text-right">+/-</th></tr></thead>
+            <tbody>{st.map(function(s,i){
+              var idx=sel.indexOf(s.n);
+              return (
+                <tr key={s.n} onClick={function(){toggle(s.n);}}
+                  className={"cursor-pointer border-b border-gray-100 "+(idx>=0?"font-bold":"hover:bg-gray-100")}
+                  style={idx>=0?{background:TC[idx]+"18",color:TC[idx]}:{}}>
+                  <td className="py-0.5 text-gray-400">{i+1}</td>
+                  <td className="py-0.5 truncate" style={{maxWidth:90}}>{s.n}</td>
+                  <td className="py-0.5 text-right font-semibold">{s.pts}</td>
+                  <td className="py-0.5 text-right font-bold" style={{color:s.op>=0?GRN:RED}}>{s.op>=0?"+":""}{s.op}</td>
+                </tr>
+              );
+            })}</tbody>
+          </table>
+        </div>
+        <div className="flex-1" style={{minWidth:0}}>
+          <div className="flex gap-3 mb-2 flex-wrap text-sm">
+            {ops.map(function(o,i){
+              return (
+                <span key={o.name} className="flex items-center gap-1">
+                  <span className="inline-block rounded-full" style={{width:8,height:8,background:TC[i]}}></span>
+                  <b style={{color:TC[i]}}>{o.name}</b>
+                  <span className="text-gray-400">{o.pts}pts</span>
+                  <span className="font-bold" style={{color:Number(o.op)>=0?GRN:RED}}>{Number(o.op)>=0?"+":""}{o.op}</span>
+                </span>
+              );
+            })}
+          </div>
+          <div className="flex gap-3 mb-1 text-xs text-gray-400 flex-wrap">
+            <span><span className="inline-block w-4 h-0.5 bg-blue-500 mr-1" style={{verticalAlign:'middle'}}></span>Actual</span>
+            <span><span className="inline-block w-4 h-0.5 mr-1" style={{verticalAlign:'middle',borderTop:'1.5px dashed #777'}}></span>Expected</span>
+            {bands && <span><span className="inline-block w-4 h-2 rounded mr-1" style={{verticalAlign:'middle',background:BLU,opacity:0.2}}></span>Current p10-p90</span>}
+            {pre && <span><span className="inline-block w-4 h-2 rounded mr-1" style={{verticalAlign:'middle',background:ORA,opacity:0.15}}></span>Pre-season p10-p90</span>}
+          </div>
+          <div style={{height:320}}>
+            <RC.ResponsiveContainer>
+              <RC.AreaChart data={cd} margin={{left:0,right:5,top:5,bottom:18}}>
+                <RC.CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
+                <RC.XAxis dataKey="gw" tick={{fontSize:9}} label={{value:"Matchweek",position:"bottom",fontSize:9,offset:0}}/>
+                <RC.YAxis tick={{fontSize:9}}/>
+                <RC.Tooltip/>
+                {!multi && pre && <RC.Area dataKey="preBase" stackId="pre" stroke="none" fill="transparent" isAnimationActive={false}/>}
+                {!multi && pre && <RC.Area dataKey="preBand" stackId="pre" stroke="none" fill={ORA} fillOpacity={0.1} isAnimationActive={false}/>}
+                {!multi && bands && <RC.Area dataKey="base" stackId="cur" stroke="none" fill="transparent" isAnimationActive={false}/>}
+                {!multi && bands && <RC.Area dataKey="band" stackId="cur" stroke="none" fill={BLU} fillOpacity={0.15} isAnimationActive={false}/>}
+                {!multi && pre && <RC.Area dataKey="preMed" stroke={ORA} strokeDasharray="6 4" strokeWidth={1} fill="none" strokeOpacity={0.5} isAnimationActive={false}/>}
+                {!multi && bands && <RC.Area dataKey="med" stroke="#aaa" strokeDasharray="4 3" strokeWidth={1} fill="none" isAnimationActive={false}/>}
+                {!multi && <RC.Area dataKey="exp" stroke="#777" strokeDasharray="6 3" strokeWidth={1} fill="none" isAnimationActive={false}/>}
+                {!multi && <RC.Area dataKey="actual" stroke={BLU} strokeWidth={2.5} fill="none" isAnimationActive={false}/>}
+                {multi && multiAreas}
+                {isCurrent && !multi && <RC.ReferenceLine x={nP} stroke="#ddd" strokeDasharray="2 2"/>}
+              </RC.AreaChart>
+            </RC.ResponsiveContainer>
+          </div>
+          {!multi && bands && pre && (
+            <div className="flex gap-4 mt-1 text-xs justify-center">
+              <span style={{color:BLU}}>Current: {bands.p10[tGW-1]}/{bands.p50[tGW-1]}/{bands.p90[tGW-1]}</span>
+              <span style={{color:ORA}}>Pre-season: {pre.p10[tGW-1]}/{pre.p50[tGW-1]}/{pre.p90[tGW-1]}</span>
+              <span className="text-gray-400">(p10/med/p90)</span>
+            </div>
+          )}
+          {multi && (
+            <div className="mt-2 text-xs">
+              {sel.map(function(n,i){
+                var t=sData[n]; if(!t) return null;
+                var ap=t.a[t.a.length-1]||0, ep=t.e[t.e.length-1]||0;
+                return <div key={n} style={{color:TC[i]}}><b>{n}</b>: {ap} pts (exp {Math.round(ep)}, {(ap-ep)>=0?"+":""}{(ap-ep).toFixed(1)})</div>;
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BadRun() {
+  var [lg, setLg] = useState("ll");
+  var [season, setSeason] = useState("25/26");
+  var [sel, setSel] = useState("Barcelona");
+  var [win, setWin] = useState(5);
+
+  var seasonList = useMemo(function(){ return Object.keys(D.seasons[lg]).sort(); }, [lg]);
+  var sData = D.seasons[lg][season] || {};
+  var tl = useMemo(function(){return Object.keys(sData).sort();}, [sData]);
+  var t = sData[sel];
+
+  useEffect(function(){
+    var teams = Object.keys(sData);
+    if(teams.length>0 && !sData[sel]) setSel(teams.sort()[0]);
+  }, [lg, season]);
+
+  if (!t) return <div className="text-gray-400 p-8 text-center">Select a team</div>;
+  var nP = t.a.length;
+  var mW = Math.min(nP, 20), w = Math.min(win, mW);
+  var lastW = t.m.slice(nP - w);
+
+  var cA=[], cE=[], ca=0, ce=0;
+  for (var i=0; i<lastW.length; i++) {
+    ca += lastW[i][2]; ce += lastW[i][3];
+    cA.push(ca); cE.push(Math.round(ce*10)/10);
+  }
+
+  var cd = lastW.map(function(m,i){
+    var v=m[1]?"vs":"@", e=cE[i], sp=1.3*Math.sqrt(i+1)*1.5;
+    return {opp:v+" "+m[0], actual:cA[i], expected:e,
+      base:Math.max(0,Math.round((e-sp)*10)/10), range:Math.round(sp*2*10)/10,
+      mp:m[2], me:m[3]};
+  });
+
+  var diff = (ca - Math.round(ce*10)/10).toFixed(1);
+
+  return (
+    <div>
+      <p className="text-gray-500 text-sm mb-3">Compare actual vs expected for specific opponents and venues.</p>
+      <div className="flex flex-wrap gap-3 items-end mb-4">
+        <LP lg={lg} set={function(v){setLg(v); setSel(v==="ll"?"Barcelona":"Liverpool"); setWin(5);}} />
+        <select value={season} onChange={function(e){setSeason(e.target.value);}} className="border rounded px-2 py-1 text-sm mb-4">
+          {seasonList.map(function(s){return <option key={s} value={s}>{s}</option>;})}
+        </select>
+      </div>
+      <div className="flex gap-4 mb-4">
+        <select value={sel} onChange={function(e){setSel(e.target.value);}} className="border rounded px-2 py-1.5 text-sm">
+          {tl.map(function(t){return <option key={t} value={t}>{t}</option>;})}
+        </select>
+        <div className="flex-1">
+          <div className="text-xs text-gray-500 mb-1">Last {w} games</div>
+          <input type="range" min={1} max={mW} value={w} onChange={function(e){setWin(Number(e.target.value));}} className="w-full" style={{accentColor:BLU}}/>
+        </div>
+      </div>
+      <div style={{height:220}} className="mb-3">
+        <RC.ResponsiveContainer>
+          <RC.AreaChart data={cd} margin={{left:0,right:5,top:5,bottom:45}}>
+            <RC.CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
+            <RC.XAxis dataKey="opp" tick={{fontSize:7,angle:-40,textAnchor:"end"}} height={55} interval={0}/>
+            <RC.YAxis tick={{fontSize:9}}/>
+            <RC.Tooltip/>
+            <RC.Area dataKey="base" stackId="b" stroke="none" fill="transparent" isAnimationActive={false}/>
+            <RC.Area dataKey="range" stackId="b" stroke="none" fill={BLU} fillOpacity={0.1} isAnimationActive={false}/>
+            <RC.Area dataKey="expected" stroke="#999" strokeDasharray="5 3" strokeWidth={2} fill="none" isAnimationActive={false}/>
+            <RC.Area dataKey="actual" stroke={BLU} strokeWidth={2.5} fill="none" dot={{r:3,fill:BLU}} isAnimationActive={false}/>
+          </RC.AreaChart>
+        </RC.ResponsiveContainer>
+      </div>
+      <div className={"p-4 rounded-xl text-center "+(Number(diff)>=0?"bg-green-50":"bg-amber-50")}>
+        <div className="text-2xl font-bold" style={{color:Number(diff)>=0?GRN:RED}}>{Number(diff)>=0?"+":""}{diff} pts</div>
+        <div className="text-sm text-gray-600">{ca} actual vs {Math.round(ce*10)/10} expected in {w} matches</div>
+      </div>
+      <table className="w-full text-xs mt-3">
+        <thead><tr className="text-gray-400 border-b"><th className="text-left py-1">Opponent</th><th className="text-center">V</th><th className="text-right">Pts</th><th className="text-right">Exp</th><th className="text-right">+/-</th></tr></thead>
+        <tbody>{lastW.map(function(m,i){
+          var d=m[2]-m[3];
+          return (
+            <tr key={i} className="border-b border-gray-100">
+              <td className="py-0.5">{m[0]}</td>
+              <td className="py-0.5 text-center">{m[1]?"H":"A"}</td>
+              <td className="py-0.5 text-right font-semibold">{m[2]}</td>
+              <td className="py-0.5 text-right text-gray-400">{m[3].toFixed(1)}</td>
+              <td className="py-0.5 text-right font-bold" style={{color:d>=0?GRN:RED}}>{d>=0?"+":""}{d.toFixed(1)}</td>
+            </tr>
+          );
+        })}</tbody>
+      </table>
+    </div>
+  );
+}
+
+function Explorer() {
+  var [lg, setLg] = useState("ll");
+  var [sel, setSel] = useState(["Villarreal","Ath Madrid","Valencia"]);
+  var teams = D.cumulative[lg==="ll"?"ll":"pl"];
+  var ss = ["13/14","14/15","15/16","16/17","17/18","18/19","19/20","20/21","21/22","22/23","23/24","24/25"];
+  var tl = useMemo(function(){return Object.entries(teams).map(function(e){return {n:e[0],c:e[1][0],ns:e[1][1]};}).sort(function(a,b){return b.c-a.c;});}, [teams]);
+  var cols = [BLU,ORA,GRN,RED,"#8B5CF6"];
+
+  function tog(n){setSel(function(p){
+    if(p.indexOf(n)>=0) return p.filter(function(x){return x!==n;});
+    if(p.length<5) return p.concat([n]); return p;
+  });}
+
+  var cd = useMemo(function(){return ss.map(function(s){
+    var r={s:s}; sel.forEach(function(t){var td=teams[t]; if(!td) return;
+      var sd=td[3].find(function(x){return x[0]===s;}); if(sd) r[t]=Math.round((sd[3]-sd[2])*10)/10;});
+    return r;});}, [sel, teams]);
+
+  var cum = useMemo(function(){return ss.map(function(s,si){
+    var r={s:s}; sel.forEach(function(t){var td=teams[t]; if(!td) return;
+      var c=0; for(var i=0;i<=si;i++){var sd=td[3].find(function(x){return x[0]===ss[i];}); if(sd)c+=sd[3]-sd[2];}
+      r[t]=Math.round(c*10)/10;});
+    return r;});}, [sel, teams]);
+
+  return (
+    <div>
+      <p className="text-gray-500 text-sm mb-3">Select up to 5 teams to compare overperformance across 12 seasons.</p>
+      <LP lg={lg} set={function(v){setLg(v); setSel(v==="ll"?["Villarreal","Ath Madrid","Valencia"]:["Liverpool","Man City","Man United"]);}}/>
+      <div className="flex gap-4">
+        <div className="w-48 shrink-0 overflow-y-auto rounded bg-gray-50 p-1 text-xs" style={{maxHeight:400}}>
+          {tl.map(function(t){var idx=sel.indexOf(t.n); return (
+            <div key={t.n} onClick={function(){tog(t.n);}}
+              className={"cursor-pointer px-1.5 py-0.5 rounded flex justify-between "+(idx>=0?"font-bold":"hover:bg-gray-100")}
+              style={idx>=0?{background:cols[idx]+"20",color:cols[idx]}:{}}>
+              <span className="truncate">{t.n} ({t.ns})</span>
+              <span style={{color:t.c>=0?GRN:RED}}>{t.c>=0?"+":""}{t.c}</span>
+            </div>);})}
+        </div>
+        <div className="flex-1" style={{minWidth:0}}>
+          <div className="text-sm font-semibold mb-1" style={{color:NAVY}}>Season by season</div>
+          <div style={{height:180}}><RC.ResponsiveContainer>
+            <RC.BarChart data={cd}><RC.CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
+              <RC.XAxis dataKey="s" tick={{fontSize:8}}/><RC.YAxis tick={{fontSize:9}}/>
+              <RC.Tooltip/><RC.ReferenceLine y={0} stroke="#ccc"/>
+              {sel.map(function(t,i){return <RC.Bar key={t} dataKey={t} fill={cols[i]} opacity={0.7}/>;})}</RC.BarChart>
+          </RC.ResponsiveContainer></div>
+          <div className="text-sm font-semibold mb-1 mt-3" style={{color:NAVY}}>Cumulative</div>
+          <div style={{height:180}}><RC.ResponsiveContainer>
+            <RC.LineChart data={cum}><RC.CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
+              <RC.XAxis dataKey="s" tick={{fontSize:8}}/><RC.YAxis tick={{fontSize:9}}/>
+              <RC.Tooltip/><RC.ReferenceLine y={0} stroke="#ccc"/>
+              {sel.map(function(t,i){return <RC.Line key={t} dataKey={t} stroke={cols[i]} strokeWidth={2} dot={{r:2}}/>;})}</RC.LineChart>
+          </RC.ResponsiveContainer></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Calc() {
+  var [lg, setLg] = useState("laliga");
+  var [hW, sH] = useState(100), [aW, sA] = useState(50);
+  var m=D.model[lg], cur=lg==="laliga"?"\u20ac":"\u00a3";
+  var x=Math.log2(aW/hW), pa=S(m.theta1+m.beta*x), ph=1-S(m.theta2+m.beta*x), pd=1-ph-pa;
+
+  return (
+    <div style={{maxWidth:500,margin:"0 auto"}}>
+      <p className="text-gray-500 text-sm mb-4">Compute match probabilities from wage bills.</p>
+      <div className="flex gap-2 mb-4">
+        {[["laliga","La Liga"],["pl","Premier League"]].map(function(p){
+          return <button key={p[0]} onClick={function(){setLg(p[0]);}}
+            className={"px-3 py-1 rounded-full text-sm font-semibold "+(lg===p[0]?"text-white":"text-gray-500 bg-gray-100")}
+            style={lg===p[0]?{background:NAVY}:{}}>{p[1]}</button>;
+        })}
+      </div>
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        {[["Home",hW,sH,BLU],["Away",aW,sA,ORA]].map(function(a){
+          return (
+            <div key={a[0]} className="p-3 rounded-lg" style={{background:a[3]+"10",border:"2px solid "+a[3]+"30"}}>
+              <div className="font-bold text-sm" style={{color:a[3]}}>{a[0]}</div>
+              <div className="text-2xl font-bold" style={{color:NAVY}}>{cur}{a[1]}M</div>
+              <input type="range" min={5} max={400} value={a[1]} onChange={function(e){a[2](Number(e.target.value));}} className="w-full" style={{accentColor:a[3]}}/>
+            </div>
+          );
+        })}
+      </div>
+      <div className="space-y-2">
+        {[["Home win",ph,BLU],["Draw",pd,"#888"],["Away win",pa,ORA]].map(function(a){
+          return (
+            <div key={a[0]}>
+              <div className="flex justify-between text-sm"><span style={{color:a[2]}}>{a[0]}</span><b style={{color:a[2]}}>{(a[1]*100).toFixed(1)}%</b></div>
+              <div className="bg-gray-200 rounded-full h-4"><div className="h-full rounded-full" style={{width:(a[1]*100)+"%",background:a[2]}}/></div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function H2H() {
+  var [lg, setLg] = useState("ll");
+  var [teamA, setTeamA] = useState("Real Madrid");
+  var [teamB, setTeamB] = useState("Ath Madrid");
+
+  var seasonList = useMemo(function(){ return Object.keys(D.seasons[lg]).sort(); }, [lg]);
+
+  // Get all teams that appear in any season
+  var allTeams = useMemo(function(){
+    var s = {};
+    seasonList.forEach(function(season){
+      Object.keys(D.seasons[lg][season]||{}).forEach(function(t){ s[t]=true; });
+    });
+    return Object.keys(s).sort();
+  }, [lg, seasonList]);
+
+  // Find all head-to-head matches
+  var matches = useMemo(function(){
+    var results = [];
+    seasonList.forEach(function(season){
+      var sd = D.seasons[lg][season];
+      if (!sd || !sd[teamA]) return;
+      var tA = sd[teamA];
+      // Find matches where teamA played teamB
+      tA.m.forEach(function(m, idx){
+        if (m[0] === teamB) {
+          var isHome = m[1] === 1;
+          var ptsA = m[2];
+          var expA = m[3];
+          // Find the reverse match in teamB data to get teamB expected
+          var tB = sd[teamB];
+          var expB = 0;
+          var ptsB = 0;
+          if (tB) {
+            // ptsB: if A got 3 (win), B got 0; if A got 0, B got 3; if A got 1, B got 1
+            ptsB = ptsA === 3 ? 0 : ptsA === 0 ? 3 : 1;
+            // Find matching match in B's data
+            tB.m.forEach(function(mb){
+              if (mb[0] === teamA && mb[1] !== m[1]) { // opposite venue
+                expB = mb[3];
+              }
+            });
+          }
+          var result = ptsA === 3 ? (isHome ? "H" : "A") : ptsA === 1 ? "D" : (isHome ? "A" : "H");
+          results.push({
+            season: season,
+            venue: isHome ? teamA+" (H)" : teamB+" (H)",
+            home: isHome ? teamA : teamB,
+            away: isHome ? teamB : teamA,
+            ptsA: ptsA, ptsB: ptsB,
+            expA: expA, expB: expB,
+            result: result,
+            diffA: Math.round((ptsA - expA)*100)/100,
+            diffB: Math.round((ptsB - expB)*100)/100,
+            gwA: idx + 1
+          });
+        }
+      });
+    });
+    return results;
+  }, [lg, seasonList, teamA, teamB]);
+
+  // Summary stats
+  var summary = useMemo(function(){
+    var wA=0, wB=0, draws=0, totPtsA=0, totPtsB=0, totExpA=0, totExpB=0;
+    matches.forEach(function(m){
+      totPtsA += m.ptsA; totPtsB += m.ptsB;
+      totExpA += m.expA; totExpB += m.expB;
+      if (m.ptsA === 3) wA++;
+      else if (m.ptsB === 3) wB++;
+      else draws++;
+    });
+    return {wA:wA, wB:wB, draws:draws, n:matches.length,
+            totPtsA:totPtsA, totPtsB:totPtsB,
+            totExpA:Math.round(totExpA*10)/10, totExpB:Math.round(totExpB*10)/10};
+  }, [matches]);
+
+  // Cumulative chart data
+  var cumData = useMemo(function(){
+    var cA=0, cB=0, ceA=0, ceB=0;
+    return matches.map(function(m, i){
+      cA += m.ptsA; cB += m.ptsB; ceA += m.expA; ceB += m.expB;
+      return {
+        idx: i+1,
+        label: m.season + (m.home===teamA?" (H)":" (A)"),
+        cumA: cA, cumB: cB,
+        expA: Math.round(ceA*10)/10, expB: Math.round(ceB*10)/10
+      };
+    });
+  }, [matches, teamA]);
+
+  return (
+    <div>
+      <p className="text-gray-500 text-sm mb-3">Select two teams to see their complete head-to-head record with expected vs actual performance.</p>
+      <LP lg={lg} set={function(v){
+        setLg(v);
+        if (v==="ll") { setTeamA("Real Madrid"); setTeamB("Ath Madrid"); }
+        else { setTeamA("Liverpool"); setTeamB("Man United"); }
+      }}/>
+      <div className="flex gap-3 mb-5 flex-wrap">
+        <div>
+          <label className="text-xs font-semibold text-gray-500 block mb-1">Team A</label>
+          <select value={teamA} onChange={function(e){setTeamA(e.target.value);}} className="border rounded px-2 py-1.5 text-sm" style={{minWidth:160,color:BLU,fontWeight:600}}>
+            {allTeams.map(function(t){return <option key={t} value={t}>{t}</option>;})}
+          </select>
+        </div>
+        <div className="flex items-end pb-1 text-gray-400 font-bold">vs</div>
+        <div>
+          <label className="text-xs font-semibold text-gray-500 block mb-1">Team B</label>
+          <select value={teamB} onChange={function(e){setTeamB(e.target.value);}} className="border rounded px-2 py-1.5 text-sm" style={{minWidth:160,color:ORA,fontWeight:600}}>
+            {allTeams.map(function(t){return <option key={t} value={t}>{t}</option>;})}
+          </select>
+        </div>
+      </div>
+
+      {matches.length === 0 ? (
+        <div className="text-gray-400 text-center py-8">No head-to-head matches found between these teams.</div>
+      ) : (
+        <div>
+          {/* Summary cards */}
+          <div className="grid grid-cols-3 gap-3 mb-5">
+            <div className="p-3 rounded-lg text-center" style={{background:BLU+"10",border:"2px solid "+BLU+"30"}}>
+              <div className="text-2xl font-bold" style={{color:BLU}}>{summary.wA}</div>
+              <div className="text-xs text-gray-500">{teamA} wins</div>
+              <div className="text-sm mt-1"><b>{summary.totPtsA}</b> pts <span className="text-gray-400">(exp {summary.totExpA})</span></div>
+              <div className="text-xs font-bold mt-0.5" style={{color:summary.totPtsA-summary.totExpA>=0?GRN:RED}}>
+                {summary.totPtsA-summary.totExpA>=0?"+":""}{(summary.totPtsA-summary.totExpA).toFixed(1)}
+              </div>
+            </div>
+            <div className="p-3 rounded-lg text-center bg-gray-50">
+              <div className="text-2xl font-bold text-gray-500">{summary.draws}</div>
+              <div className="text-xs text-gray-500">Draws</div>
+              <div className="text-sm text-gray-400 mt-1">{summary.n} matches</div>
+              <div className="text-xs text-gray-400 mt-0.5">{seasonList.filter(function(s){return matches.some(function(m){return m.season===s;});}).length} seasons</div>
+            </div>
+            <div className="p-3 rounded-lg text-center" style={{background:ORA+"10",border:"2px solid "+ORA+"30"}}>
+              <div className="text-2xl font-bold" style={{color:ORA}}>{summary.wB}</div>
+              <div className="text-xs text-gray-500">{teamB} wins</div>
+              <div className="text-sm mt-1"><b>{summary.totPtsB}</b> pts <span className="text-gray-400">(exp {summary.totExpB})</span></div>
+              <div className="text-xs font-bold mt-0.5" style={{color:summary.totPtsB-summary.totExpB>=0?GRN:RED}}>
+                {summary.totPtsB-summary.totExpB>=0?"+":""}{(summary.totPtsB-summary.totExpB).toFixed(1)}
+              </div>
+            </div>
+          </div>
+
+          {/* Cumulative chart */}
+          <div className="text-sm font-semibold mb-1" style={{color:NAVY}}>Cumulative points in head-to-head matches</div>
+          <div className="flex gap-3 mb-1 text-xs text-gray-400">
+            <span><span className="inline-block w-4 h-0.5 mr-1" style={{verticalAlign:"middle",background:BLU}}></span>{teamA} actual</span>
+            <span><span className="inline-block w-4 h-0.5 mr-1" style={{verticalAlign:"middle",background:BLU,opacity:0.3,borderTop:"1.5px dashed "+BLU}}></span>{teamA} expected</span>
+            <span><span className="inline-block w-4 h-0.5 mr-1" style={{verticalAlign:"middle",background:ORA}}></span>{teamB} actual</span>
+            <span><span className="inline-block w-4 h-0.5 mr-1" style={{verticalAlign:"middle",background:ORA,opacity:0.3,borderTop:"1.5px dashed "+ORA}}></span>{teamB} expected</span>
+          </div>
+          <div style={{height:240}}>
+            <RC.ResponsiveContainer>
+              <RC.LineChart data={cumData} margin={{left:0,right:5,top:5,bottom:30}}>
+                <RC.CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
+                <RC.XAxis dataKey="label" tick={{fontSize:7,angle:-45,textAnchor:"end"}} height={50} interval={Math.max(0,Math.floor(cumData.length/12)-1)}/>
+                <RC.YAxis tick={{fontSize:9}}/>
+                <RC.Tooltip/>
+                <RC.Line dataKey="expA" stroke={BLU} strokeDasharray="4 3" strokeWidth={1.2} strokeOpacity={0.4} dot={false} name={teamA+" exp"}/>
+                <RC.Line dataKey="expB" stroke={ORA} strokeDasharray="4 3" strokeWidth={1.2} strokeOpacity={0.4} dot={false} name={teamB+" exp"}/>
+                <RC.Line dataKey="cumA" stroke={BLU} strokeWidth={2.5} dot={{r:2,fill:BLU}} name={teamA}/>
+                <RC.Line dataKey="cumB" stroke={ORA} strokeWidth={2.5} dot={{r:2,fill:ORA}} name={teamB}/>
+              </RC.LineChart>
+            </RC.ResponsiveContainer>
+          </div>
+
+          {/* Match-by-match table */}
+          <div className="text-sm font-semibold mb-1 mt-4" style={{color:NAVY}}>Match-by-match record</div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead><tr className="text-gray-400 border-b">
+                <th className="text-left py-1">Season</th>
+                <th className="text-left">Venue</th>
+                <th className="text-right" style={{color:BLU}}>{teamA} pts</th>
+                <th className="text-right text-gray-300">exp</th>
+                <th className="text-center">Result</th>
+                <th className="text-right text-gray-300">exp</th>
+                <th className="text-right" style={{color:ORA}}>{teamB} pts</th>
+              </tr></thead>
+              <tbody>{matches.map(function(m, i){
+                var resColor = m.ptsA > m.ptsB ? BLU : m.ptsB > m.ptsA ? ORA : "#888";
+                var resLabel = m.ptsA > m.ptsB ? teamA.split(" ")[0] : m.ptsB > m.ptsA ? teamB.split(" ")[0] : "Draw";
+                return (
+                  <tr key={i} className="border-b border-gray-100">
+                    <td className="py-0.5">{m.season}</td>
+                    <td className="py-0.5 text-gray-500">{m.home} (H)</td>
+                    <td className="py-0.5 text-right font-semibold" style={{color:BLU}}>{m.ptsA}</td>
+                    <td className="py-0.5 text-right text-gray-300">{m.expA.toFixed(1)}</td>
+                    <td className="py-0.5 text-center font-bold" style={{color:resColor}}>{resLabel}</td>
+                    <td className="py-0.5 text-right text-gray-300">{m.expB.toFixed(1)}</td>
+                    <td className="py-0.5 text-right font-semibold" style={{color:ORA}}>{m.ptsB}</td>
+                  </tr>
+                );
+              })}</tbody>
+              <tfoot><tr className="border-t-2 font-bold">
+                <td className="py-1" colSpan={2}>Total ({summary.n} matches)</td>
+                <td className="py-1 text-right" style={{color:BLU}}>{summary.totPtsA}</td>
+                <td className="py-1 text-right text-gray-400">{summary.totExpA}</td>
+                <td className="py-1 text-center" style={{color:summary.totPtsA-summary.totPtsB>0?BLU:summary.totPtsB-summary.totPtsA>0?ORA:"#888"}}>
+                  {summary.totPtsA>summary.totPtsB?"+":""}
+                  {summary.totPtsA-summary.totPtsB}
+                </td>
+                <td className="py-1 text-right text-gray-400">{summary.totExpB}</td>
+                <td className="py-1 text-right" style={{color:ORA}}>{summary.totPtsB}</td>
+              </tr></tfoot>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+var tabs=[{id:"tracker",l:"Season Tracker"},{id:"badrun",l:"Bad Run Checker"},{id:"h2h",l:"Head to Head"},{id:"explorer",l:"Explorer"},{id:"calc",l:"Calculator"}];
+
+function App() {
+  var [tab, setTab] = useState("tracker");
+  return (
+    <div className="min-h-screen bg-white">
+      <div className="py-4 px-5" style={{background:NAVY}}>
+        <h1 className="text-xl font-bold text-white" style={{fontFamily:"Georgia,serif"}}>What money can&#8217;t buy</h1>
+        <p className="text-blue-200 text-xs">La Liga &amp; Premier League | 9,008 matches | 13 seasons | 50,000 simulations</p>
+      </div>
+      <div className="border-b bg-gray-50 sticky top-0 z-10 flex overflow-x-auto">
+        {tabs.map(function(t){
+          return <button key={t.id} onClick={function(){setTab(t.id);}}
+            className={"px-4 py-2 text-sm font-medium border-b-2 "+(tab===t.id?"border-current":"border-transparent text-gray-500")}
+            style={tab===t.id?{color:NAVY}:{}}>{t.l}</button>;
+        })}
+      </div>
+      <div style={{maxWidth:950,margin:"0 auto",padding:16}}>
+        {tab==="tracker" && <Tracker/>}
+        {tab==="badrun" && <BadRun/>}
+        {tab==="h2h" && <H2H/>}
+        {tab==="explorer" && <Explorer/>}
+        {tab==="calc" && <Calc/>}
+      </div>
+      <div className="text-center text-xs text-gray-400 py-3 border-t">
+        Ordered logit + Monte Carlo | whatmoneycantbuyfootball@gmail.com
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.render(React.createElement(Root), document.getElementById('root'));
+</script>
+</body>
+</html>
