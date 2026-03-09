@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Debug test</title>
+</head>
+<body>
+<h2>Checking libraries...</h2>
+<div id="log"></div>
+<script>
+function log(msg, ok) {
+  var d = document.createElement('div');
+  d.style.padding = '8px';
+  d.style.margin = '4px';
+  d.style.borderRadius = '4px';
+  d.style.background = ok ? '#e8f5e9' : '#ffebee';
+  d.style.color = ok ? '#2e7d32' : '#c62828';
+  d.textContent = msg;
+  document.getElementById('log').appendChild(d);
+}
+
+function loadScript(url, name, cb) {
+  log('Loading ' + name + '...', true);
+  var s = document.createElement('script');
+  s.src = url;
+  s.onload = function() { log(name + ' OK', true); cb(); };
+  s.onerror = function() { log(name + ' FAILED from: ' + url, false); };
+  document.head.appendChild(s);
+}
+
+loadScript('https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js', 'React', function(){
+  loadScript('https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js', 'ReactDOM', function(){
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js', 'Recharts', function(){
+      log('All libraries loaded!', true);
+      // Test data
+      fetch('data.json').then(function(r){return r.json();}).then(function(d){
+        log('data.json: ' + Object.keys(d.seasons.ll).length + ' La Liga seasons', true);
+        // Test render
+        try {
+          var el = React.createElement('div', {style:{padding:20,background:'#e3f2fd',borderRadius:8,marginTop:12}},
+            React.createElement('h3', null, 'React works!'),
+            React.createElement('p', null, 'All systems go. The full app should work.')
+          );
+          ReactDOM.render(el, document.createElement('div'));
+          log('React rendering works!', true);
+        } catch(e) {
+          log('React render failed: ' + e.message, false);
+        }
+      }).catch(function(e){
+        log('data.json failed: ' + e.message, false);
+      });
+    });
+  });
+});
+</script>
+</body>
+</html>
