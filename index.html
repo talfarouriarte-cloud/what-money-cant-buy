@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What money can't buy</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif}</style>
+</head>
+<body>
+<div id="root"><p style="padding:40px;text-align:center;color:#888">Loading...</p></div>
+<script>
+var e = React.createElement;
+var useState = React.useState;
+var useMemo = React.useMemo;
+var useEffect = React.useEffect;
+var RC = Recharts;
+var NAVY="#1A3A6B",BLU="#2E75B6",ORA="#D4772C",GRN="#2E8B57",RED="#C0392B";
+var TC=["#2E75B6","#D4772C","#2E8B57"];
+var S = function(z){return 1/(1+Math.exp(-z));};
+var D = null;
+
+function h(tag, props) {
+  var args = [tag, props];
+  for (var i=2; i<arguments.length; i++) args.push(arguments[i]);
+  return e.apply(null, args);
+}
+
+function LP(props) {
+  return h("div",{className:"flex gap-1.5 mb-4"},
+    [["ll","La Liga"],["pl","Premier League"]].map(function(p){
+      return h("button",{key:p[0],onClick:function(){props.set(p[0]);},
+        className:"px-3 py-1.5 rounded-full text-sm font-semibold "+(props.lg===p[0]?"text-white":"text-gray-500 bg-gray-100"),
+        style:props.lg===p[0]?{background:NAVY}:{}},p[1]);
+    })
+  );
+}
+
+function Tracker() {
+  var _lg = useState("ll"), lg=_lg[0], setLg=_lg[1];
+  var _sel = useState(["Barcelona"]), sel=_sel[0], setSel=_sel[1];
+  var _ssn = useState("25/26"), season=_ssn[0], setSeason=_ssn[1];
+
+  var seasonList = useMemo(function(){ return Object.keys(D.seasons[lg]).sort(); }, [lg]);
+  var isCurrent = season === "25/26";
+  var sData = D.seasons[lg][season] || {};
+  var multi = sel.length > 1;
+
+  var st = useMemo(function(){
+    return Object.entries(sData).map(function(en){
+      var n=en[0],d=en[1];
+      return {n:n, pts:d.a[d.a.length-1]||0, np:d.a.length, w:d.w,
+              exp:d.e[d.e.length-1]||0, op:Math.round((d.a[d.a.length-1]||0)-(d.e[d.e.length-1]||0))};
+    }).sort(function(a,b){return b.pts-a.pts;});
+  }, [sData]);
+
+  useEffect(function(){
+    var teams = Object.keys(sData);
+    if (teams.length>0){
+      var first = teams.sort(function(a,b){
+        return (sData[b].a[sData[b].a.length-1]||0)-(sData[a].a[sData[a].a.length-1]||0);
+      })[0];
+      setSel([first]);
+    }
+  }, [lg, season]);
+
+  function toggle(n) {
+    setSel(function(p){
+      if(p.indexOf(n)>=0) return p.filter(function(x){return x!==n;});
+      if(p.length>=3) return [p[1],p[2],n];
+      return p.concat([n]);
+    });
+  }
+
+  var primary = sData[sel[0]];
+  if (!primary) return h("div",{className:"text-gray-400 p-8 text-center"},"Select a team");
+  var nP = primary.a.length;
+  var bands = (isCurrent && !multi && D.bands[lg] && D.bands[lg][sel[0]]) ? D.bands[lg][sel[0]] : null;
+  var pre = (isCurrent && !multi && D.pre[lg] && D.pre[lg][sel[0]]) ? D.pre[lg][sel[0]] : null;
+  var tGW = bands ? bands.p50.length : nP;
+
+  function expOf(name) {
+    var t=sData[name]; if(!t) return [];
+    var c=0; return t.m.map(function(m){c+=m[3]; return Math.round(c*10)/10;});
+  }
+
+  var cd = useMemo(function(){
+    var rows=[], maxGW=tGW;
+    if(multi) sel.forEach(function(n){var t=sData[n]; if(t&&t.a.length>maxGW) maxGW=t.a.length;});
+    for(var i=0;i<maxGW;i++){
+      var r={gw:i+1};
+      if(!multi){
+        if(i<nP){r.actual=primary.a[i]; r.exp=primary.e[i];}
+        if(bands){r.base=bands.p10[i]; r.band=bands.p90[i]-bands.p10[i]; r.med=bands.p50[i];}
+        if(pre){r.preBase=pre.p10[i]||0; r.preBand=(pre.p90[i]||0)-(pre.p10[i]||0); r.preMed=pre.p50[i]||0;}
+      } else {
+        for(var j=0;j<sel.length;j++){
+          var t=sData[sel[j]]; if(!t) continue;
+          if(i<t.a.length){r["a"+j]=t.a[i]; r["e"+j]=t.e[i];}
+          if(t.a.length<=nP && i>=t.a.length) {} // no projection for historical
+        }
+      }
+      rows.push(r);
+    }
+    return rows;
+  }, [sel, sData, multi, nP, bands, pre, tGW]);
+
+  var ops = sel.map(function(name){
+    var t=sData[name]; if(!t) return {name:name,op:"0",pts:0};
+    var ap=t.a[t.a.length-1]||0, ep=t.e[t.e.length-1]||0;
+    return {name:name, op:(ap-ep).toFixed(1), pts:ap};
+  });
+
+  // Build chart areas
+  var chartChildren = [
+    e(RC.CartesianGrid,{key:"g",strokeDasharray:"3 3",stroke:"#f0f0f0"}),
+    e(RC.XAxis,{key:"x",dataKey:"gw",tick:{fontSize:9},label:{value:"Matchweek",position:"bottom",fontSize:9,offset:0}}),
+    e(RC.YAxis,{key:"y",tick:{fontSize:9}}),
+    e(RC.Tooltip,{key:"t"})
+  ];
+  if(!multi){
+    if(pre){
+      chartChildren.push(e(RC.Area,{key:"preB",dataKey:"preBase",stackId:"pre",stroke:"none",fill:"transparent",isAnimationActive:false}));
+      chartChildren.push(e(RC.Area,{key:"preBd",dataKey:"preBand",stackId:"pre",stroke:"none",fill:ORA,fillOpacity:0.1,isAnimationActive:false}));
+    }
+    if(bands){
+      chartChildren.push(e(RC.Area,{key:"base",dataKey:"base",stackId:"cur",stroke:"none",fill:"transparent",isAnimationActive:false}));
+      chartChildren.push(e(RC.Area,{key:"band",dataKey:"band",stackId:"cur",stroke:"none",fill:BLU,fillOpacity:0.15,isAnimationActive:false}));
+    }
+    if(pre) chartChildren.push(e(RC.Area,{key:"prM",dataKey:"preMed",stroke:ORA,strokeDasharray:"6 4",strokeWidth:1,fill:"none",strokeOpacity:0.5,isAnimationActive:false}));
+    if(bands) chartChildren.push(e(RC.Area,{key:"med",dataKey:"med",stroke:"#aaa",strokeDasharray:"4 3",strokeWidth:1,fill:"none",isAnimationActive:false}));
+    chartChildren.push(e(RC.Area,{key:"exp",dataKey:"exp",stroke:"#777",strokeDasharray:"6 3",strokeWidth:1,fill:"none",isAnimationActive:false}));
+    chartChildren.push(e(RC.Area,{key:"act",dataKey:"actual",stroke:BLU,strokeWidth:2.5,fill:"none",isAnimationActive:false}));
+  } else {
+    for(var j=0;j<sel.length;j++){
+      chartChildren.push(e(RC.Area,{key:"e"+j,dataKey:"e"+j,stroke:TC[j],strokeDasharray:"4 3",strokeWidth:1,fill:"none",strokeOpacity:0.4,isAnimationActive:false}));
+      chartChildren.push(e(RC.Area,{key:"a"+j,dataKey:"a"+j,stroke:TC[j],strokeWidth:2.5,fill:"none",isAnimationActive:false}));
+    }
+  }
+  if(isCurrent&&!multi) chartChildren.push(e(RC.ReferenceLine,{key:"now",x:nP,stroke:"#ddd",strokeDasharray:"2 2"}));
+
+  return h("div",null,
+    h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},
+      e(LP,{lg:lg,set:function(v){setLg(v);}}),
+      h("select",{value:season,onChange:function(ev){setSeason(ev.target.value);},className:"border rounded px-2 py-1 text-sm mb-4"},
+        seasonList.map(function(s){return h("option",{key:s,value:s},s+(s==="25/26"?" (current)":""));})
+      )
+    ),
+    h("div",{className:"flex gap-4"},
+      h("div",{className:"w-48 shrink-0 overflow-y-auto rounded bg-gray-50 p-1 text-xs",style:{maxHeight:420}},
+        h("table",{className:"w-full"},
+          h("thead",null,h("tr",{className:"text-gray-400"},
+            h("th",{className:"text-left"},"#"),h("th",{className:"text-left"},"Team"),
+            h("th",{className:"text-right"},"Pts"),h("th",{className:"text-right"},"+/-")
+          )),
+          h("tbody",null,st.map(function(s,i){
+            var idx=sel.indexOf(s.n);
+            return h("tr",{key:s.n,onClick:function(){toggle(s.n);},
+              className:"cursor-pointer border-b border-gray-100 "+(idx>=0?"font-bold":"hover:bg-gray-100"),
+              style:idx>=0?{background:TC[idx]+"18",color:TC[idx]}:{}},
+              h("td",{className:"py-0.5 text-gray-400"},i+1),
+              h("td",{className:"py-0.5 truncate",style:{maxWidth:90}},s.n),
+              h("td",{className:"py-0.5 text-right font-semibold"},s.pts),
+              h("td",{className:"py-0.5 text-right font-bold",style:{color:s.op>=0?GRN:RED}},(s.op>=0?"+":"")+s.op)
+            );
+          }))
+        )
+      ),
+      h("div",{className:"flex-1",style:{minWidth:0}},
+        h("div",{className:"flex gap-3 mb-2 flex-wrap text-sm"},
+          ops.map(function(o,i){
+            return h("span",{key:o.name,className:"flex items-center gap-1"},
+              h("span",{className:"inline-block rounded-full",style:{width:8,height:8,background:TC[i]}}),
+              h("b",{style:{color:TC[i]}},o.name),
+              h("span",{className:"text-gray-400"},o.pts+"pts"),
+              h("span",{className:"font-bold",style:{color:Number(o.op)>=0?GRN:RED}},(Number(o.op)>=0?"+":"")+o.op)
+            );
+          })
+        ),
+        h("div",{style:{height:320}},
+          e(RC.ResponsiveContainer,null,
+            e(RC.AreaChart,{data:cd,margin:{left:0,right:5,top:5,bottom:18}},chartChildren)
+          )
+        ),
+        !multi && bands && pre ? h("div",{className:"flex gap-4 mt-1 text-xs justify-center"},
+          h("span",{style:{color:BLU}},"Current: "+bands.p10[tGW-1]+"/"+bands.p50[tGW-1]+"/"+bands.p90[tGW-1]),
+          h("span",{style:{color:ORA}},"Pre-season: "+pre.p10[tGW-1]+"/"+pre.p50[tGW-1]+"/"+pre.p90[tGW-1]),
+          h("span",{className:"text-gray-400"},"(p10/med/p90)")
+        ) : null,
+        multi ? h("div",{className:"mt-2 text-xs"},
+          sel.map(function(n,i){
+            var t=sData[n]; if(!t) return null;
+            var ap=t.a[t.a.length-1]||0, ep=t.e[t.e.length-1]||0;
+            return h("div",{key:n,style:{color:TC[i]}},h("b",null,n),": "+ap+" pts (exp "+Math.round(ep)+", "+(ap-ep>=0?"+":"")+(ap-ep).toFixed(1)+")");
+          })
+        ) : null
+      )
+    )
+  );
+}
+
+function BadRun() {
+  var _lg=useState("ll"),lg=_lg[0],setLg=_lg[1];
+  var _ssn=useState("25/26"),season=_ssn[0],setSeason=_ssn[1];
+  var _sel=useState("Barcelona"),sel=_sel[0],setSel=_sel[1];
+  var _win=useState(5),win=_win[0],setWin=_win[1];
+
+  var seasonList = useMemo(function(){return Object.keys(D.seasons[lg]).sort();}, [lg]);
+  var sData = D.seasons[lg][season]||{};
+  var tl = useMemo(function(){return Object.keys(sData).sort();}, [sData]);
+  var t = sData[sel];
+
+  useEffect(function(){
+    var teams=Object.keys(sData);
+    if(teams.length>0&&!sData[sel]) setSel(teams.sort()[0]);
+  }, [lg,season]);
+
+  if(!t) return h("div",{className:"text-gray-400 p-8 text-center"},"Select a team");
+  var nP=t.a.length, mW=Math.min(nP,20), w=Math.min(win,mW);
+  var lastW=t.m.slice(nP-w);
+  var cA=[],cE=[],ca=0,ce=0;
+  for(var i=0;i<lastW.length;i++){ca+=lastW[i][2];ce+=lastW[i][3];cA.push(ca);cE.push(Math.round(ce*10)/10);}
+
+  var cd=lastW.map(function(m,i){
+    var v=m[1]?"vs":"@",ex=cE[i],sp=1.3*Math.sqrt(i+1)*1.5;
+    return {opp:v+" "+m[0],actual:cA[i],expected:ex,
+      base:Math.max(0,Math.round((ex-sp)*10)/10),range:Math.round(sp*2*10)/10,
+      mp:m[2],me:m[3]};
+  });
+  var diff=(ca-Math.round(ce*10)/10).toFixed(1);
+
+  return h("div",null,
+    h("p",{className:"text-gray-500 text-sm mb-3"},"Compare actual vs expected for specific opponents and venues."),
+    h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},
+      e(LP,{lg:lg,set:function(v){setLg(v);setSel(v==="ll"?"Barcelona":"Liverpool");setWin(5);}}),
+      h("select",{value:season,onChange:function(ev){setSeason(ev.target.value);},className:"border rounded px-2 py-1 text-sm mb-4"},
+        seasonList.map(function(s){return h("option",{key:s,value:s},s);}))
+    ),
+    h("div",{className:"flex gap-4 mb-4"},
+      h("select",{value:sel,onChange:function(ev){setSel(ev.target.value);},className:"border rounded px-2 py-1.5 text-sm"},
+        tl.map(function(t){return h("option",{key:t,value:t},t);})),
+      h("div",{className:"flex-1"},
+        h("div",{className:"text-xs text-gray-500 mb-1"},"Last "+w+" games"),
+        h("input",{type:"range",min:1,max:mW,value:w,onChange:function(ev){setWin(Number(ev.target.value));},className:"w-full",style:{accentColor:BLU}}))
+    ),
+    h("div",{style:{height:220},className:"mb-3"},
+      e(RC.ResponsiveContainer,null,
+        e(RC.AreaChart,{data:cd,margin:{left:0,right:5,top:5,bottom:45}},
+          e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),
+          e(RC.XAxis,{dataKey:"opp",tick:{fontSize:7,angle:-40,textAnchor:"end"},height:55,interval:0}),
+          e(RC.YAxis,{tick:{fontSize:9}}),
+          e(RC.Tooltip,null),
+          e(RC.Area,{dataKey:"base",stackId:"b",stroke:"none",fill:"transparent",isAnimationActive:false}),
+          e(RC.Area,{dataKey:"range",stackId:"b",stroke:"none",fill:BLU,fillOpacity:0.1,isAnimationActive:false}),
+          e(RC.Area,{dataKey:"expected",stroke:"#999",strokeDasharray:"5 3",strokeWidth:2,fill:"none",isAnimationActive:false}),
+          e(RC.Area,{dataKey:"actual",stroke:BLU,strokeWidth:2.5,fill:"none",dot:{r:3,fill:BLU},isAnimationActive:false})
+        )
+      )
+    ),
+    h("div",{className:"p-4 rounded-xl text-center "+(Number(diff)>=0?"bg-green-50":"bg-amber-50")},
+      h("div",{className:"text-2xl font-bold",style:{color:Number(diff)>=0?GRN:RED}},(Number(diff)>=0?"+":"")+diff+" pts"),
+      h("div",{className:"text-sm text-gray-600"},ca+" actual vs "+Math.round(ce*10)/10+" expected in "+w+" matches")
+    ),
+    h("table",{className:"w-full text-xs mt-3"},
+      h("thead",null,h("tr",{className:"text-gray-400 border-b"},
+        h("th",{className:"text-left py-1"},"Opponent"),h("th",{className:"text-center"},"V"),
+        h("th",{className:"text-right"},"Pts"),h("th",{className:"text-right"},"Exp"),h("th",{className:"text-right"},"+/-"))),
+      h("tbody",null,lastW.map(function(m,i){
+        var d=m[2]-m[3];
+        return h("tr",{key:i,className:"border-b border-gray-100"},
+          h("td",{className:"py-0.5"},m[0]),
+          h("td",{className:"py-0.5 text-center"},m[1]?"H":"A"),
+          h("td",{className:"py-0.5 text-right font-semibold"},m[2]),
+          h("td",{className:"py-0.5 text-right text-gray-400"},m[3].toFixed(1)),
+          h("td",{className:"py-0.5 text-right font-bold",style:{color:d>=0?GRN:RED}},(d>=0?"+":"")+d.toFixed(1))
+        );
+      }))
+    )
+  );
+}
+
+function H2H() {
+  var _lg=useState("ll"),lg=_lg[0],setLg=_lg[1];
+  var _a=useState("Real Madrid"),teamA=_a[0],setTeamA=_a[1];
+  var _b=useState("Ath Madrid"),teamB=_b[0],setTeamB=_b[1];
+
+  var seasonList=useMemo(function(){return Object.keys(D.seasons[lg]).sort();},[lg]);
+  var allTeams=useMemo(function(){
+    var s={};seasonList.forEach(function(sn){Object.keys(D.seasons[lg][sn]||{}).forEach(function(t){s[t]=true;});});
+    return Object.keys(s).sort();
+  },[lg,seasonList]);
+
+  var matches=useMemo(function(){
+    var res=[];
+    seasonList.forEach(function(sn){
+      var sd=D.seasons[lg][sn]; if(!sd||!sd[teamA]) return;
+      sd[teamA].m.forEach(function(m){
+        if(m[0]===teamB){
+          var isH=m[1]===1, pA=m[2], eA=m[3], pB=pA===3?0:pA===0?3:1, eB=0;
+          var tB=sd[teamB];
+          if(tB) tB.m.forEach(function(mb){if(mb[0]===teamA&&mb[1]!==m[1]) eB=mb[3];});
+          res.push({sn:sn,home:isH?teamA:teamB,pA:pA,pB:pB,eA:eA,eB:eB});
+        }
+      });
+    });
+    return res;
+  },[lg,seasonList,teamA,teamB]);
+
+  var sum=useMemo(function(){
+    var wA=0,wB=0,dr=0,tpA=0,tpB=0,teA=0,teB=0;
+    matches.forEach(function(m){tpA+=m.pA;tpB+=m.pB;teA+=m.eA;teB+=m.eB;
+      if(m.pA===3)wA++;else if(m.pB===3)wB++;else dr++;});
+    return {wA:wA,wB:wB,dr:dr,n:matches.length,tpA:tpA,tpB:tpB,teA:Math.round(teA*10)/10,teB:Math.round(teB*10)/10};
+  },[matches]);
+
+  var cumData=useMemo(function(){
+    var cA=0,cB=0,ceA=0,ceB=0;
+    return matches.map(function(m,i){
+      cA+=m.pA;cB+=m.pB;ceA+=m.eA;ceB+=m.eB;
+      return {idx:i+1,label:m.sn+(m.home===teamA?" (H)":" (A)"),cumA:cA,cumB:cB,
+        expA:Math.round(ceA*10)/10,expB:Math.round(ceB*10)/10};
+    });
+  },[matches,teamA]);
+
+  return h("div",null,
+    h("p",{className:"text-gray-500 text-sm mb-3"},"Head-to-head record with actual vs expected performance."),
+    e(LP,{lg:lg,set:function(v){setLg(v);
+      if(v==="ll"){setTeamA("Real Madrid");setTeamB("Ath Madrid");}
+      else{setTeamA("Liverpool");setTeamB("Man United");}}}),
+    h("div",{className:"flex gap-3 mb-5 flex-wrap"},
+      h("div",null,
+        h("label",{className:"text-xs font-semibold text-gray-500 block mb-1"},"Team A"),
+        h("select",{value:teamA,onChange:function(ev){setTeamA(ev.target.value);},className:"border rounded px-2 py-1.5 text-sm",style:{minWidth:160,color:BLU,fontWeight:600}},
+          allTeams.map(function(t){return h("option",{key:t,value:t},t);}))),
+      h("div",{className:"flex items-end pb-1 text-gray-400 font-bold"},"vs"),
+      h("div",null,
+        h("label",{className:"text-xs font-semibold text-gray-500 block mb-1"},"Team B"),
+        h("select",{value:teamB,onChange:function(ev){setTeamB(ev.target.value);},className:"border rounded px-2 py-1.5 text-sm",style:{minWidth:160,color:ORA,fontWeight:600}},
+          allTeams.map(function(t){return h("option",{key:t,value:t},t);})))
+    ),
+    matches.length===0?h("div",{className:"text-gray-400 text-center py-8"},"No matches found."):
+    h("div",null,
+      h("div",{className:"grid grid-cols-3 gap-3 mb-5"},
+        h("div",{className:"p-3 rounded-lg text-center",style:{background:BLU+"10",border:"2px solid "+BLU+"30"}},
+          h("div",{className:"text-2xl font-bold",style:{color:BLU}},sum.wA),
+          h("div",{className:"text-xs text-gray-500"},teamA+" wins"),
+          h("div",{className:"text-sm mt-1"},h("b",null,sum.tpA)," pts ",h("span",{className:"text-gray-400"},"(exp "+sum.teA+")")),
+          h("div",{className:"text-xs font-bold mt-0.5",style:{color:sum.tpA-sum.teA>=0?GRN:RED}},(sum.tpA-sum.teA>=0?"+":"")+(sum.tpA-sum.teA).toFixed(1))
+        ),
+        h("div",{className:"p-3 rounded-lg text-center bg-gray-50"},
+          h("div",{className:"text-2xl font-bold text-gray-500"},sum.dr),
+          h("div",{className:"text-xs text-gray-500"},"Draws"),
+          h("div",{className:"text-sm text-gray-400 mt-1"},sum.n+" matches")
+        ),
+        h("div",{className:"p-3 rounded-lg text-center",style:{background:ORA+"10",border:"2px solid "+ORA+"30"}},
+          h("div",{className:"text-2xl font-bold",style:{color:ORA}},sum.wB),
+          h("div",{className:"text-xs text-gray-500"},teamB+" wins"),
+          h("div",{className:"text-sm mt-1"},h("b",null,sum.tpB)," pts ",h("span",{className:"text-gray-400"},"(exp "+sum.teB+")")),
+          h("div",{className:"text-xs font-bold mt-0.5",style:{color:sum.tpB-sum.teB>=0?GRN:RED}},(sum.tpB-sum.teB>=0?"+":"")+(sum.tpB-sum.teB).toFixed(1))
+        )
+      ),
+      h("div",{className:"text-sm font-semibold mb-1",style:{color:NAVY}},"Cumulative points in head-to-head"),
+      h("div",{style:{height:240}},
+        e(RC.ResponsiveContainer,null,
+          e(RC.LineChart,{data:cumData,margin:{left:0,right:5,top:5,bottom:30}},
+            e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),
+            e(RC.XAxis,{dataKey:"label",tick:{fontSize:7,angle:-45,textAnchor:"end"},height:50,interval:Math.max(0,Math.floor(cumData.length/12)-1)}),
+            e(RC.YAxis,{tick:{fontSize:9}}),
+            e(RC.Tooltip,null),
+            e(RC.Line,{dataKey:"expA",stroke:BLU,strokeDasharray:"4 3",strokeWidth:1.2,strokeOpacity:0.4,dot:false,name:teamA+" exp"}),
+            e(RC.Line,{dataKey:"expB",stroke:ORA,strokeDasharray:"4 3",strokeWidth:1.2,strokeOpacity:0.4,dot:false,name:teamB+" exp"}),
+            e(RC.Line,{dataKey:"cumA",stroke:BLU,strokeWidth:2.5,dot:{r:2,fill:BLU},name:teamA}),
+            e(RC.Line,{dataKey:"cumB",stroke:ORA,strokeWidth:2.5,dot:{r:2,fill:ORA},name:teamB})
+          )
+        )
+      ),
+      h("div",{className:"text-sm font-semibold mb-1 mt-4",style:{color:NAVY}},"Match-by-match record"),
+      h("table",{className:"w-full text-xs"},
+        h("thead",null,h("tr",{className:"text-gray-400 border-b"},
+          h("th",{className:"text-left py-1"},"Season"),h("th",{className:"text-left"},"Home"),
+          h("th",{className:"text-right",style:{color:BLU}},teamA.split(" ")[0]),h("th",{className:"text-right text-gray-300"},"exp"),
+          h("th",{className:"text-center"},""),
+          h("th",{className:"text-right text-gray-300"},"exp"),h("th",{className:"text-right",style:{color:ORA}},teamB.split(" ")[0])
+        )),
+        h("tbody",null,matches.map(function(m,i){
+          var col=m.pA>m.pB?BLU:m.pB>m.pA?ORA:"#888";
+          var lbl=m.pA>m.pB?teamA.split(" ")[0]:m.pB>m.pA?teamB.split(" ")[0]:"Draw";
+          return h("tr",{key:i,className:"border-b border-gray-100"},
+            h("td",{className:"py-0.5"},m.sn),
+            h("td",{className:"py-0.5 text-gray-500"},m.home),
+            h("td",{className:"py-0.5 text-right font-semibold",style:{color:BLU}},m.pA),
+            h("td",{className:"py-0.5 text-right text-gray-300"},m.eA.toFixed(1)),
+            h("td",{className:"py-0.5 text-center font-bold",style:{color:col}},lbl),
+            h("td",{className:"py-0.5 text-right text-gray-300"},m.eB.toFixed(1)),
+            h("td",{className:"py-0.5 text-right font-semibold",style:{color:ORA}},m.pB)
+          );
+        })),
+        h("tfoot",null,h("tr",{className:"border-t-2 font-bold"},
+          h("td",{className:"py-1",colSpan:2},"Total ("+sum.n+")"),
+          h("td",{className:"py-1 text-right",style:{color:BLU}},sum.tpA),
+          h("td",{className:"py-1 text-right text-gray-400"},sum.teA),
+          h("td",{className:"py-1 text-center",style:{color:sum.tpA>sum.tpB?BLU:sum.tpB>sum.tpA?ORA:"#888"}},(sum.tpA>sum.tpB?"+":"")+(sum.tpA-sum.tpB)),
+          h("td",{className:"py-1 text-right text-gray-400"},sum.teB),
+          h("td",{className:"py-1 text-right",style:{color:ORA}},sum.tpB)
+        ))
+      )
+    )
+  );
+}
+
+function Explorer() {
+  var _lg=useState("ll"),lg=_lg[0],setLg=_lg[1];
+  var _sel=useState(["Villarreal","Ath Madrid","Valencia"]),sel=_sel[0],setSel=_sel[1];
+  var teams=lg==="ll"?D.cumulative.ll:D.cumulative.pl;
+  var ss=["13/14","14/15","15/16","16/17","17/18","18/19","19/20","20/21","21/22","22/23","23/24","24/25"];
+  var tl=useMemo(function(){return Object.entries(teams).map(function(en){return {n:en[0],c:en[1][0],ns:en[1][1]};}).sort(function(a,b){return b.c-a.c;});}, [teams]);
+  var cols=[BLU,ORA,GRN,RED,"#8B5CF6"];
+
+  function tog(n){setSel(function(p){
+    if(p.indexOf(n)>=0) return p.filter(function(x){return x!==n;});
+    if(p.length<5) return p.concat([n]); return p;});}
+
+  var cd=useMemo(function(){return ss.map(function(s){
+    var r={s:s};sel.forEach(function(t){var td=teams[t];if(!td)return;
+      var sd=td[3].find(function(x){return x[0]===s;});if(sd)r[t]=Math.round((sd[3]-sd[2])*10)/10;});
+    return r;});},[sel,teams]);
+
+  var cum=useMemo(function(){return ss.map(function(s,si){
+    var r={s:s};sel.forEach(function(t){var td=teams[t];if(!td)return;
+      var c=0;for(var i=0;i<=si;i++){var sd=td[3].find(function(x){return x[0]===ss[i];});if(sd)c+=sd[3]-sd[2];}
+      r[t]=Math.round(c*10)/10;});
+    return r;});},[sel,teams]);
+
+  var bars=sel.map(function(t,i){return e(RC.Bar,{key:t,dataKey:t,fill:cols[i],opacity:0.7});});
+  var lines=sel.map(function(t,i){return e(RC.Line,{key:t,dataKey:t,stroke:cols[i],strokeWidth:2,dot:{r:2}});});
+
+  return h("div",null,
+    h("p",{className:"text-gray-500 text-sm mb-3"},"Select up to 5 teams to compare overperformance."),
+    e(LP,{lg:lg,set:function(v){setLg(v);setSel(v==="ll"?["Villarreal","Ath Madrid","Valencia"]:["Liverpool","Man City","Man United"]);}}),
+    h("div",{className:"flex gap-4"},
+      h("div",{className:"w-48 shrink-0 overflow-y-auto rounded bg-gray-50 p-1 text-xs",style:{maxHeight:400}},
+        tl.map(function(t){var idx=sel.indexOf(t.n);
+          return h("div",{key:t.n,onClick:function(){tog(t.n);},
+            className:"cursor-pointer px-1.5 py-0.5 rounded flex justify-between "+(idx>=0?"font-bold":"hover:bg-gray-100"),
+            style:idx>=0?{background:cols[idx]+"20",color:cols[idx]}:{}},
+            h("span",{className:"truncate"},t.n+" ("+t.ns+")"),
+            h("span",{style:{color:t.c>=0?GRN:RED}},(t.c>=0?"+":"")+t.c));})
+      ),
+      h("div",{className:"flex-1",style:{minWidth:0}},
+        h("div",{className:"text-sm font-semibold mb-1",style:{color:NAVY}},"Season by season"),
+        h("div",{style:{height:180}},e(RC.ResponsiveContainer,null,
+          e(RC.BarChart,{data:cd},
+            e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),
+            e(RC.XAxis,{dataKey:"s",tick:{fontSize:8}}),e(RC.YAxis,{tick:{fontSize:9}}),
+            e(RC.Tooltip,null),e(RC.ReferenceLine,{y:0,stroke:"#ccc"}),bars))),
+        h("div",{className:"text-sm font-semibold mb-1 mt-3",style:{color:NAVY}},"Cumulative"),
+        h("div",{style:{height:180}},e(RC.ResponsiveContainer,null,
+          e(RC.LineChart,{data:cum},
+            e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),
+            e(RC.XAxis,{dataKey:"s",tick:{fontSize:8}}),e(RC.YAxis,{tick:{fontSize:9}}),
+            e(RC.Tooltip,null),e(RC.ReferenceLine,{y:0,stroke:"#ccc"}),lines)))
+      )
+    )
+  );
+}
+
+function Calc() {
+  var _lg=useState("laliga"),lg=_lg[0],setLg=_lg[1];
+  var _hW=useState(100),hW=_hW[0],sH=_hW[1];
+  var _aW=useState(50),aW=_aW[0],sA=_aW[1];
+  var m=D.model[lg],cur=lg==="laliga"?"\u20ac":"\u00a3";
+  var x=Math.log2(aW/hW),pa=S(m.theta1+m.beta*x),ph=1-S(m.theta2+m.beta*x),pd=1-ph-pa;
+
+  return h("div",{style:{maxWidth:500,margin:"0 auto"}},
+    h("p",{className:"text-gray-500 text-sm mb-4"},"Compute match probabilities from wage bills."),
+    h("div",{className:"flex gap-2 mb-4"},
+      [["laliga","La Liga"],["pl","Premier League"]].map(function(p){
+        return h("button",{key:p[0],onClick:function(){setLg(p[0]);},
+          className:"px-3 py-1 rounded-full text-sm font-semibold "+(lg===p[0]?"text-white":"text-gray-500 bg-gray-100"),
+          style:lg===p[0]?{background:NAVY}:{}},p[1]);})
+    ),
+    h("div",{className:"grid grid-cols-2 gap-4 mb-4"},
+      [["Home",hW,sH,BLU],["Away",aW,sA,ORA]].map(function(a){
+        return h("div",{key:a[0],className:"p-3 rounded-lg",style:{background:a[3]+"10",border:"2px solid "+a[3]+"30"}},
+          h("div",{className:"font-bold text-sm",style:{color:a[3]}},a[0]),
+          h("div",{className:"text-2xl font-bold",style:{color:NAVY}},cur+a[1]+"M"),
+          h("input",{type:"range",min:5,max:400,value:a[1],onChange:function(ev){a[2](Number(ev.target.value));},className:"w-full",style:{accentColor:a[3]}}));})
+    ),
+    h("div",{className:"space-y-2"},
+      [["Home win",ph,BLU],["Draw",pd,"#888"],["Away win",pa,ORA]].map(function(a){
+        return h("div",{key:a[0]},
+          h("div",{className:"flex justify-between text-sm"},
+            h("span",{style:{color:a[2]}},a[0]),h("b",{style:{color:a[2]}},(a[1]*100).toFixed(1)+"%")),
+          h("div",{className:"bg-gray-200 rounded-full h-4"},
+            h("div",{className:"h-full rounded-full",style:{width:(a[1]*100)+"%",background:a[2]}})));})
+    )
+  );
+}
+
+var tabs=[{id:"tracker",l:"Season Tracker"},{id:"badrun",l:"Bad Run Checker"},{id:"h2h",l:"Head to Head"},{id:"explorer",l:"Explorer"},{id:"calc",l:"Calculator"}];
+
+function App() {
+  var _tab=useState("tracker"),tab=_tab[0],setTab=_tab[1];
+  return h("div",{className:"min-h-screen bg-white"},
+    h("div",{className:"py-4 px-5",style:{background:NAVY}},
+      h("h1",{className:"text-xl font-bold text-white",style:{fontFamily:"Georgia,serif"}},"What money can\u2019t buy"),
+      h("p",{className:"text-blue-200 text-xs"},"La Liga & Premier League | 9,008 matches | 13 seasons | 50,000 simulations")
+    ),
+    h("div",{className:"border-b bg-gray-50 sticky top-0 z-10 flex overflow-x-auto"},
+      tabs.map(function(t){
+        return h("button",{key:t.id,onClick:function(){setTab(t.id);},
+          className:"px-4 py-2 text-sm font-medium border-b-2 "+(tab===t.id?"border-current":"border-transparent text-gray-500"),
+          style:tab===t.id?{color:NAVY}:{}},t.l);})
+    ),
+    h("div",{style:{maxWidth:950,margin:"0 auto",padding:16}},
+      tab==="tracker"?e(Tracker,null):null,
+      tab==="badrun"?e(BadRun,null):null,
+      tab==="h2h"?e(H2H,null):null,
+      tab==="explorer"?e(Explorer,null):null,
+      tab==="calc"?e(Calc,null):null
+    ),
+    h("div",{className:"text-center text-xs text-gray-400 py-3 border-t"},"Ordered logit + Monte Carlo | whatmoneycantbuyfootball@gmail.com")
+  );
+}
+
+// Boot
+fetch('data.json')
+  .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+  .then(function(data){
+    D=data;
+    ReactDOM.render(e(App),document.getElementById('root'));
+  })
+  .catch(function(err){
+    document.getElementById('root').innerHTML='<div style="padding:40px;text-align:center"><h2>Error loading data</h2><p style="color:red">'+err.message+'</p><p>Make sure data.json is in the same folder as index.html</p></div>';
+  });
+</script>
+</body>
+</html>
