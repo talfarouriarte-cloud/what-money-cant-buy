@@ -26,6 +26,8 @@ var _thId=0;
 function TH(props){var myId=React.useMemo(function(){return++_thId;},[]);
 return h("th",Object.assign({},props.sty,{onClick:function(ev){ev.stopPropagation();if(_thSet)_thSet(_thOpen===myId?null:myId);},style:Object.assign({},props.sty.style||{},{cursor:"help",position:"relative"})}),props.label,
 _thOpen===myId?h("div",{style:{position:"absolute",top:"100%",right:0,zIndex:50,background:"#4A5568",color:"#fff",padding:"4px 8px",borderRadius:6,fontSize:10,fontWeight:400,whiteSpace:"nowrap",boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}},props.tip):null);}
+function Info(props){var _s=React.useState(false),open=_s[0],setOpen=_s[1];
+return h("div",{className:"mb-3"},h("button",{onClick:function(){setOpen(!open);},className:"flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600",style:{cursor:"pointer"}},h("span",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:8,border:"1px solid #ccc",fontSize:10,fontWeight:600,color:"#999"}},open?"\u2212":"\u2139"),h("span",null,open?"Hide info":"About this tab")),open?h("div",{className:"mt-2 p-3 rounded-lg text-xs text-gray-600 leading-relaxed",style:{background:"#f8f9fa",border:"1px solid #e9ecef"}},props.children):null);}
 function rkBg(rk,preRk){if(rk===null||preRk===null)return"transparent";if(rk<preRk)return"rgba(46,139,87,0.12)";if(rk>preRk)return"rgba(192,57,43,0.1)";return"transparent";}
 function getHash(){try{var h=window.location.hash.slice(1);var o={};h.split("&").forEach(function(p){var kv=p.split("=");if(kv[0])o[kv[0]]=decodeURIComponent(kv[1]||"");});return o;}catch(e){return {};}}
 function setHash(k,v){var o=getHash();o[k]=v;var parts=[];for(var key in o){if(o[key])parts.push(key+"="+encodeURIComponent(o[key]));}window.location.hash=parts.join("&");}
@@ -111,7 +113,7 @@ if(d.actual!==undefined)rows.push(h("div",{key:"a",style:{color:B}},"Actual: "+d
 if(d.curMed!==undefined&&!isPast)rows.push(h("div",{key:"m",style:{color:B,opacity:0.7}},"Proj median: "+d.curMed));
 if(d.curBase!==undefined&&d.curBand!==undefined&&d.curBand>0)rows.push(h("div",{key:"b",className:"text-gray-400"},"Range: "+d.curBase+"-"+(d.curBase+d.curBand)));
 if(d.exp!==undefined)rows.push(h("div",{key:"e",className:"text-gray-500"},"Expected: "+d.exp));
-if(d.preMed!==undefined)rows.push(h("div",{key:"p",style:{color:O}},"Pre-season: "+d.preMed));
+if(d.preMed!==undefined)rows.push(h("div",{key:"p",style:{color:O}},"Budget: "+d.preMed));
 if(rData){rows.push(h("div",{key:"pr",className:"mt-1 pt-1",style:{borderTop:"1px solid #eee"}},
 h("div",{className:"flex gap-1 items-center",style:{fontSize:10}},
 h("span",{style:{color:G,fontWeight:600}},"W "+Math.round(rData[2]*100)+"%"),
@@ -180,6 +182,7 @@ return h("div",null,
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},
 e(LP,{lg:lg,set:switchLg}),
 h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s+(s==="25/26"?" (current)":""));}))),
+e(Info,null,"Track actual points against budget expectations. Budget forecast shows what the wage model predicts before the season. Updated forecast locks in results and simulates remaining matches (10,000 Monte Carlo iterations). Select up to 3 teams to compare."),
 h("div",{className:"flex gap-4"},
 h("div",{className:"hidden sm:block w-44 shrink-0"},teamListEl),
 h("div",{className:"flex-1",style:{minWidth:0}},
@@ -188,41 +191,41 @@ h("div",{className:"flex gap-3 mb-2 flex-wrap text-sm"},ops.map(function(o,i){re
 h("div",{style:{height:300}},e(RC.ResponsiveContainer,null,e(RC.AreaChart,{data:cd,margin:{left:0,right:5,top:5,bottom:5}},cc))),
 !multi?h("div",{className:"flex flex-wrap gap-x-4 gap-y-1 mt-1 mb-2 text-xs text-gray-500 justify-center"},
 h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,background:B,display:"inline-block"}}),h("span",null,"Actual")),
-iC&&bd?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,background:B,borderTop:"1px dashed "+B,display:"inline-block",opacity:0.6}}),h("span",null,"MC projection (p50)")):null,
-iC&&bd?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:B,display:"inline-block",opacity:0.15,borderRadius:2}}),h("span",null,"MC range (p10-p90)")):null,
-iC&&bd?h("div",{className:"w-full text-center mt-1",style:{fontSize:9,color:"#aaa"}},"MC = Monte Carlo: 10,000 simulations of remaining matches using the ordered logit wage model"):null,
-pre?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,borderTop:"1px dashed "+O,display:"inline-block",opacity:0.6}}),h("span",null,"Pre-season (p50)")):null,
-pre?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:O,display:"inline-block",opacity:0.1,borderRadius:2}}),h("span",null,"Pre-season range")):null,
+iC&&bd?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,background:B,borderTop:"1px dashed "+B,display:"inline-block",opacity:0.6}}),h("span",null,"Updated projection (p50)")):null,
+iC&&bd?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:B,display:"inline-block",opacity:0.15,borderRadius:2}}),h("span",null,"Updated range (p10-p90)")):null,
+iC&&bd?h("div",{className:"w-full text-center mt-1",style:{fontSize:9,color:"#aaa"}},"Budget = wage model only. Updated = results locked in + 10,000 simulations of remaining matches."):null,
+pre?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,borderTop:"1px dashed "+O,display:"inline-block",opacity:0.6}}),h("span",null,"Budget forecast (p50)")):null,
+pre?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:O,display:"inline-block",opacity:0.1,borderRadius:2}}),h("span",null,"Budget forecast range")):null,
 !iC?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,borderTop:"1px dashed #999",display:"inline-block"}}),h("span",null,"Expected")):null,
 !iC?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:B,display:"inline-block",opacity:0.15,borderRadius:2}}),h("span",null,"Variance (p10-p90)")):null
 ):h("div",{className:"flex flex-wrap gap-x-4 gap-y-1 mt-1 mb-2 text-xs text-gray-500 justify-center"},
 h("span",null,"\u2014 Actual"),
-iC?h("span",null,"- - MC projection"):null,
-iC?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:"#999",display:"inline-block",opacity:0.1,borderRadius:2}}),h("span",null,"MC range")):null,
-iC?h("span",null,"\u00B7\u00B7\u00B7 Pre-season"):null,
+iC?h("span",null,"- - Updated projection"):null,
+iC?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:"#999",display:"inline-block",opacity:0.1,borderRadius:2}}),h("span",null,"Updated range")):null,
+iC?h("span",null,"\u00B7\u00B7\u00B7 Budget forecast"):null,
 !iC?h("span",null,"\u00B7\u00B7 Expected"):null),
 h("div",{className:"mt-3 overflow-x-auto rounded-lg",style:{border:"1px solid #e5e7eb"}},
 h("table",{className:"w-full",style:{minWidth:450,fontSize:11,borderCollapse:"collapse"}},
 h("thead",null,
 h("tr",{style:{background:"#f9fafb"}},
 h("th",{className:"text-left px-2 py-1",rowSpan:2,style:{borderRight:"1px solid #e5e7eb",fontWeight:600}},"Team"),
-iC?h("th",{className:"text-center px-1 py-0.5",colSpan:3,rowSpan:1,style:{borderBottom:"1px solid #e5e7eb",borderRight:"1px solid #e5e7eb",fontSize:9}},"Actual"):
-h("th",{className:"text-center px-1 py-0.5",colSpan:4,rowSpan:1,style:{borderBottom:"1px solid #e5e7eb",borderRight:"1px solid #e5e7eb",fontSize:9}},"Actual"),
-h("th",{className:"text-center px-1 py-0.5",colSpan:3,style:{color:O,borderBottom:"2px solid "+O+"30",borderRight:"1px solid #e5e7eb",fontSize:9}},"Pre-season"),
-iC?h("th",{className:"text-center px-1 py-0.5",colSpan:5,style:{color:B,borderBottom:"2px solid "+B+"30",fontSize:9}},"Current forecast (MC)"):null),
+iC?h("th",{className:"text-center px-1 py-0.5",colSpan:3,rowSpan:1,style:{borderBottom:"1px solid #e5e7eb",borderRight:"1px solid #e5e7eb",fontSize:9}},"Results"):
+h("th",{className:"text-center px-1 py-0.5",colSpan:4,rowSpan:1,style:{borderBottom:"1px solid #e5e7eb",borderRight:"1px solid #e5e7eb",fontSize:9}},"Results"),
+h("th",{className:"text-center px-1 py-0.5",colSpan:3,style:{color:O,borderBottom:"2px solid "+O+"30",borderRight:"1px solid #e5e7eb",fontSize:9}},"Budget forecast"),
+iC?h("th",{className:"text-center px-1 py-0.5",colSpan:5,style:{color:B,borderBottom:"2px solid "+B+"30",fontSize:9}},"Updated forecast"):null),
 h("tr",{style:{background:"#f9fafb",borderBottom:"2px solid #e5e7eb"}},
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{fontSize:9}},label:"GW",tip:"Matchweeks played"}),
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{fontSize:9}},label:"Pts",tip:"Actual points"}),
 !iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{fontSize:9}},label:"Rk",tip:"Actual final rank"}):null,
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{fontSize:9,borderRight:"1px solid #e5e7eb"}},label:"+/-",tip:"Actual minus expected points"}),
-e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Rk",tip:"Pre-season predicted rank"}),
-e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Exp",tip:"Pre-season expected points"}),
-e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9,borderRight:"1px solid #e5e7eb"}},label:"P1",tip:"Pre-season P(champion)"}),
-iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"Rk",tip:"Monte Carlo predicted rank (10,000 simulations)"}):null,
-iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"p10",tip:"Monte Carlo 10th percentile (optimistic floor)"}):null,
-iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"Med",tip:"Monte Carlo median projection (50th percentile)"}):null,
-iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"p90",tip:"Monte Carlo 90th percentile (pessimistic ceiling)"}):null,
-iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"P1",tip:"Monte Carlo probability of finishing 1st"}):null)),
+e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Rk",tip:"Budget forecast predicted rank"}),
+e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Exp",tip:"Budget forecast expected points"}),
+e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9,borderRight:"1px solid #e5e7eb"}},label:"P1",tip:"Budget forecast P(champion)"}),
+iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"Rk",tip:"Updated forecast predicted rank (10,000 simulations)"}):null,
+iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"p10",tip:"Updated forecast 10th percentile (optimistic floor)"}):null,
+iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"Med",tip:"Updated forecast median projection (50th percentile)"}):null,
+iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"p90",tip:"Updated forecast 90th percentile (pessimistic ceiling)"}):null,
+iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"P1",tip:"Updated forecast probability of finishing 1st"}):null)),
 h("tbody",null,sel.map(function(n,i){var t=sD[n];if(!t)return null;
 var ap=t.a[t.a.length-1]||0,ep=t.e[t.e.length-1]||0,df2=ap-ep;
 var jBd=iC&&D.bands[lg]&&D.bands[lg][n]?D.bands[lg][n]:null;
@@ -274,7 +277,7 @@ var cd=lW.map(function(m,i){var v=m[1]?"vs":"@",ex=cE[i],sp=1.3*Math.sqrt(i+1)*1
 return{opp:v+" "+m[0],actual:cA[i],expected:ex,base:Math.max(0,Math.round((ex-sp)*10)/10),range:Math.round(sp*2*10)/10,mp:m[2],me:m[3]};});
 var df=(ca-Math.round(ce*10)/10).toFixed(1);
 return h("div",null,
-h("p",{className:"text-gray-500 text-sm mb-3"},"Compare actual vs expected for specific opponents."),
+e(Info,null,"Test whether a team's recent bad (or good) run is statistically unusual given their wage bill. The shaded area shows expected variance \u2014 results inside the band are normal fluctuation, not a crisis."),
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},e(LP,{lg:lg,set:function(v){sLg(v);sSn(Object.keys(D.seasons[v]).sort().reverse()[0]);sSel(v==="ll"?"Barcelona":"Liverpool");sWin(5);}}),
 h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s);}))),
 h("div",{className:"flex flex-wrap gap-4 mb-4"},
@@ -314,6 +317,7 @@ var cumD=React.useMemo(function(){var cA=0,cB=0,ceA=0,ceB=0;return mt.map(functi
 return{lb:m.sn+(m.hm===tA?" (H)":" (A)"),cA:cA,cB:cB,eA:Math.round(ceA*10)/10,eB:Math.round(ceB*10)/10};});},[mt,tA]);
 return h("div",null,
 h("p",{className:"text-gray-500 text-sm mb-3"},"Head-to-head record with actual vs expected."),
+e(Info,null,"Head-to-head record between two teams across all available seasons, with cumulative overperformance tracked over time."),
 e(LP,{lg:lg,set:function(v){sLg(v);if(v==="ll"){sTA("Real Madrid");sTB("At Madrid");}else{sTA("Liverpool");sTB("Man United");}}}),
 h("div",{className:"flex gap-3 mb-5 flex-wrap mt-3"},
 h("div",null,h("label",{className:"text-xs text-gray-500 block mb-1"},"Team A"),h("select",{value:tA,onChange:function(ev){sTA(ev.target.value);},className:"border rounded px-2 py-1.5 text-sm",style:{minWidth:150,color:B,fontWeight:600}},allT.map(function(t){return h("option",{key:t,value:t},t);}))),
@@ -389,10 +393,10 @@ if(mode==="pts"){r[t]=Math.round(cumOP*10)/10;}
 else if(mode==="norm"){var avgExp=cumExp/n;r[t]=avgExp>0?Math.round((cumOP/n)/avgExp*1000)/10:0;}
 else{var p=pval(cumOP,n*38);r[t]=Math.round((cumOP>=0?1:-1)*(100-p*100)*10)/10;}});return r;});},[sel,teams,mode,win]);
 var sfx=mode==="pts"?"pts":mode==="norm"?"%":"";
-var teamListEl=h("div",{className:"overflow-y-auto rounded bg-gray-50 p-1 text-xs",style:{maxHeight:400}},tl.map(function(t){var idx=sel.indexOf(t.n);return h("div",{key:t.n,onClick:function(){tog(t.n);},className:"cursor-pointer px-1.5 py-0.5 rounded flex justify-between "+(idx>=0?"font-bold":"hover:bg-gray-100"),style:idx>=0?{background:cols[idx]+"20",color:cols[idx]}:{}},h("span",{className:"truncate"},t.n+" ("+t.ns+")"),h("span",{style:{color:t.c>=0?G:R}},(t.c>=0?"+":"")+t.c+sfx));}));
+var teamListEl=h("div",{className:"overflow-y-auto rounded bg-gray-50 p-1 text-xs",style:{maxHeight:400}},tl.map(function(t){var idx=sel.indexOf(t.n);return h("div",{key:t.n,onClick:function(){tog(t.n);},className:"cursor-pointer px-1.5 py-0.5 rounded flex justify-between "+(idx>=0?"font-bold":"hover:bg-gray-100"),style:idx>=0?{background:cols[idx]+"20",color:cols[idx]}:{}},h("span",{className:"truncate"},t.n+" ("+t.ns+")"),h("span",{style:{color:t.c>=0?G:R}},(t.c>=0?"+":"")+t.c+(sfx||"")));}));
 var cumLabel=win==="all"?(mode==="ms"?"Trailing MS":"Cumulative"):"Trailing "+winN+"yr"+(mode==="ms"?" MS":"");
 return h("div",null,
-h("p",{className:"text-gray-500 text-sm mb-3"},"Compare overperformance across teams and seasons."),
+e(Info,null,"Compare how much each team over- or underperforms their wage bill. Extra pts: raw points above/below expectation. Normalized: budget-adjusted percentage ((cum. overperf \u00f7 seasons) \u00f7 avg expected pts/season \u00d7 100). MS (Managerial Score): sign(overperf) \u00d7 (100 \u2212 p), measuring statistical confidence that performance is not due to chance. Time windows control the trailing period for the cumulative chart."),
 h("div",{className:"flex flex-wrap gap-3 items-end mb-3"},
 e(LP,{lg:lg,set:function(v){sLg(v);sSel(v==="ll"?["Villarreal","At Madrid","Valencia"]:["Liverpool","Man City","Man United"]);}}),
 h("div",{className:"flex gap-1"},modes.map(function(m){return h("button",{key:m.k,title:m.tip,onClick:function(){setMode(m.k);},className:"px-2 py-0.5 rounded text-xs font-medium "+(mode===m.k?"text-white":"text-gray-500 bg-gray-100"),style:mode===m.k?{background:N}:{}},m.l);})),
@@ -413,6 +417,7 @@ var _2=React.useState(100),hW=_2[0],sH=_2[1];var _3=React.useState(50),aW=_3[0],
 var m=D.model[lg],cur=lg==="laliga"?"\u20ac":"\u00a3";
 var x=Math.log2(aW/hW),pa=Sg(m.theta1+m.beta*x),ph=1-Sg(m.theta2+m.beta*x),pd=1-ph-pa;
 return h("div",{style:{maxWidth:500,margin:"0 auto"}},
+e(Info,null,"Compute match-outcome probabilities (home win / draw / away win) from any two wage bills using the ordered logit model. Adjust the sliders to see how budget differences translate into win probabilities."),
 h("div",{className:"flex gap-2 mb-4"},[["laliga","La Liga"],["pl","Premier League"]].map(function(p){return h("button",{key:p[0],onClick:function(){sLg(p[0]);},className:"px-3 py-1 rounded-full text-sm font-semibold "+(lg===p[0]?"text-white":"text-gray-500 bg-gray-100"),style:lg===p[0]?{background:N}:{}},p[1]);})),
 h("div",{className:"grid grid-cols-2 gap-4 mb-4"},[["Home",hW,sH,B],["Away",aW,sA,O]].map(function(a){return h("div",{key:a[0],className:"p-3 rounded-lg",style:{background:a[3]+"10",border:"2px solid "+a[3]+"30"}},h("div",{className:"font-bold text-sm",style:{color:a[3]}},a[0]),h("div",{className:"text-2xl font-bold",style:{color:N}},cur+a[1]+"M"),h("input",{type:"range",min:5,max:400,value:a[1],onChange:function(ev){a[2](Number(ev.target.value));},className:"w-full",style:{accentColor:a[3]}}));})),
 h("div",{className:"space-y-2"},[["Home win",ph,B],["Draw",pd,"#888"],["Away win",pa,O]].map(function(a){return h("div",{key:a[0]},h("div",{className:"flex justify-between text-sm"},h("span",{style:{color:a[2]}},a[0]),h("b",{style:{color:a[2]}},(a[1]*100).toFixed(1)+"%")),h("div",{className:"bg-gray-200 rounded-full h-4"},h("div",{className:"h-full rounded-full",style:{width:(a[1]*100)+"%",background:a[2]}})));})));}
@@ -462,7 +467,7 @@ if(p===7)return h("span",{style:{color:"#27AE60"}},p+sfx);
 if(p<=17)return h("span",{className:"text-gray-400"},p+sfx);
 return h("span",{style:{color:"#E74C3C",fontWeight:700}},p+sfx);}
 return h("div",null,
-h("p",{className:"text-gray-500 text-sm mb-3"},"Probability of finishing in each position group. ",h("span",{className:"text-gray-400"},"MC = Monte Carlo: 10,000 full-league simulations using the ordered logit wage model.")),
+e(Info,null,"Pre-season and in-season probabilities of finishing in each position group (champion, Champions League, Europa League, Conference League, mid-table, relegation). Based on 10,000 joint league simulations where all 20 teams play simultaneously. Budget forecast uses only wage bills; Updated forecast locks in actual results and simulates remaining matches."),
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},
 e(LP,{lg:lg,set:function(v){sLg(v);var sk=Object.keys(D.pos&&D.pos[v]||{}).sort().reverse();if(sk.length>0)sSn(sk[0]);}}),
 h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s+(s==="25/26"?" (current)":""));}))),
@@ -472,20 +477,20 @@ h("thead",null,
 h("tr",{style:{background:"#f9fafb"}},
 h("th",{className:"text-left px-2 py-1",rowSpan:2,style:{borderRight:"1px solid #e5e7eb",fontWeight:600}},"Team"),
 e(TH,{sty:{className:"text-center px-1 py-1",rowSpan:2,style:{borderRight:"1px solid #e5e7eb",fontSize:10}},label:"Pts",tip:iC?"Current actual points":"Final actual points"}),
-h("th",{className:"text-center px-1 py-0.5",colSpan:8,style:{color:O,borderBottom:"2px solid "+O+"30",borderRight:"1px solid #e5e7eb",fontSize:10}},"Pre-season forecast"),
-iC&&posD.cur?h("th",{className:"text-center px-1 py-0.5",colSpan:8,style:{color:B,borderBottom:"2px solid "+B+"30",borderRight:"1px solid #e5e7eb",fontSize:10}},"Current forecast (MC)"):null,
+h("th",{className:"text-center px-1 py-0.5",colSpan:8,style:{color:O,borderBottom:"2px solid "+O+"30",borderRight:"1px solid #e5e7eb",fontSize:10}},"Budget forecast"),
+iC&&posD.cur?h("th",{className:"text-center px-1 py-0.5",colSpan:8,style:{color:B,borderBottom:"2px solid "+B+"30",borderRight:"1px solid #e5e7eb",fontSize:10}},"Updated forecast"):null,
 !iC?e(TH,{sty:{className:"text-center px-1 py-0.5",rowSpan:2,style:{fontSize:10}},label:"Final",tip:"Actual final league position"}):null),
 h("tr",{style:{background:"#f9fafb",borderBottom:"2px solid #e5e7eb"}},
-e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Rk",tip:"Pre-season predicted rank (by expected points)"}),
-e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Exp",tip:"Pre-season expected points (from wage model)"}),
+e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Rk",tip:"Budget forecast predicted rank (by expected points)"}),
+e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Exp",tip:"Budget forecast expected points (from wage model)"}),
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#FFD700",fontSize:9}},label:"1st",tip:"Probability of winning the league (10,000 simulations)"}),
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#1A56DB",fontSize:9}},label:"UCL",tip:"Probability of finishing in top 4 (Champions League)"}),
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#E67E22",fontSize:9}},label:"UEL",tip:"Probability of finishing 5th-6th (Europa League)"}),
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#27AE60",fontSize:9}},label:"Conf",tip:"Probability of finishing 7th (Conference League)"}),
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#95A5A6",fontSize:9}},label:"Mid",tip:"Probability of finishing 8th-17th"}),
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#E74C3C",fontSize:9}},label:"Rel",tip:"Probability of relegation (18th-20th)"}),
-iC&&posD.cur?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9,borderLeft:"1px solid #e5e7eb"}},label:"Rk",tip:"Monte Carlo predicted rank (by projected points)"}):null,
-iC&&posD.cur?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"Proj",tip:"Monte Carlo projected final points (median of 10,000 simulations)"}):null,
+iC&&posD.cur?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9,borderLeft:"1px solid #e5e7eb"}},label:"Rk",tip:"Updated forecast predicted rank (by projected points)"}):null,
+iC&&posD.cur?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"Proj",tip:"Updated forecast projected points (median of 10,000 simulations)"}):null,
 iC&&posD.cur?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#FFD700",fontSize:9}},label:"1st",tip:"Current probability of winning the league"}):null,
 iC&&posD.cur?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#1A56DB",fontSize:9}},label:"UCL",tip:"Current probability of top 4"}):null,
 iC&&posD.cur?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#E67E22",fontSize:9}},label:"UEL",tip:"Current probability of 5th-6th"}):null,
@@ -505,7 +510,47 @@ iC&&r.cur?cats.map(function(c){return pctCell(r.cur[c.k],c.k,"c"+c.k);}):null,
 !iC?h("td",{className:"px-2 py-0.5 text-right",style:{background:r.actPos?rkBg(r.actPos,r.preRk):"transparent"}},r.actPos?posLabel(r.actPos):"-"):null
 );})))));}
 
-var tabs=[{id:"tracker",l:"Season Tracker"},{id:"predictions",l:"Predictions"},{id:"badrun",l:"Bad Run Checker"},{id:"h2h",l:"Head to Head"},{id:"explorer",l:"Overperformance"},{id:"calc",l:"Calculator"}];
+function Methodology(){
+var F=function(t){return h("span",{style:{fontFamily:"serif",fontStyle:"italic"}},t);};
+var Eq=function(props){return h("div",{className:"my-3 px-4 py-2 rounded text-center",style:{background:"#f8f9fa",border:"1px solid #e9ecef",fontFamily:"serif",fontSize:13}},props.children);};
+var Sec=function(props){return h("div",{className:"mb-6"},h("h3",{className:"font-bold text-sm mb-2",style:{color:N}},props.title),props.children);};
+return h("div",{style:{maxWidth:700,margin:"0 auto"},className:"text-sm text-gray-700 leading-relaxed"},
+h("h2",{className:"text-lg font-bold mb-4",style:{color:N,fontFamily:"Georgia,serif"}},"Methodology"),
+e(Sec,{title:"The model"},
+h("p",null,"Match outcomes (home win, draw, away loss) are modelled using an ",h("b",null,"ordered logistic regression")," where the single predictor is the log-ratio of wage bills:"),
+e(Eq,null,F("x")," = log",h("sub",null,"2"),"(",F("W"),h("sub",null,"away")," / ",F("W"),h("sub",null,"home"),")"),
+h("p",null,"The model estimates three parameters: ",F("\u03b2")," (budget sensitivity), ",F("\u03b8"),h("sub",null,"1")," and ",F("\u03b8"),h("sub",null,"2")," (cut-points). The probability of each outcome for the home team is:"),
+e(Eq,null,"P(home win) = 1 \u2212 \u03c3(",F("\u03b8"),h("sub",null,"2")," + ",F("\u03b2"),F("x"),")"),
+e(Eq,null,"P(draw) = \u03c3(",F("\u03b8"),h("sub",null,"2")," + ",F("\u03b2"),F("x"),") \u2212 \u03c3(",F("\u03b8"),h("sub",null,"1")," + ",F("\u03b2"),F("x"),")"),
+e(Eq,null,"P(away win) = \u03c3(",F("\u03b8"),h("sub",null,"1")," + ",F("\u03b2"),F("x"),")"),
+h("p",null,"where \u03c3(z) = 1/(1+e",h("sup",null,"\u2212z"),") is the logistic function.")),
+e(Sec,{title:"Estimated parameters"},
+h("div",{className:"overflow-x-auto"},h("table",{className:"text-xs",style:{borderCollapse:"collapse"}},
+h("thead",null,h("tr",{style:{borderBottom:"2px solid #ddd"}},h("th",{className:"text-left pr-4 py-1"},"League"),h("th",{className:"text-right px-3"},F("\u03b2")),h("th",{className:"text-right px-3"},F("\u03b8"),h("sub",null,"1")),h("th",{className:"text-right px-3"},F("\u03b8"),h("sub",null,"2")),h("th",{className:"text-right px-3"},"Matches"))),
+h("tbody",null,
+h("tr",{style:{borderBottom:"1px solid #eee"}},h("td",{className:"py-1 pr-4"},"La Liga"),h("td",{className:"text-right px-3"},"0.4719"),h("td",{className:"text-right px-3"},"\u22121.0404"),h("td",{className:"text-right px-3"},"0.2081"),h("td",{className:"text-right px-3"},"4,448")),
+h("tr",null,h("td",{className:"py-1 pr-4"},"Premier League"),h("td",{className:"text-right px-3"},"0.6760"),h("td",{className:"text-right px-3"},"\u22120.8358"),h("td",{className:"text-right px-3"},"0.2422"),h("td",{className:"text-right px-3"},"4,560")))))),
+e(Sec,{title:"Data"},
+h("p",null,"9,008 matches across 13 seasons (2013/14\u20132025/26) in La Liga and the Premier League. Wage data sourced from Capology and FBref. Match results from football-data.co.uk.")),
+e(Sec,{title:"Budget forecast (pre-season)"},
+h("p",null,"The full 380-match season is simulated 10,000 times using only wage bills. Each match is drawn independently from the ordered logit probabilities. Expected points = average outcome across simulations.")),
+e(Sec,{title:"Updated forecast (in-season)"},
+h("p",null,"Played matches are locked in at their actual result. The remaining fixture calendar is simulated 10,000 times. This produces prediction intervals (p10, median, p90) for final points.")),
+e(Sec,{title:"Position probabilities"},
+h("p",null,"All 20 teams are simulated jointly\u2014each iteration produces a complete league table. Position probabilities (champion, top 4, relegation, etc.) are the fraction of iterations where each team finishes in that zone. This captures interdependence: one team\u2019s win is another\u2019s loss.")),
+e(Sec,{title:"Overperformance"},
+h("p",null,"Defined as actual points minus model-expected points. A positive value means the team extracted more from its wage bill than the model predicts."),
+h("p",{className:"mt-2 font-semibold"},"Normalized overperformance:"),
+e(Eq,null,"Norm = (cum. overperf \u00f7 ",F("n"),") \u00f7 avg expected pts/season \u00d7 100"),
+h("p",{className:"mt-2 font-semibold"},"Managerial Score (MS):"),
+e(Eq,null,"MS = sign(overperf) \u00d7 (100 \u2212 ",F("p"),")"),
+h("p",null,"where ",F("p")," is the two-tailed probability that the cumulative overperformance is due to chance, computed as:"),
+e(Eq,null,F("p")," = 2 \u00d7 (1 \u2212 \u03a6(|cum. overperf| / (\u03c3 \u00d7 \u221a",F("n"),h("sub",null,"matches"),")))"),
+h("p",null,"with \u03c3 \u2248 1.58 (the standard deviation of single-match residuals from the ordered logit model) and \u03a6 the standard normal CDF.")),
+e(Sec,{title:"Reference"},
+h("p",null,"For the full analysis, see: ",h("a",{href:"https://talfarouriarte-cloud.github.io/what-money-cant-buy/What_Money_Cant_Buy_in_Football.pdf",target:"_blank",style:{color:B,textDecoration:"underline"}},"What Money Can\u2019t Buy in Football")," (PDF)")));}
+
+var tabs=[{id:"tracker",l:"Season Tracker"},{id:"predictions",l:"Predictions"},{id:"badrun",l:"Bad Run Checker"},{id:"h2h",l:"Head to Head"},{id:"explorer",l:"Overperformance"},{id:"calc",l:"Calculator"},{id:"method",l:"Methodology"}];
 function App(){useTHState();
 React.useEffect(function(){function close(){if(_thSet)_thSet(null);}document.addEventListener("click",close);return function(){document.removeEventListener("click",close);};},[]);
 var _1=React.useState(getHash().tab||"tracker"),tab=_1[0],sTab0=_1[1];
@@ -513,7 +558,7 @@ function sTab(v){sTab0(v);setHash("tab",v);}
 return h("div",{className:"min-h-screen bg-white"},
 h("div",{className:"py-4 px-5",style:{background:N}},h("h1",{className:"text-xl font-bold text-white",style:{fontFamily:"Georgia,serif"}},"What money can\u2019t buy"),h("p",{className:"text-blue-200 text-xs"},"La Liga & Premier League | 9,008 matches | 13 seasons")),
 h("div",{className:"border-b bg-gray-50 sticky top-0 z-10 flex overflow-x-auto"},tabs.map(function(t){return h("button",{key:t.id,onClick:function(){sTab(t.id);},className:"px-4 py-2 text-sm font-medium border-b-2 "+(tab===t.id?"border-current":"border-transparent text-gray-500"),style:tab===t.id?{color:N}:{}},t.l);})),
-h("div",{style:{maxWidth:950,margin:"0 auto",padding:16}},tab==="tracker"?e(Tracker):null,tab==="predictions"?e(Predictions):null,tab==="badrun"?e(BadRun):null,tab==="h2h"?e(H2H):null,tab==="explorer"?e(Explorer):null,tab==="calc"?e(Calc):null),
+h("div",{style:{maxWidth:950,margin:"0 auto",padding:16}},tab==="tracker"?e(Tracker):null,tab==="predictions"?e(Predictions):null,tab==="badrun"?e(BadRun):null,tab==="h2h"?e(H2H):null,tab==="explorer"?e(Explorer):null,tab==="calc"?e(Calc):null,tab==="method"?e(Methodology):null),
 h("div",{className:"text-center text-xs text-gray-400 py-3 border-t"},"Ordered logit + Monte Carlo | whatmoneycantbuyfootball@gmail.com"));}
 
 fetch("data.json").then(function(r){return r.json();}).then(function(d){D=d;ReactDOM.render(e(App),document.getElementById("root"));}).catch(function(err){document.getElementById("root").innerHTML="<p style='padding:40px;text-align:center;color:red'>Error: "+err.message+"</p>";});
