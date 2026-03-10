@@ -31,9 +31,10 @@ className:"px-3 py-1 rounded-full text-sm font-semibold "+(p.lg===x[0]?"text-whi
 style:p.lg===x[0]?{background:N}:{}},x[1]);}));}
 
 function Tracker(){
-var _1=React.useState(initH.lg||"ll"),lg=_1[0],sLg0=_1[1];
-var _2=React.useState(initH.sel?initH.sel.split(","):["Barcelona"]),sel=_2[0],sSel=_2[1];
-var _3=React.useState(initH.sn||"25/26"),sn=_3[0],sSn0=_3[1];
+var hh=getHash();
+var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
+var _2=React.useState(hh.sel?hh.sel.split(","):["Barcelona"]),sel=_2[0],sSel=_2[1];
+var _3=React.useState(hh.sn||"25/26"),sn=_3[0],sSn0=_3[1];
 var _4=React.useState(false),showList=_4[0],setShowList=_4[1];
 function sLg(v){sLg0(v);setHash("lg",v);}
 function sSn(v){sSn0(v);setHash("sn",v);}
@@ -251,10 +252,14 @@ iC?h("td",{className:"px-1 py-0.5 text-right",style:{color:B,fontWeight:600}},tC
 }
 
 function BadRun(){
-var _1=React.useState("ll"),lg=_1[0],sLg=_1[1];
-var _2=React.useState("25/26"),sn=_2[0],sSn=_2[1];
-var _3=React.useState("Barcelona"),sel=_3[0],sSel=_3[1];
+var hh=getHash();
+var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
+var _2=React.useState(hh.sn||"25/26"),sn=_2[0],sSn0=_2[1];
+var _3=React.useState(hh.br||"Barcelona"),sel=_3[0],sSel0=_3[1];
 var _4=React.useState(5),win=_4[0],sWin=_4[1];
+function sLg(v){sLg0(v);setHash("lg",v);}
+function sSn(v){sSn0(v);setHash("sn",v);}
+function sSel(v){sSel0(v);setHash("br",v);}
 var sL=React.useMemo(function(){return Object.keys(D.seasons[lg]).sort().reverse();},[lg]);
 var sD=D.seasons[lg][sn]||{},tl=React.useMemo(function(){return Object.keys(sD).sort();},[sD]);
 var t=sD[sel];
@@ -268,7 +273,7 @@ return{opp:v+" "+m[0],actual:cA[i],expected:ex,base:Math.max(0,Math.round((ex-sp
 var df=(ca-Math.round(ce*10)/10).toFixed(1);
 return h("div",null,
 h("p",{className:"text-gray-500 text-sm mb-3"},"Compare actual vs expected for specific opponents."),
-h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},e(LP,{lg:lg,set:function(v){sLg(v);sSn(Object.keys(D.seasons[v]).sort().pop());sSel(v==="ll"?"Barcelona":"Liverpool");sWin(5);}}),
+h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},e(LP,{lg:lg,set:function(v){sLg(v);sSn(Object.keys(D.seasons[v]).sort().reverse()[0]);sSel(v==="ll"?"Barcelona":"Liverpool");sWin(5);}}),
 h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s);}))),
 h("div",{className:"flex flex-wrap gap-4 mb-4"},
 h("select",{value:sel,onChange:function(ev){sSel(ev.target.value);},className:"border rounded px-2 py-1.5 text-sm flex-shrink-0"},tl.map(function(x){return h("option",{key:x,value:x},x);})),
@@ -287,9 +292,13 @@ h("tbody",null,lW.map(function(m,i){var d=m[2]-m[3];return h("tr",{key:i,classNa
 }
 
 function H2H(){
-var _1=React.useState("ll"),lg=_1[0],sLg=_1[1];
-var _2=React.useState("Real Madrid"),tA=_2[0],sTA=_2[1];
-var _3=React.useState("At Madrid"),tB=_3[0],sTB=_3[1];
+var hh=getHash();
+var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
+var _2=React.useState(hh.h2a||"Real Madrid"),tA=_2[0],sTA0=_2[1];
+var _3=React.useState(hh.h2b||"At Madrid"),tB=_3[0],sTB0=_3[1];
+function sLg(v){sLg0(v);setHash("lg",v);}
+function sTA(v){sTA0(v);setHash("h2a",v);}
+function sTB(v){sTB0(v);setHash("h2b",v);}
 var sL=React.useMemo(function(){return Object.keys(D.seasons[lg]).sort().reverse();},[lg]);
 var allT=React.useMemo(function(){var s={};sL.forEach(function(sn){Object.keys(D.seasons[lg][sn]||{}).forEach(function(t){s[t]=true;});});return Object.keys(s).sort();},[lg,sL]);
 var mt=React.useMemo(function(){var res=[];sL.forEach(function(sn){var sd=D.seasons[lg][sn];if(!sd||!sd[tA])return;
@@ -329,9 +338,12 @@ h("tfoot",null,h("tr",{className:"border-t-2 font-bold"},h("td",{className:"py-1
 }
 
 function Explorer(){
-var _1=React.useState("ll"),lg=_1[0],sLg=_1[1];
-var _2=React.useState(["Villarreal","At Madrid","Valencia"]),sel=_2[0],sSel=_2[1];
+var hh=getHash();
+var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
+var _2=React.useState(hh.ex?hh.ex.split(","):["Villarreal","At Madrid","Valencia"]),sel=_2[0],sSel=_2[1];
 var _5=React.useState(false),showList=_5[0],setShowList=_5[1];
+function sLg(v){sLg0(v);setHash("lg",v);}
+React.useEffect(function(){setHash("ex",sel.join(","));},[sel]);
 var teams=lg==="ll"?D.cumulative.ll:D.cumulative.pl;
 var ss=["13/14","14/15","15/16","16/17","17/18","18/19","19/20","20/21","21/22","22/23","23/24","24/25"];
 var tl=React.useMemo(function(){return Object.entries(teams).map(function(en){return{n:en[0],c:en[1][0],ns:en[1][1]};}).sort(function(a,b){return b.c-a.c;});},[teams]);
@@ -364,8 +376,11 @@ h("div",{className:"grid grid-cols-2 gap-4 mb-4"},[["Home",hW,sH,B],["Away",aW,s
 h("div",{className:"space-y-2"},[["Home win",ph,B],["Draw",pd,"#888"],["Away win",pa,O]].map(function(a){return h("div",{key:a[0]},h("div",{className:"flex justify-between text-sm"},h("span",{style:{color:a[2]}},a[0]),h("b",{style:{color:a[2]}},(a[1]*100).toFixed(1)+"%")),h("div",{className:"bg-gray-200 rounded-full h-4"},h("div",{className:"h-full rounded-full",style:{width:(a[1]*100)+"%",background:a[2]}})));})));}
 
 function Predictions(){
-var _1=React.useState("ll"),lg=_1[0],sLg=_1[1];
-var _2=React.useState("25/26"),sn=_2[0],sSn=_2[1];
+var hh=getHash();
+var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
+var _2=React.useState(hh.sn||"25/26"),sn=_2[0],sSn0=_2[1];
+function sLg(v){sLg0(v);setHash("lg",v);}
+function sSn(v){sSn0(v);setHash("sn",v);}
 var sL=React.useMemo(function(){return Object.keys(D.pos&&D.pos[lg]||{}).sort().reverse();},[lg]);
 var posD=D.pos&&D.pos[lg]&&D.pos[lg][sn]?D.pos[lg][sn]:null;
 var sD=D.seasons[lg][sn]||{};
@@ -441,7 +456,7 @@ iC&&r.cur?cats.map(function(c){return pctCell(r.cur[c.k],c.k,"c"+c.k);}):null,
 );})))));}
 
 var tabs=[{id:"tracker",l:"Season Tracker"},{id:"predictions",l:"Predictions"},{id:"badrun",l:"Bad Run Checker"},{id:"h2h",l:"Head to Head"},{id:"explorer",l:"Explorer"},{id:"calc",l:"Calculator"}];
-function App(){var _1=React.useState(initH.tab||"tracker"),tab=_1[0],sTab0=_1[1];
+function App(){var _1=React.useState(getHash().tab||"tracker"),tab=_1[0],sTab0=_1[1];
 function sTab(v){sTab0(v);setHash("tab",v);}
 return h("div",{className:"min-h-screen bg-white"},
 h("div",{className:"py-4 px-5",style:{background:N}},h("h1",{className:"text-xl font-bold text-white",style:{fontFamily:"Georgia,serif"}},"What money can\u2019t buy"),h("p",{className:"text-blue-200 text-xs"},"La Liga & Premier League | 9,008 matches | 13 seasons")),
