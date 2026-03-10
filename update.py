@@ -4,9 +4,11 @@ Daily data update for 'What money can't buy'
 Downloads latest results, recomputes expected points, re-runs MC simulation.
 
 Reads fixture calendar from fixtures.json (built by setup_season.py).
+Optionally updates fixture calendar from football-data.org API (requires FOOTBALL_DATA_API_KEY env var).
 Produces updated data.json with fresh bands anchored at latest results.
 
 Usage: python update.py
+       FOOTBALL_DATA_API_KEY=xxx python update.py  (to update fixtures from API)
 Requirements: pip install pandas numpy scipy requests
 """
 import pandas as pd
@@ -28,6 +30,153 @@ DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(DATA_DIR, 'data.json')
 FIXTURES_FILE = os.path.join(DATA_DIR, 'fixtures.json')
 
+# football-data.org API → our internal name mapping
+# API uses 'shortName'; most match directly, these are the exceptions
+API_NAME_MAP = {
+    # La Liga
+    "Alavés": "Alaves", "Atlético de Madrid": "At Madrid", "Atlético Madrid": "At Madrid",
+    "Atl. Madrid": "At Madrid", "Athletic Club": "Ath Bilbao", "Athletic": "Ath Bilbao",
+    "Club Atlético de Madrid": "At Madrid", "FC Barcelona": "Barcelona",
+    "Real Betis": "Betis", "Celta de Vigo": "Celta", "Celta Vigo": "Celta",
+    "Elche CF": "Elche", "RCD Espanyol": "Espanyol", "Espanyol": "Espanol",
+    "Getafe CF": "Getafe", "Girona FC": "Girona", "Levante UD": "Levante",
+    "RCD Mallorca": "Mallorca", "CA Osasuna": "Osasuna", "Real Oviedo": "Oviedo",
+    "Real Sociedad": "Sociedad", "Rayo Vallecano": "Vallecano", "Villarreal CF": "Villarreal",
+    "Deportivo Alavés": "Alaves", "RC Celta de Vigo": "Celta",
+    "RCD Espanyol de Barcelona": "Espanol",
+    # Premier League
+    "Manchester City": "Man City", "Man City": "Man City",
+    "Manchester United": "Man United", "Man United": "Man United",
+    "Nottm Forest": "Nottm Forest", "Nott'm Forest": "Nottm Forest",
+    "Newcastle United": "Newcastle", "Newcastle": "Newcastle",
+    "Wolverhampton": "Wolves", "Wolves": "Wolves",
+    "AFC Sunderland": "Sunderland",
+    "West Ham United": "West Ham", "West Ham": "West Ham",
+    "Aston Villa": "Aston Villa", "Crystal Palace": "Crystal Palace",
+    "AFC Bournemouth": "Bournemouth",
+    "Brighton & Hove Albion": "Brighton", "Brighton Hove": "Brighton",
+    "Leeds United": "Leeds",
+    "Burnley FC": "Burnley",
+    "Brentford FC": "Brentford",
+}
+COMPETITION_CODES = {'ll': 'PD', 'pl': 'PL'}
+
+def api_name_to_internal(name):
+    """Convert football-data.org team name to our internal name."""
+    if name in API_NAME_MAP:
+        return API_NAME_MAP[name]
+    # Try without common suffixes
+    for suffix in [' FC', ' CF', ' UD', ' CD']:
+        stripped = name.replace(suffix, '').strip()
+        if stripped in API_NAME_MAP:
+            return API_NAME_MAP[stripped]
+    # Strip accents as last resort
+    import unicodedata
+    normalized = unicodedata.normalize('NFD', name)
+    ascii_name = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+    if ascii_name in API_NAME_MAP:
+        return API_NAME_MAP[ascii_name]
+    return name
+
+def fetch_fixtures_from_api():
+    """Fetch full fixture calendar from football-data.org API for both leagues.
+    Returns updated fixtures dict in same format as fixtures.json, or None on failure."""
+    api_key = os.environ.get('FOOTBALL_DATA_API_KEY', '')
+    if not api_key:
+        print("  No FOOTBALL_DATA_API_KEY set, skipping API fixture update")
+        return None
+    
+    headers = {'X-Auth-Token': api_key}
+    base_url = 'https://api.football-data.org/v4/competitions'
+    fixtures = {}
+    
+    for lg, code in COMPETITION_CODES.items():
+        url = f'{base_url}/{code}/matches'
+        print(f"  Fetching {lg} fixtures from football-data.org ({code})...")
+        try:
+            r = requests.get(url, headers=headers, timeout=30)
+            r.raise_for_status()
+            data = r.json()
+            matches = data.get('matches', [])
+            print(f"    Got {len(matches)} matches")
+            
+            if not matches:
+                continue
+            
+            # Build name mapping from this response
+            name_cache = {}
+            for m in matches:
+                for side in ['homeTeam', 'awayTeam']:
+                    api_short = m[side].get('shortName', m[side].get('name', ''))
+                    api_full = m[side].get('name', '')
+                    if api_short not in name_cache:
+                        internal = api_name_to_internal(api_short)
+                        if internal == api_short:
+                            internal = api_name_to_internal(api_full)
+                        name_cache[api_short] = fix_name(internal)
+            
+            # Log name mapping for debugging
+            our_teams = set()
+            for m in matches:
+                h_short = m['homeTeam'].get('shortName', m['homeTeam'].get('name', ''))
+                a_short = m['awayTeam'].get('shortName', m['awayTeam'].get('name', ''))
+                our_teams.add(name_cache.get(h_short, h_short))
+                our_teams.add(name_cache.get(a_short, a_short))
+            print(f"    Teams: {sorted(our_teams)}")
+            
+            # Group by matchday, sort matches within each GW by date
+            gw_matches = {}
+            for m in matches:
+                md = m.get('matchday', 0) or 0
+                if md < 1:
+                    continue
+                if md not in gw_matches:
+                    gw_matches[md] = []
+                
+                h_short = m['homeTeam'].get('shortName', m['homeTeam'].get('name', ''))
+                a_short = m['awayTeam'].get('shortName', m['awayTeam'].get('name', ''))
+                h_name = name_cache.get(h_short, h_short)
+                a_name = name_cache.get(a_short, a_short)
+                
+                status = m.get('status', 'SCHEDULED')
+                is_played = status == 'FINISHED'
+                utc_date = m.get('utcDate', '')
+                
+                gw_matches[md].append({
+                    'home': h_name, 'away': a_name,
+                    'played': is_played, 'date': utc_date,
+                    'status': status
+                })
+            
+            # Build calendar
+            max_gw = max(gw_matches.keys()) if gw_matches else 38
+            calendar = []
+            for gw in range(1, max_gw + 1):
+                gw_list = gw_matches.get(gw, [])
+                # Sort by date within each GW
+                gw_list.sort(key=lambda x: x['date'] or '9999')
+                match_pairs = [[m['home'], m['away']] for m in gw_list]
+                played_flags = [m['played'] for m in gw_list]
+                dates = [m['date'] for m in gw_list]
+                calendar.append({
+                    'gw': gw, 'matches': match_pairs,
+                    'played': played_flags, 'dates': dates
+                })
+            
+            n_played = sum(1 for gw in calendar for p in gw['played'] if p)
+            n_total = sum(len(gw['matches']) for gw in calendar)
+            print(f"    Calendar: {max_gw} matchdays, {n_total} fixtures, {n_played} played")
+            
+            if lg not in fixtures:
+                fixtures[lg] = {}
+            fixtures[lg]['25/26'] = {'calendar': calendar}
+            
+        except Exception as e:
+            print(f"    API FAILED: {e}")
+            continue
+    
+    return fixtures if fixtures else None
+
 def fix_name(n):
     return NAME_MAP.get(n, n)
 
@@ -48,9 +197,20 @@ def download_current_season():
             results[lg] = None
     return results
 
-def process_season(filepath, wages, beta, t1, t2):
+def process_season(filepath, wages, beta, t1, t2, fixtures_calendar=None, lg=None):
     df = pd.read_csv(filepath, encoding='utf-8', on_bad_lines='skip', low_memory=False)
     df = df[['HomeTeam','AwayTeam','FTR']].dropna()
+    
+    # Build matchday lookup from fixture calendar: (home, away) -> official GW
+    gw_lookup = {}
+    if fixtures_calendar and lg:
+        cal = fixtures_calendar.get(lg, {}).get('25/26', {}).get('calendar', [])
+        for gw_data in cal:
+            gw = gw_data.get('gw', 0)
+            for pair in gw_data['matches']:
+                h_fix, a_fix = fix_name(pair[0]), fix_name(pair[1])
+                gw_lookup[(h_fix, a_fix)] = gw
+    
     td = {}
     for t in sorted(set(df['HomeTeam']) | set(df['AwayTeam'])):
         td[t] = {'pts':[],'exp':[],'m':[],'cp':0,'ce':0.0}
@@ -65,15 +225,17 @@ def process_season(filepath, wages, beta, t1, t2):
         elif r['FTR'] == 'A': hp, ap = 0, 3
         else: hp, ap = 1, 1
         eh, ea = ph * 3 + pd_, pa * 3 + pd_
+        official_gw = gw_lookup.get((fix_name(h), fix_name(a)), 0)
         for team, pts, exp, opp, ih in [(h,hp,eh,a,1),(a,ap,ea,h,0)]:
             td[team]['cp'] += pts; td[team]['ce'] += exp
             td[team]['pts'].append(td[team]['cp'])
             td[team]['exp'].append(round(td[team]['ce'], 1))
-            td[team]['m'].append([opp, ih, pts, round(exp, 2)])
+            td[team]['m'].append([opp, ih, pts, round(exp, 2), official_gw])
     return {t: {'a':d['pts'],'e':d['exp'],'m':d['m'],'w':wages.get(t, wages.get(fix_name(t), 0))} for t,d in td.items()}
 
 def get_remaining_fixtures(season_data, fixtures_calendar, lg, season='25/26'):
-    """Get ordered remaining fixtures per team from fixtures.json calendar."""
+    """Get ordered remaining fixtures per team from fixtures.json calendar.
+    Returns {team: [(opp, is_home, gw, date), ...]} ordered by date when available."""
     played = {}
     for team in season_data:
         played[team] = set()
@@ -85,23 +247,27 @@ def get_remaining_fixtures(season_data, fixtures_calendar, lg, season='25/26'):
     if fixtures_calendar:
         cal = fixtures_calendar.get(lg, {}).get(season, {}).get('calendar', [])
         for gw_data in cal:
-            for h, a in gw_data['matches']:
-                h, a = fix_name(h), fix_name(a)
-                # Home team's fixture
+            gw = gw_data.get('gw', 0)
+            dates = gw_data.get('dates', [])
+            for idx, pair in enumerate(gw_data['matches']):
+                h, a = fix_name(pair[0]), fix_name(pair[1])
+                match_date = dates[idx] if idx < len(dates) else ''
                 if h in team_remaining and (a, 1) not in played.get(h, set()):
-                    team_remaining[h].append((a, 1))
-                # Away team's fixture
+                    team_remaining[h].append((a, 1, gw, match_date))
                 if a in team_remaining and (h, 0) not in played.get(a, set()):
-                    team_remaining[a].append((h, 0))
+                    team_remaining[a].append((h, 0, gw, match_date))
+        
+        # Sort by date if dates are available, falling back to calendar order
+        for team in team_remaining:
+            team_remaining[team].sort(key=lambda x: x[3] if x[3] else '9999')
     else:
-        # Fallback: unordered
         teams = list(season_data.keys())
         for team in teams:
             for opp in teams:
                 if opp == team: continue
                 for ih in [1, 0]:
                     if (opp, ih) not in played.get(team, set()):
-                        team_remaining[team].append((opp, ih))
+                        team_remaining[team].append((opp, ih, 0, ''))
     
     return team_remaining
 
@@ -125,7 +291,7 @@ def run_mc_simulation(season_data, wages, beta, t1, t2, remaining_fixtures, n_si
         
         # Compute probabilities for each remaining fixture
         probs = []
-        for opp, is_home in fixtures:
+        for opp, is_home, *_ in fixtures:
             wh = wages.get(team, 20) if is_home else wages.get(opp, wages.get(fix_name(opp), 20))
             wa = wages.get(opp, wages.get(fix_name(opp), 20)) if is_home else wages.get(team, 20)
             x = np.log2(wa / wh)
@@ -218,7 +384,7 @@ def build_match_list(teams, wages, remaining_fixtures, beta, t1, t2):
     matches_seen = set()
     match_list = []
     for t_idx, team in enumerate(teams):
-        for opp, is_home in remaining_fixtures.get(team, []):
+        for opp, is_home, *_ in remaining_fixtures.get(team, []):
             if opp not in teams:
                 continue
             o_idx = teams.index(opp)
@@ -351,6 +517,20 @@ def update():
     else:
         print("  WARNING: No fixtures.json — using unordered fixtures")
     
+    # Update fixture calendar from football-data.org API
+    api_fixtures = fetch_fixtures_from_api()
+    if api_fixtures:
+        if fixtures_cal is None:
+            fixtures_cal = {}
+        for lg_key in api_fixtures:
+            if lg_key not in fixtures_cal:
+                fixtures_cal[lg_key] = {}
+            fixtures_cal[lg_key]['25/26'] = api_fixtures[lg_key]['25/26']
+        # Save updated fixtures.json
+        with open(FIXTURES_FILE, 'w') as f:
+            json.dump(fixtures_cal, f)
+        print("  Updated fixtures.json from API")
+    
     files = download_current_season()
     
     for lg in ['ll', 'pl']:
@@ -366,7 +546,7 @@ def update():
             continue
         
         p = PARAMS[lg]
-        result = process_season(files[lg], wages, p['beta'], p['theta1'], p['theta2'])
+        result = process_season(files[lg], wages, p['beta'], p['theta1'], p['theta2'], fixtures_cal, lg)
         
         # Fix names
         for old, new in NAME_MAP.items():
@@ -396,17 +576,18 @@ def update():
         for team in result:
             rem = remaining.get(team, [])
             r_list = []
-            for opp, is_home in rem:
+            for opp, is_home, gw_num, match_date, *_ in rem:
                 wh = wages.get(team, 20) if is_home else wages.get(opp, wages.get(fix_name(opp), 20))
                 wa = wages.get(opp, wages.get(fix_name(opp), 20)) if is_home else wages.get(team, 20)
                 x = np.log2(wa / wh)
                 ph = float(round(1 - expit(p['theta2'] + p['beta'] * x), 2))
                 pd_ = float(round(expit(p['theta2'] + p['beta'] * x) - expit(p['theta1'] + p['beta'] * x), 2))
                 pa = float(round(1 - ph - pd_, 2))
+                # r entry: [opp, isHome, pWin, pDraw, pLoss, matchday, date]
                 if is_home:
-                    r_list.append([fix_name(opp), 1, ph, pd_, pa])
+                    r_list.append([fix_name(opp), 1, ph, pd_, pa, gw_num, match_date[:10] if match_date else ''])
                 else:
-                    r_list.append([fix_name(opp), 0, pa, pd_, ph])
+                    r_list.append([fix_name(opp), 0, pa, pd_, ph, gw_num, match_date[:10] if match_date else ''])
             result[team]['r'] = r_list
         data['seasons'][lg]['25/26'] = result
         print(f"  Added remaining fixtures: {len(result[sample].get('r',[]))} per team")
