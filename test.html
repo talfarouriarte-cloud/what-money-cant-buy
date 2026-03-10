@@ -676,15 +676,93 @@ e(Sec,{title:"Reference"},
 h("p",null,"For the full analysis, including regression diagnostics, Monte Carlo validation, and detailed discussion of results, see:"),
 h("p",{className:"mt-1"},h("a",{href:"https://talfarouriarte-cloud.github.io/what-money-cant-buy/What%20money%20cant%20buy.pdf",target:"_blank",style:{color:B,textDecoration:"underline",fontWeight:600}},"\u201cWhat Money Can\u2019t Buy in Football\u201d")," (PDF)")));}
 
-var tabs=[{id:"tracker",l:"Season Tracker"},{id:"predictions",l:"Predictions"},{id:"badrun",l:"Run Evaluator"},{id:"h2h",l:"Head to Head"},{id:"explorer",l:"Overperformance"},{id:"calc",l:"Calculator"},{id:"method",l:"Methodology"}];
+function Home(props){
+var hh=getHash();
+var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
+var lgK=lg==="ll"?"laliga":"pl";
+var sd25=D.seasons[lg]["25/26"]||{};
+var teamList=React.useMemo(function(){return Object.entries(sd25).filter(function(e){return e[1].w>0;}).map(function(e){return{n:e[0],w:e[1].w,pts:e[1].a[e[1].a.length-1]||0};}).sort(function(a,b){return b.pts-a.pts;});},[lg]);
+var _2=React.useState(hh.sel?hh.sel.split(",")[0]:(lg==="ll"?"Barcelona":"Liverpool")),team=_2[0],setTeam0=_2[1];
+function sLg(v){sLg0(v);setHash("lg",v);var defT=v==="ll"?"Barcelona":"Liverpool";setTeam(defT);}
+function setTeam(v){setTeam0(v);setHash("sel",v);setHash("br",v);setHash("h2a",v);}
+var t=sd25[team];
+var cur=lg==="ll"?"\u20ac":"\u00a3";
+if(!t)return h("div",null,h("div",{className:"text-center py-8"},e(LP,{lg:lg,set:sLg}),h("p",{className:"text-gray-400 mt-4"},"Select a team")));
+var nP=t.a.length,ap=t.a[nP-1]||0,ep=t.e[nP-1]||0,df=ap-ep;
+// Card data
+var bd=D.bands[lg]&&D.bands[lg][team]?D.bands[lg][team]:null;
+var posD=D.pos&&D.pos[lg]&&D.pos[lg]["25/26"]?D.pos[lg]["25/26"]:null;
+var curPos=posD&&posD.cur&&posD.cur[team]?posD.cur[team]:null;
+var prePos=posD&&posD.pre&&posD.pre[team]?posD.pre[team]:null;
+var cum=D.cumulative[lg]&&D.cumulative[lg][team]?D.cumulative[lg][team]:null;
+var nextM=t.r&&t.r.length>0?t.r[0]:null;
+// Last 5 games
+var last5=t.m.slice(Math.max(0,nP-5));
+var l5a=0,l5e=0;last5.forEach(function(m){l5a+=m[2];l5e+=m[3];});
+var l5d=l5a-l5e;
+// Next match probs
+var nxW=nextM?Math.round(nextM[2]*100):0,nxD=nextM?Math.round(nextM[3]*100):0,nxL=nextM?Math.round(nextM[4]*100):0;
+// Managerial Score
+var SIG=1.58;
+function normCDF(z){var t2=1/(1+0.2316419*Math.abs(z));var d2=0.3989423*Math.exp(-z*z/2);var p=d2*t2*(0.3193815+t2*(-0.3565638+t2*(1.781478+t2*(-1.821256+t2*1.330274))));return z>0?1-p:p;}
+var ms=cum?(function(){var co=cum[0],nm=cum[1]*38;if(nm<=0||co===0)return 0;var z=Math.abs(co)/(SIG*Math.sqrt(nm));var p=2*(1-normCDF(z));return Math.round((co>=0?1:-1)*(100-p*100)*10)/10;})():0;
+// Projected final
+var projFin=bd?bd.p50[bd.p50.length-1]:Math.round(ep/nP*38);
+var projRk=null;
+if(D.pos&&D.pos[lg]&&D.pos[lg]["25/26"]&&D.pos[lg]["25/26"].cur){
+var pts2={};var sd2=D.seasons[lg]["25/26"];Object.keys(sd2).forEach(function(tt){if(D.bands[lg]&&D.bands[lg][tt]){var b2=D.bands[lg][tt];pts2[tt]=b2.p50[b2.p50.length-1];}});
+var sorted=Object.entries(pts2).sort(function(a,b){return b[1]-a[1];});
+for(var i=0;i<sorted.length;i++){if(sorted[i][0]===team){projRk=i+1;break;}}}
+function Card(props){return h("div",{onClick:function(){props.go(props.tab);},className:"rounded-xl p-4 cursor-pointer hover:shadow-md transition-shadow",style:{background:"white",border:"1px solid #e5e7eb"}},
+h("div",{className:"flex items-start justify-between mb-2"},h("div",{className:"text-xs font-semibold uppercase tracking-wide",style:{color:props.color||N}},props.q),h("span",{style:{fontSize:10,color:"#aaa"}},props.tabName+" \u2192")),
+props.children);}
+return h("div",null,
+h("div",{className:"flex flex-wrap gap-3 items-center mb-6"},
+e(LP,{lg:lg,set:sLg}),
+h("select",{value:team,onChange:function(ev){setTeam(ev.target.value);},className:"border rounded px-3 py-1.5 text-base font-semibold",style:{minWidth:180}},teamList.map(function(tt){return h("option",{key:tt.n,value:tt.n},tt.n+" ("+cur+tt.w+"M)");})),
+h("div",{className:"flex items-center gap-3 text-sm"},
+h("span",{style:{color:N,fontWeight:700}},ap+" pts"),
+h("span",{className:"text-gray-400"},"GW "+nP),
+h("span",{style:{color:df>=0?G:R,fontWeight:700}},(df>=0?"+":"")+df.toFixed(1)+" vs budget"))),
+h("div",{className:"grid gap-4",style:{gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))"}},
+e(Card,{q:"How is "+team+" doing?",tab:"tracker",tabName:"Season Tracker",go:props.go,color:B},
+h("div",{className:"flex items-baseline gap-2"},h("span",{className:"text-2xl font-bold",style:{color:N}},ap+" pts"),h("span",{className:"text-sm text-gray-500"},"after "+nP+" games")),
+h("div",{className:"text-sm mt-1"},"Expected: ",h("span",{className:"text-gray-500"},Math.round(ep)),h("span",{style:{color:df>=0?G:R,fontWeight:600,marginLeft:8}},(df>=0?"+":"")+df.toFixed(1)+" pts")),
+bd?h("div",{className:"text-xs text-gray-400 mt-1"},"Projected final: ",h("b",{style:{color:N}},projFin+" pts"),projRk?" (rank "+projRk+")":""):null),
+e(Card,{q:"What lies ahead?",tab:"predictions",tabName:"Predictions",go:props.go,color:"#1A56DB"},
+curPos?h("div",null,
+h("div",{className:"flex gap-3 flex-wrap text-sm"},
+curPos["1st"]>0.005?h("span",null,h("b",{style:{color:"#8B6914"}},Math.round(curPos["1st"]*100)+"%")," champion"):null,
+h("span",null,h("b",{style:{color:"#1A56DB"}},Math.round(curPos.ucl*100)+"%")," UCL"),
+curPos.rel>0.005?h("span",null,h("b",{style:{color:"#E74C3C"}},Math.round(curPos.rel*100)+"%")," relegation"):null),
+prePos?h("div",{className:"text-xs text-gray-400 mt-2"},"Pre-season: ",Math.round(prePos["1st"]*100)+"% champion, ",Math.round(prePos.ucl*100)+"% UCL"):null):h("div",{className:"text-gray-400 text-sm"},"No projection data")),
+e(Card,{q:"Is the recent run unusual?",tab:"badrun",tabName:"Run Evaluator",go:props.go,color:l5d>=0?G:R},
+h("div",{className:"text-sm"},"Last 5 games: ",h("b",null,l5a+" pts")," (expected "+l5e.toFixed(1)+")"),
+h("div",{className:"text-lg font-bold mt-1",style:{color:l5d>=0?G:R}},(l5d>=0?"+":"")+l5d.toFixed(1)+" pts"),
+h("div",{className:"flex gap-1 mt-1"},last5.map(function(m,i){var res=m[2]===3?"W":m[2]===1?"D":"L";var bg=m[2]===3?"#dcfce7":m[2]===1?"#fef3c7":"#fee2e2";return h("span",{key:i,className:"text-xs px-1.5 py-0.5 rounded font-semibold",style:{background:bg}},res);}))),
+e(Card,{q:"Next match",tab:"calc",tabName:"Calculator",go:props.go,color:O},
+nextM?h("div",null,
+h("div",{className:"text-sm font-semibold mb-2"},nextM[1]?"vs ":"@ ",nextM[0]),
+h("div",{className:"flex gap-2"},
+h("div",{className:"flex-1 rounded p-1.5 text-center",style:{background:G+"18"}},h("div",{className:"text-lg font-bold",style:{color:G}},nxW+"%"),h("div",{className:"text-xs text-gray-500"},"Win")),
+h("div",{className:"flex-1 rounded p-1.5 text-center",style:{background:"#88888818"}},h("div",{className:"text-lg font-bold",style:{color:"#888"}},nxD+"%"),h("div",{className:"text-xs text-gray-500"},"Draw")),
+h("div",{className:"flex-1 rounded p-1.5 text-center",style:{background:R+"18"}},h("div",{className:"text-lg font-bold",style:{color:R}},nxL+"%"),h("div",{className:"text-xs text-gray-500"},"Loss")))):h("div",{className:"text-gray-400 text-sm"},"Season complete")),
+e(Card,{q:"Long-term management",tab:"explorer",tabName:"Overperformance",go:props.go,color:cum&&cum[0]>=0?G:R},
+cum?h("div",null,
+h("div",{className:"flex items-baseline gap-2"},
+h("span",{className:"text-2xl font-bold",style:{color:cum[0]>=0?G:R}},(cum[0]>=0?"+":"")+cum[0]),
+h("span",{className:"text-sm text-gray-500"},"extra pts in "+cum[1]+" seasons")),
+h("div",{className:"text-sm mt-1"},"Managerial Score: ",h("b",{style:{color:ms>=0?G:R}},(ms>=0?"+":"")+ms))):h("div",{className:"text-gray-400 text-sm"},"No historical data"))));}
+
+var tabs=[{id:"home",l:"Home"},{id:"tracker",l:"Season Tracker"},{id:"predictions",l:"Predictions"},{id:"badrun",l:"Run Evaluator"},{id:"h2h",l:"Head to Head"},{id:"explorer",l:"Overperformance"},{id:"calc",l:"Calculator"},{id:"method",l:"Methodology"}];
 function App(){useTHState();
 React.useEffect(function(){function close(){if(_thSet)_thSet(null);}document.addEventListener("click",close);return function(){document.removeEventListener("click",close);};},[]);
-var _1=React.useState(getHash().tab||"tracker"),tab=_1[0],sTab0=_1[1];
+var _1=React.useState(getHash().tab||"home"),tab=_1[0],sTab0=_1[1];
 function sTab(v){sTab0(v);setHash("tab",v);}
 return h("div",{className:"min-h-screen bg-white"},
 h("div",{className:"py-4 px-5",style:{background:N}},h("h1",{className:"text-xl font-bold text-white",style:{fontFamily:"Georgia,serif"}},"What money can\u2019t buy"),h("p",{className:"text-blue-200 text-xs"},"La Liga & Premier League | 9,008 matches | 13 seasons")),
 h("div",{className:"border-b bg-gray-50 sticky top-0 z-10 flex overflow-x-auto"},tabs.map(function(t){return h("button",{key:t.id,onClick:function(){sTab(t.id);},className:"px-4 py-2 text-sm font-medium border-b-2 "+(tab===t.id?"border-current":"border-transparent text-gray-500"),style:tab===t.id?{color:N}:{}},t.l);})),
-h("div",{style:{maxWidth:950,margin:"0 auto",padding:16}},tab==="tracker"?e(Tracker):null,tab==="predictions"?e(Predictions):null,tab==="badrun"?e(BadRun):null,tab==="h2h"?e(H2H):null,tab==="explorer"?e(Explorer):null,tab==="calc"?e(Calc):null,tab==="method"?e(Methodology):null),
+h("div",{style:{maxWidth:950,margin:"0 auto",padding:16}},tab==="home"?e(Home,{go:sTab}):null,tab==="tracker"?e(Tracker):null,tab==="predictions"?e(Predictions):null,tab==="badrun"?e(BadRun):null,tab==="h2h"?e(H2H):null,tab==="explorer"?e(Explorer):null,tab==="calc"?e(Calc):null,tab==="method"?e(Methodology):null),
 h("div",{className:"text-center text-xs text-gray-400 py-3 border-t"},"Ordered logit + Monte Carlo | whatmoneycantbuyfootball@gmail.com"));}
 
 fetch("data.json").then(function(r){return r.json();}).then(function(d){D=d;ReactDOM.render(e(App),document.getElementById("root"));}).catch(function(err){document.getElementById("root").innerHTML="<p style='padding:40px;text-align:center;color:red'>Error: "+err.message+"</p>";});
