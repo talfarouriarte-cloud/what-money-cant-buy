@@ -182,7 +182,7 @@ return h("div",null,
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},
 e(LP,{lg:lg,set:switchLg}),
 h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s+(s==="25/26"?" (current)":""));}))),
-e(Info,null,"Each team\u2019s annual wage bill is fed into an ordered logistic regression to predict match-by-match win/draw/loss probabilities. These are summed across all 38 matchdays to produce expected points (Budget forecast). As the season progresses, played results are locked in and only the remaining fixtures are simulated 10,000 times (Updated forecast). The shaded bands show the p10\u2013p90 range: 80% of simulations fall within this corridor. The dashed line is the median (p50). Select up to 3 teams to compare."),
+e(Info,null,"Each team\u2019s annual wage bill is fed into an ordered logistic regression to predict match-by-match win/draw/loss probabilities. These are summed across all 38 matchdays to produce expected points (Budget forecast). As the season progresses, played results are locked in and only the remaining fixtures are simulated 10,000 times (Updated forecast). ",h("br"),h("br"),h("b",null,"Single team view:")," solid line = actual points; dashed line = median projection (p50); shaded band = p10\u2013p90 range (80% of simulations fall within this corridor). Orange = budget forecast (pre-season, from wages only). Blue = updated forecast (actual results + remaining simulations).",h("br"),h("br"),h("b",null,"Multi-team view (up to 3):")," compare actual trajectories side by side, each with its own updated median and p10\u2013p90 band. The faint dashed line shows the budget forecast median for reference."),
 h("div",{className:"flex gap-4"},
 h("div",{className:"hidden sm:block w-44 shrink-0"},teamListEl),
 h("div",{className:"flex-1",style:{minWidth:0}},
@@ -269,24 +269,42 @@ var sD=D.seasons[lg][sn]||{},tl=React.useMemo(function(){return Object.keys(sD).
 var t=sD[sel];
 React.useEffect(function(){var ts=Object.keys(sD);if(ts.length>0&&!sD[sel])sSel(ts.sort()[0]);},[lg,sn]);
 if(!t)return h("div",{className:"p-8 text-center text-gray-400"},"No data");
+var SIG=1.58;
 var nP=t.a.length,mW=Math.min(nP,20),w=Math.min(win,mW),lW=t.m.slice(nP-w);
 var cA=[],cE=[],ca=0,ce=0;
 for(var i=0;i<lW.length;i++){ca+=lW[i][2];ce+=lW[i][3];cA.push(ca);cE.push(Math.round(ce*10)/10);}
-var cd=lW.map(function(m,i){var v=m[1]?"vs":"@",ex=cE[i],sp=1.3*Math.sqrt(i+1)*1.5;
-return{opp:v+" "+m[0],actual:cA[i],expected:ex,base:Math.max(0,Math.round((ex-sp)*10)/10),range:Math.round(sp*2*10)/10,mp:m[2],me:m[3]};});
+// Three bands: 25-75 (0.674σ), 10-90 (1.28σ), 3-97 (1.88σ)
+var cd=lW.map(function(m,i){var v=m[1]?"vs":"@",ex=cE[i],n=i+1;
+var s1=0.674*SIG*Math.sqrt(n),s2=1.28*SIG*Math.sqrt(n),s3=1.88*SIG*Math.sqrt(n);
+return{opp:v+" "+m[0],actual:cA[i],expected:ex,
+b3lo:Math.max(0,Math.round((ex-s3)*10)/10),b3h:Math.round(s3*2*10)/10,
+b2lo:Math.max(0,Math.round((ex-s2)*10)/10),b2h:Math.round(s2*2*10)/10,
+b1lo:Math.max(0,Math.round((ex-s1)*10)/10),b1h:Math.round(s1*2*10)/10,
+mp:m[2],me:m[3]};});
 var df=(ca-Math.round(ce*10)/10).toFixed(1);
 return h("div",null,
-e(Info,null,"The wage model produces expected points per match against each opponent. Over a short run of games, actual points can deviate from expectation simply due to randomness. The shaded band shows the expected variance (\u00b11.28\u03c3): results inside this range are statistically normal. A run that breaks outside the band may indicate genuine over- or underperformance beyond what chance explains."),
+e(Info,null,"The wage model produces expected points per match against each opponent. Over a short run of games, actual points can deviate from expectation due to randomness. The chart shows three probability bands around the expected line: ",h("b",null,"dark band")," = 50% probability (25th\\u201375th percentile), ",h("b",null,"medium band")," = 80% probability (10th\\u201390th percentile), ",h("b",null,"light band")," = 94% probability (3rd\\u201397th percentile). If actual points fall outside the light band, the run is statistically unusual (less than 6% probability by chance alone)."),
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},e(LP,{lg:lg,set:function(v){sLg(v);sSn(Object.keys(D.seasons[v]).sort().reverse()[0]);sSel(v==="ll"?"Barcelona":"Liverpool");sWin(5);}}),
 h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s);}))),
 h("div",{className:"flex flex-wrap gap-4 mb-4"},
-h("select",{value:sel,onChange:function(ev){sSel(ev.target.value);},className:"border rounded px-2 py-1.5 text-sm flex-shrink-0"},tl.map(function(x){return h("option",{key:x,value:x},x);})),
+h("select",{value:sel,onChange:function(ev){sSel(ev.target.value);},className:"border rounded px-2 py-1.5 text-base font-semibold flex-shrink-0",style:{minWidth:160}},tl.map(function(x){return h("option",{key:x,value:x},x);})),
 h("div",{className:"flex-1",style:{minWidth:120}},h("div",{className:"text-xs text-gray-500 mb-1"},"Last "+w+" games"),h("input",{type:"range",min:1,max:mW,value:w,onChange:function(ev){sWin(Number(ev.target.value));},className:"w-full",style:{accentColor:B}}))),
-h("div",{style:{height:220},className:"mb-3"},e(RC.ResponsiveContainer,null,
+h("div",{style:{height:240},className:"mb-3"},e(RC.ResponsiveContainer,null,
 e(RC.AreaChart,{data:cd,margin:{left:0,right:5,top:5,bottom:45}},
 e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),e(RC.XAxis,{dataKey:"opp",tick:{fontSize:7,angle:-40,textAnchor:"end"},height:55,interval:0}),e(RC.YAxis,{tick:{fontSize:9}}),e(RC.Tooltip,null),
-e(RC.Area,{dataKey:"base",stackId:"b",stroke:"none",fill:"transparent",isAnimationActive:false}),e(RC.Area,{dataKey:"range",stackId:"b",stroke:"none",fill:B,fillOpacity:0.1,isAnimationActive:false}),
+e(RC.Area,{dataKey:"b3lo",stackId:"b3",stroke:"none",fill:"transparent",isAnimationActive:false}),
+e(RC.Area,{dataKey:"b3h",stackId:"b3",stroke:"none",fill:B,fillOpacity:0.06,isAnimationActive:false}),
+e(RC.Area,{dataKey:"b2lo",stackId:"b2",stroke:"none",fill:"transparent",isAnimationActive:false}),
+e(RC.Area,{dataKey:"b2h",stackId:"b2",stroke:"none",fill:B,fillOpacity:0.1,isAnimationActive:false}),
+e(RC.Area,{dataKey:"b1lo",stackId:"b1",stroke:"none",fill:"transparent",isAnimationActive:false}),
+e(RC.Area,{dataKey:"b1h",stackId:"b1",stroke:"none",fill:B,fillOpacity:0.15,isAnimationActive:false}),
 e(RC.Area,{dataKey:"expected",stroke:"#999",strokeDasharray:"5 3",strokeWidth:2,fill:"none",isAnimationActive:false}),e(RC.Area,{dataKey:"actual",stroke:B,strokeWidth:2.5,fill:"none",dot:{r:3,fill:B},isAnimationActive:false})))),
+h("div",{className:"flex flex-wrap gap-x-4 gap-y-1 mb-3 text-xs text-gray-500 justify-center"},
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,background:B,display:"inline-block"}}),h("span",null,"Actual")),
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:0,borderTop:"2px dashed #999",display:"inline-block"}}),h("span",null,"Expected")),
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:12,height:8,background:B,display:"inline-block",opacity:0.3,borderRadius:2}}),h("span",null,"50% band")),
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:12,height:8,background:B,display:"inline-block",opacity:0.15,borderRadius:2}}),h("span",null,"80% band")),
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:12,height:8,background:B,display:"inline-block",opacity:0.06,borderRadius:2}}),h("span",null,"94% band"))),
 h("div",{className:"p-4 rounded-xl text-center "+(Number(df)>=0?"bg-green-50":"bg-amber-50")},
 h("div",{className:"text-2xl font-bold",style:{color:Number(df)>=0?G:R}},(Number(df)>=0?"+":"")+df+" pts"),
 h("div",{className:"text-sm text-gray-600"},ca+" actual vs "+Math.round(ce*10)/10+" expected in "+w+" matches")),
@@ -600,7 +618,7 @@ e(Eq,null,"Extra pts = actual \u2212 expected"),
 h("p",{className:"mt-2 font-semibold"},"2. Normalized overperformance:"),
 e(Eq,null,"Norm = (cum. overperf \u00f7 ",F("n"),h("sub",null,"seasons"),") \u00f7 avg expected pts/season \u00d7 100"),
 h("p",null,"This adjusts for budget level: +10 points on 45 expected is more impressive than +10 on 80 expected."),
-h("p",{className:"mt-2 font-semibold"},"3. Managerial Score (MS):"),
+h("p",{className:"mt-2 font-semibold"},"3. Managerial Score:"),
 e(Eq,null,"MS = sign(overperf) \u00d7 (100 \u2212 ",F("p"),")"),
 h("p",null,"where ",F("p")," is the two-tailed probability that the cumulative overperformance occurred by chance:"),
 e(Eq,null,F("p")," = 2 \u00d7 [1 \u2212 \u03a6(|cum. overperf| / (\u03c3 \u00d7 \u221a",F("n"),h("sub",null,"matches"),"))]"),
