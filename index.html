@@ -303,17 +303,20 @@ mp:m[2],me:m[3]};});
 var df=(ca-Math.round(ce*10)/10).toFixed(1);
 var normCDF2=function(z){var t=1/(1+0.2316419*Math.abs(z));var d=0.3989423*Math.exp(-z*z/2);var p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return z>0?1-p:p;};
 var runPct=(function(){if(nGames<=0||Number(df)===0)return 50;var z=Math.abs(Number(df))/(SIG*Math.sqrt(nGames));return(1-normCDF2(z))*100;})();
-var freqStr=(function(){if(runPct>=50)return null;var target=100/runPct;
+var nWindows=Math.floor(38/nGames);
+var seasonPct=(nWindows>1)?(1-Math.pow(1-runPct/100,nWindows))*100:runPct;
+var freqStr=(function(){if(seasonPct>=50)return null;var target=100/seasonPct;
 var bestX=1,bestY=Math.round(target),bestErr=999;
 function gcd(a,b){return b===0?a:gcd(b,a%b);}
 for(var x=1;x<=10;x++){var y=Math.round(target*x);if(y<1)y=1;var err=Math.abs(y/x-target)/target;if(err<bestErr){bestErr=err;bestX=x;bestY=y;}if(err<0.05)break;}
 var g=gcd(bestX,bestY);bestX=bestX/g;bestY=bestY/g;
-if(bestX>=bestY)return bestX+" every season";
-if(bestX===1)return "1 every "+bestY+" season"+(bestY>1?"s":"");
-return bestX+" every "+bestY+" seasons";})();
-var pctStr=runPct>=1?Math.round(runPct)+"%":runPct>=0.1?runPct.toFixed(1)+"%":"<0.1%";
+if(bestX>=bestY)return "most seasons";
+if(bestX===1)return "roughly 1 in "+bestY+" seasons";
+return "roughly "+bestX+" in "+bestY+" seasons";})();
+var pctStr=seasonPct>=1?Math.round(seasonPct)+"%":seasonPct>=0.1?seasonPct.toFixed(1)+"%":"<0.1%";
 var dir=Number(df)>=0?"overperformance":"underperformance";
-var probSentence="This level of "+dir+" occurs in "+pctStr+" of similar-length runs"+(freqStr?", i.e. roughly "+freqStr:"")+".";
+var probSentence="A "+nGames+"-game run with this level of "+dir+" or more appears in "+pctStr+" of seasons"+(freqStr?", "+freqStr:"")+".";
+if(nGames>=30)probSentence="This level of "+dir+" over "+nGames+" games occurs in "+pctStr+" of seasons"+".";
 // Build GW options
 var fromOpts=[];for(var gi=1;gi<nP;gi++)fromOpts.push(gi);
 var toOpts=[];for(var gi2=gf+1;gi2<=nP;gi2++)toOpts.push(gi2);
@@ -720,6 +723,16 @@ var nextM=t.r&&t.r.length>0?t.r[0]:null;
 var last5=t.m.slice(Math.max(0,nP-5));
 var l5a=0,l5e=0;last5.forEach(function(m){l5a+=m[2];l5e+=m[3];});
 var l5d=l5a-l5e;
+// Last 10 games
+var last10=t.m.slice(Math.max(0,nP-10));
+var l10a=0,l10e=0;last10.forEach(function(m){l10a+=m[2];l10e+=m[3];});
+var l10d=l10a-l10e;
+var l10n=last10.length;
+// Season probability helper
+function seasonProb(diff,nG){if(nG<=0||diff===0)return null;var z=Math.abs(diff)/(SIG2*Math.sqrt(nG));var normCDF3=function(zz){var tt=1/(1+0.2316419*Math.abs(zz));var dd=0.3989423*Math.exp(-zz*zz/2);var pp=dd*tt*(0.3193815+tt*(-0.3565638+tt*(1.781478+tt*(-1.821256+tt*1.330274))));return zz>0?1-pp:pp;};var pWin=(1-normCDF3(z))*100;var nW=Math.floor(38/nG);return nW>1?(1-Math.pow(1-pWin/100,nW))*100:pWin;}
+var SIG2=1.58;
+var sp5=seasonProb(l5d,last5.length);
+var sp10=seasonProb(l10d,l10n);
 // Next match probs
 var nxW=nextM?Math.round(nextM[2]*100):0,nxD=nextM?Math.round(nextM[3]*100):0,nxL=nextM?Math.round(nextM[4]*100):0;
 // Managerial Score
@@ -757,9 +770,9 @@ h("span",null,h("b",{style:{color:"#1A56DB"}},Math.round(curPos.ucl*100)+"%")," 
 curPos.rel>0.005?h("span",null,h("b",{style:{color:"#E74C3C"}},Math.round(curPos.rel*100)+"%")," relegation"):null),
 prePos?h("div",{className:"text-xs text-gray-400 mt-2"},"Pre-season: ",Math.round(prePos["1st"]*100)+"% champion, ",Math.round(prePos.ucl*100)+"% UCL"):null):h("div",{className:"text-gray-400 text-sm"},"No projection data")),
 e(Card,{q:"Is the recent run unusual?",tab:"badrun",tabName:"Run Evaluator",go:props.go,color:l5d>=0?G:R},
-h("div",{className:"text-sm"},"Last 5 games: ",h("b",null,l5a+" pts")," (expected "+l5e.toFixed(1)+")"),
-h("div",{className:"text-lg font-bold mt-1",style:{color:l5d>=0?G:R}},(l5d>=0?"+":"")+l5d.toFixed(1)+" pts"),
-h("div",{className:"flex gap-1 mt-1"},last5.map(function(m,i){var res=m[2]===3?"W":m[2]===1?"D":"L";var bg=m[2]===3?"#dcfce7":m[2]===1?"#fef3c7":"#fee2e2";return h("span",{key:i,className:"text-xs px-1.5 py-0.5 rounded font-semibold",style:{background:bg}},res);}))),
+h("div",{className:"text-sm"},"Last 5: ",h("b",null,l5a+" pts")," (exp "+l5e.toFixed(1)+")",h("span",{style:{color:l5d>=0?G:R,fontWeight:700,marginLeft:6}},(l5d>=0?"+":"")+l5d.toFixed(1)),sp5!==null?h("span",{className:"text-gray-400",style:{marginLeft:6}},"\u2022 "+Math.round(sp5)+"% of seasons"):null),
+l10n>=10?h("div",{className:"text-sm mt-0.5"},"Last 10: ",h("b",null,l10a+" pts")," (exp "+l10e.toFixed(1)+")",h("span",{style:{color:l10d>=0?G:R,fontWeight:700,marginLeft:6}},(l10d>=0?"+":"")+l10d.toFixed(1)),sp10!==null?h("span",{className:"text-gray-400",style:{marginLeft:6}},"\u2022 "+Math.round(sp10)+"% of seasons"):null):null,
+h("div",{className:"flex gap-1 mt-1.5"},last5.map(function(m,i){var res=m[2]===3?"W":m[2]===1?"D":"L";var bg=m[2]===3?"#dcfce7":m[2]===1?"#fef3c7":"#fee2e2";return h("span",{key:i,className:"text-xs px-1.5 py-0.5 rounded font-semibold",style:{background:bg}},res);}))),
 e(Card,{q:"Next match",tab:"h2h",tabName:"Head to Head",go:function(){if(nextM){setHash("h2a",team);setHash("h2b",nextM[0]);}props.go("h2h");},color:O},
 nextM?h("div",null,
 h("div",{className:"text-sm font-semibold mb-2"},nextM[1]?"vs ":"@ ",nextM[0],nextM[5]?h("span",{className:"text-gray-400 font-normal"}," \u00b7 GW"+nextM[5]):null,nextM[6]?h("span",{className:"text-gray-400 font-normal"}," \u00b7 "+nextM[6]):null),
