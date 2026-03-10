@@ -415,6 +415,31 @@ def update():
     print("  Computing position probabilities...")
     data['pos'] = compute_all_position_probs(data, fixtures_cal)
     
+    # Update cumulative with 25/26 partial season
+    print("  Updating cumulative with 25/26...")
+    for lg in ['ll', 'pl']:
+        sd = data['seasons'][lg].get('25/26', {})
+        for team in sd:
+            t = sd[team]
+            if not t.get('a') or not t.get('e') or not t.get('w'):
+                continue
+            act = t['a'][-1]
+            exp = t['e'][-1]
+            wage = t['w']
+            
+            if team not in data['cumulative'][lg]:
+                data['cumulative'][lg][team] = [0, 0, 0, []]
+            
+            c = data['cumulative'][lg][team]
+            c[3] = [s for s in c[3] if s[0] != '25/26']
+            c[3].append(['25/26', wage, round(exp, 1), act])
+            cumOP = sum(s[3] - s[2] for s in c[3])
+            nS = len(c[3])
+            avgExp = sum(s[2] for s in c[3]) / nS if nS > 0 else 1
+            c[0] = round(cumOP, 1)
+            c[1] = nS
+            c[2] = round((cumOP / nS) / avgExp * 100, 1) if avgExp > 0 else 0
+    
     # Save
     out = json.dumps(data, separators=(',',':'), ensure_ascii=False)
     for old, new in NAME_MAP.items():
