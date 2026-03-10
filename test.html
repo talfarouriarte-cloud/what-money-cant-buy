@@ -283,7 +283,7 @@ var nGames=lW.length;
 var cA=[],cE=[],ca=0,ce=0;
 for(var i=0;i<lW.length;i++){ca+=lW[i][2];ce+=lW[i][3];cA.push(ca);cE.push(Math.round(ce*10)/10);}
 var B50="#7C3AED",B80="#2E75B6",B94="#10B981";
-var DG="#15803d",PG="#86efac",DR="#b91c1c",PR="#fca5a5";
+var DG="#166534",PG="#bbf7d0",DR="#991b1b",PR="#fecaca";
 var cd=lW.map(function(m,i){var v=m[1]?"vs":"@",ex=cE[i],n=i+1;
 var s25=0.674*SIG*Math.sqrt(n),s3=1.88*SIG*Math.sqrt(n);
 var p3=Math.max(0,Math.round((ex-s3)*10)/10);
@@ -299,16 +299,18 @@ zPG:Math.round((p97-p75)*10)/10,
 mp:m[2],me:m[3]};});
 var df=(ca-Math.round(ce*10)/10).toFixed(1);
 // Range slider component
-var pctL=((gf-1)/(nP-1||1)*100),pctR=((gt-1)/(nP-1||1)*100);
 var rangeBar=h("div",{className:"mb-4"},
-h("div",{className:"flex justify-between text-xs text-gray-500 mb-1"},
-h("span",null,"GW "+gf+" \u2013 GW "+gt+" ("+nGames+" games)"),
-h("span",null,nP+" played")),
-h("div",{style:{position:"relative",height:28}},
-h("div",{style:{position:"absolute",top:12,left:0,right:0,height:4,background:"#e5e7eb",borderRadius:2}}),
-h("div",{style:{position:"absolute",top:12,left:pctL+"%",width:(pctR-pctL)+"%",height:4,background:B,borderRadius:2,opacity:0.4}}),
-h("input",{type:"range",min:1,max:nP,value:gf,onChange:function(ev){var v=Number(ev.target.value);if(v<gt)setFrom(v);},style:{position:"absolute",top:0,left:0,width:"100%",height:28,background:"transparent",WebkitAppearance:"none",pointerEvents:"none",zIndex:3},className:"range-thumb"}),
-h("input",{type:"range",min:1,max:nP,value:gt,onChange:function(ev){var v=Number(ev.target.value);if(v>gf)setTo(v);},style:{position:"absolute",top:0,left:0,width:"100%",height:28,background:"transparent",WebkitAppearance:"none",pointerEvents:"none",zIndex:4},className:"range-thumb"})));
+h("div",{className:"flex items-center gap-3 flex-wrap"},
+h("div",{className:"flex items-center gap-2"},
+h("span",{className:"text-xs text-gray-500"},"From GW"),
+h("input",{type:"number",min:1,max:nP-1,value:gf,onChange:function(ev){var v=Math.max(1,Math.min(Number(ev.target.value),gt-1));setFrom(v);},className:"border rounded px-2 py-1 text-sm w-14 text-center"})),
+h("div",{className:"flex items-center gap-2"},
+h("span",{className:"text-xs text-gray-500"},"To GW"),
+h("input",{type:"number",min:2,max:nP,value:gt,onChange:function(ev){var v=Math.max(gf+1,Math.min(Number(ev.target.value),nP));setTo(v);},className:"border rounded px-2 py-1 text-sm w-14 text-center"})),
+h("span",{className:"text-xs text-gray-500"},nGames+" games"),
+h("button",{onClick:function(){var nw=Math.min(5,nP);setFrom(Math.max(1,nP-nw+1));setTo(nP);},className:"text-xs px-2 py-1 rounded bg-gray-100 text-gray-600"},"Last 5"),
+h("button",{onClick:function(){var nw=Math.min(10,nP);setFrom(Math.max(1,nP-nw+1));setTo(nP);},className:"text-xs px-2 py-1 rounded bg-gray-100 text-gray-600"},"Last 10"),
+h("button",{onClick:function(){setFrom(1);setTo(nP);},className:"text-xs px-2 py-1 rounded bg-gray-100 text-gray-600"},"All")));
 return h("div",null,
 e(Info,null,"Evaluate whether a run of results is statistically unusual given the team\u2019s wage bill. The expected line (dashed) shows what the budget predicts. ",h("b",null,"Above the line = overperformance")," (green shading): dark green covers the most likely outcomes (50th\u201375th percentile), pale green extends to the 97th percentile. ",h("b",null,"Below the line = underperformance")," (red shading): dark red = 25th\u201350th percentile, pale red = down to the 3rd percentile. Results beyond the pale zone have less than 3% probability of occurring by chance in that direction."),
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},e(LP,{lg:lg,set:function(v){sLg(v);sSn(Object.keys(D.seasons[v]).sort().reverse()[0]);sSel(v==="ll"?"Barcelona":"Liverpool");}}),
@@ -318,12 +320,12 @@ h("select",{value:sel,onChange:function(ev){sSel(ev.target.value);},className:"b
 rangeBar,
 h("div",{style:{height:240},className:"mb-2"},e(RC.ResponsiveContainer,null,
 e(RC.AreaChart,{data:cd,margin:{left:0,right:5,top:5,bottom:45}},
-e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),e(RC.XAxis,{dataKey:"opp",tick:{fontSize:8,angle:-35,textAnchor:"end"},height:55,interval:0}),e(RC.YAxis,{tick:{fontSize:9}}),e(RC.Tooltip,null),
+e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),e(RC.XAxis,{dataKey:"opp",tick:{fontSize:10,fontWeight:600,angle:-35,textAnchor:"end"},height:60,interval:0}),e(RC.YAxis,{tick:{fontSize:9}}),e(RC.Tooltip,null),
 e(RC.Area,{dataKey:"zBase",stackId:"z",stroke:"none",fill:"transparent",isAnimationActive:false}),
-e(RC.Area,{dataKey:"zPR",stackId:"z",stroke:"none",fill:PR,fillOpacity:0.45,isAnimationActive:false}),
-e(RC.Area,{dataKey:"zDR",stackId:"z",stroke:"none",fill:DR,fillOpacity:0.18,isAnimationActive:false}),
-e(RC.Area,{dataKey:"zDG",stackId:"z",stroke:"none",fill:DG,fillOpacity:0.18,isAnimationActive:false}),
-e(RC.Area,{dataKey:"zPG",stackId:"z",stroke:"none",fill:PG,fillOpacity:0.45,isAnimationActive:false}),
+e(RC.Area,{dataKey:"zPR",stackId:"z",stroke:"none",fill:PR,fillOpacity:0.5,isAnimationActive:false}),
+e(RC.Area,{dataKey:"zDR",stackId:"z",stroke:"none",fill:DR,fillOpacity:0.35,isAnimationActive:false}),
+e(RC.Area,{dataKey:"zDG",stackId:"z",stroke:"none",fill:DG,fillOpacity:0.35,isAnimationActive:false}),
+e(RC.Area,{dataKey:"zPG",stackId:"z",stroke:"none",fill:PG,fillOpacity:0.5,isAnimationActive:false}),
 e(RC.Area,{dataKey:"expected",stroke:"#999",strokeDasharray:"5 3",strokeWidth:2,fill:"none",isAnimationActive:false}),e(RC.Area,{dataKey:"actual",stroke:N,strokeWidth:2.5,fill:"none",dot:{r:3,fill:N},isAnimationActive:false})))),
 h("div",{className:"flex flex-wrap gap-x-3 gap-y-1 mb-3 text-xs text-gray-500 justify-center"},
 h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,background:N,display:"inline-block"}}),h("span",null,"Actual")),
@@ -407,7 +409,7 @@ function pval(cumOP,nMatches){if(nMatches<=0||cumOP===0)return 1;var z=Math.abs(
 var modes=[
 {k:"pts",l:"Extra pts",tip:"Raw overperformance: actual minus expected points per season"},
 {k:"norm",l:"Normalized",tip:"(Cum. overperf \u00f7 seasons) \u00f7 avg expected pts/season \u00d7 100"},
-{k:"ms",l:"MS",tip:"Managerial Score: sign(overperf) \u00d7 (100 \u2212 p), p = statistical significance"}];
+{k:"ms",l:"Man. Score",tip:"Managerial Score: sign(overperf) \u00d7 (100 \u2212 p), p = statistical significance"}];
 var wins=[{k:"all",l:"All",tip:"Full period (12 seasons)"},{k:"5y",l:"5yr",tip:"Trailing 5 seasons"},{k:"3y",l:"3yr",tip:"Trailing 3 seasons"}];
 var winN=win==="5y"?5:win==="3y"?3:99;
 function getSeasons(td){if(!td)return[];var d=td[3];if(winN>=d.length)return d;return d.slice(d.length-winN);}
@@ -441,7 +443,7 @@ var sfx=mode==="pts"?"pts":mode==="norm"?"%":"";
 var teamListEl=h("div",{className:"overflow-y-auto rounded bg-gray-50 p-1 text-xs",style:{maxHeight:400}},tl.map(function(t){var idx=sel.indexOf(t.n);return h("div",{key:t.n,onClick:function(){tog(t.n);},className:"cursor-pointer px-1.5 py-0.5 rounded flex justify-between "+(idx>=0?"font-bold":"hover:bg-gray-100"),style:idx>=0?{background:cols[idx]+"20",color:cols[idx]}:{}},h("span",{className:"truncate"},t.n+" ("+t.ns+")"),h("span",{style:{color:t.c>=0?G:R}},(t.c>=0?"+":"")+t.c+(sfx||"")));}));
 var cumLabel=win==="all"?(mode==="ms"?"Trailing Managerial Score":"Cumulative"):"Trailing "+winN+"yr"+(mode==="ms"?" Managerial Score":"");
 return h("div",null,
-e(Info,null,"Overperformance = actual points minus wage-model expected points. A team that consistently beats its budget expectation is extracting extra value from its payroll (coaching, recruitment, culture). Three metrics: Extra pts (raw gap), Normalized (percentage gap adjusted for budget level: (cum. overperf \u00f7 seasons) \u00f7 avg expected pts \u00d7 100), and MS (Managerial Score: sign \u00d7 (100 \u2212 p), where p is the probability the result is due to chance alone). The time window controls the trailing period for the bottom chart: All shows full history, 5yr/3yr show a rolling window."),
+e(Info,null,"Overperformance = actual points minus wage-model expected points. A team that consistently beats its budget expectation is extracting extra value from its payroll (coaching, recruitment, culture). Three metrics: Extra pts (raw gap), Normalized (percentage gap adjusted for budget level: (cum. overperf \u00f7 seasons) \u00f7 avg expected pts \u00d7 100), and Managerial Score (sign \u00d7 (100 \u2212 p), where p is the probability the result is due to chance alone). The time window controls the trailing period for the bottom chart: All shows full history, 5yr/3yr show a rolling window."),
 h("div",{className:"flex flex-wrap gap-3 items-end mb-3"},
 e(LP,{lg:lg,set:function(v){sLg(v);sSel(v==="ll"?["Villarreal","At Madrid","Valencia"]:["Liverpool","Man City","Man United"]);}}),
 h("div",{className:"flex gap-1"},modes.map(function(m){return h("button",{key:m.k,title:m.tip,onClick:function(){setMode(m.k);},className:"px-2 py-0.5 rounded text-xs font-medium "+(mode===m.k?"text-white":"text-gray-500 bg-gray-100"),style:mode===m.k?{background:N}:{}},m.l);})),
