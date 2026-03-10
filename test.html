@@ -20,6 +20,9 @@ function h(t,p){var a=[t,p];for(var i=2;i<arguments.length;i++)a.push(arguments[
 var Sg=function(z){return 1/(1+Math.exp(-z));};
 function expPos(p){if(!p)return 20;return 1*p["1st"]+3*(p.ucl-p["1st"])+5.5*p.uel+7*p.ucol+12.5*p.mid+19*p.rel;}
 function rankByPts(teamsObj){var arr=Object.entries(teamsObj).sort(function(a,b){return b[1]-a[1];});var r={};arr.forEach(function(x,i){r[x[0]]=i+1;});return r;}
+function TH(props){var _s=React.useState(false),show=_s[0],setShow=_s[1];
+return h("th",Object.assign({},props.sty,{onClick:function(){setShow(!show);},style:Object.assign({},props.sty.style||{},{cursor:"help",position:"relative"})}),props.label,
+show?h("div",{style:{position:"absolute",top:"100%",right:0,zIndex:50,background:"#333",color:"#fff",padding:"4px 8px",borderRadius:4,fontSize:10,fontWeight:400,whiteSpace:"nowrap",boxShadow:"0 2px 8px rgba(0,0,0,0.2)"},onClick:function(ev){ev.stopPropagation();}},props.tip):null);}
 function rkBg(rk,preRk){if(rk===null||preRk===null)return"transparent";if(rk<preRk)return"rgba(46,139,87,0.12)";if(rk>preRk)return"rgba(192,57,43,0.1)";return"transparent";}
 function getHash(){try{var h=window.location.hash.slice(1);var o={};h.split("&").forEach(function(p){var kv=p.split("=");if(kv[0])o[kv[0]]=decodeURIComponent(kv[1]||"");});return o;}catch(e){return {};}}
 function setHash(k,v){var o=getHash();o[k]=v;var parts=[];for(var key in o){if(o[key])parts.push(key+"="+encodeURIComponent(o[key]));}window.location.hash=parts.join("&");}
@@ -203,18 +206,18 @@ h("th",{className:"text-center px-1 py-0.5",colSpan:4,rowSpan:1,style:{borderBot
 h("th",{className:"text-center px-1 py-0.5",colSpan:3,style:{color:O,borderBottom:"2px solid "+O+"30",borderRight:"1px solid #e5e7eb",fontSize:9}},"Pre-season"),
 iC?h("th",{className:"text-center px-1 py-0.5",colSpan:5,style:{color:B,borderBottom:"2px solid "+B+"30",fontSize:9}},"Current MC"):null),
 h("tr",{style:{background:"#f9fafb",borderBottom:"2px solid #e5e7eb"}},
-h("th",{className:"text-right px-1 py-0.5",title:"Matchweeks played",style:{fontSize:9}},"GW"),
-h("th",{className:"text-right px-1 py-0.5",title:"Actual points",style:{fontSize:9}},"Pts"),
-!iC?h("th",{className:"text-right px-1 py-0.5",title:"Actual final rank",style:{fontSize:9}},"Rk"):null,
-h("th",{className:"text-right px-1 py-0.5",title:"Overperformance vs expected",style:{fontSize:9,borderRight:"1px solid #e5e7eb"}},"+/-"),
-h("th",{className:"text-right px-1 py-0.5",title:"Pre-season predicted rank",style:{color:O,fontSize:9}},"Rk"),
-h("th",{className:"text-right px-1 py-0.5",title:"Pre-season expected points",style:{color:O,fontSize:9}},"Exp"),
-h("th",{className:"text-right px-1 py-0.5",title:"Pre-season probability of 1st",style:{color:O,fontSize:9,borderRight:"1px solid #e5e7eb"}},"P1"),
-iC?h("th",{className:"text-right px-1 py-0.5",title:"Current MC predicted rank",style:{color:B,fontSize:9}},"Rk"):null,
-iC?h("th",{className:"text-right px-1 py-0.5",title:"MC 10th percentile",style:{color:B,fontSize:9}},"p10"):null,
-iC?h("th",{className:"text-right px-1 py-0.5",title:"MC median projection",style:{color:B,fontSize:9}},"Med"):null,
-iC?h("th",{className:"text-right px-1 py-0.5",title:"MC 90th percentile",style:{color:B,fontSize:9}},"p90"):null,
-iC?h("th",{className:"text-right px-1 py-0.5",title:"Current probability of 1st",style:{color:B,fontSize:9}},"P1"):null)),
+e(TH,{sty:{className:"text-right px-1 py-0.5",style:{fontSize:9}},label:"GW",tip:"Matchweeks played"}),
+e(TH,{sty:{className:"text-right px-1 py-0.5",style:{fontSize:9}},label:"Pts",tip:"Actual points"}),
+!iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{fontSize:9}},label:"Rk",tip:"Actual final rank"}):null,
+e(TH,{sty:{className:"text-right px-1 py-0.5",style:{fontSize:9,borderRight:"1px solid #e5e7eb"}},label:"+/-",tip:"Actual minus expected points"}),
+e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Rk",tip:"Pre-season predicted rank"}),
+e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Exp",tip:"Pre-season expected points"}),
+e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9,borderRight:"1px solid #e5e7eb"}},label:"P1",tip:"Pre-season P(champion)"}),
+iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"Rk",tip:"Current MC predicted rank"}):null,
+iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"p10",tip:"MC 10th percentile"}):null,
+iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"Med",tip:"MC median projection"}):null,
+iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"p90",tip:"MC 90th percentile"}):null,
+iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"P1",tip:"Current P(champion)"}):null)),
 h("tbody",null,sel.map(function(n,i){var t=sD[n];if(!t)return null;
 var ap=t.a[t.a.length-1]||0,ep=t.e[t.e.length-1]||0,df2=ap-ep;
 var jBd=iC&&D.bands[lg]&&D.bands[lg][n]?D.bands[lg][n]:null;
@@ -336,26 +339,67 @@ var hh=getHash();
 var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
 var _2=React.useState(hh.ex?hh.ex.split(","):["Villarreal","At Madrid","Valencia"]),sel=_2[0],sSel=_2[1];
 var _5=React.useState(false),showList=_5[0],setShowList=_5[1];
+var _6=React.useState(hh.om||"pts"),mode=_6[0],setMode0=_6[1];
+var _7=React.useState(hh.ow||"all"),win=_7[0],setWin0=_7[1];
 function sLg(v){sLg0(v);setHash("lg",v);}
+function setMode(v){setMode0(v);setHash("om",v);}
+function setWin(v){setWin0(v);setHash("ow",v);}
 React.useEffect(function(){setHash("ex",sel.join(","));},[sel]);
 var teams=lg==="ll"?D.cumulative.ll:D.cumulative.pl;
 var ss=["13/14","14/15","15/16","16/17","17/18","18/19","19/20","20/21","21/22","22/23","23/24","24/25"];
-var tl=React.useMemo(function(){return Object.entries(teams).map(function(en){return{n:en[0],c:en[1][0],ns:en[1][1]};}).sort(function(a,b){return b.c-a.c;});},[teams]);
+var SIG=1.58;
+function normCDF(z){var t=1/(1+0.2316419*Math.abs(z));var d=0.3989423*Math.exp(-z*z/2);var p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return z>0?1-p:p;}
+function pval(cumOP,nMatches){if(nMatches<=0)return 1;var z=Math.abs(cumOP)/(SIG*Math.sqrt(nMatches));return 2*(1-normCDF(z));}
+var modes=[
+{k:"pts",l:"Extra pts",tip:"Raw overperformance: actual minus expected points per season"},
+{k:"norm",l:"Normalized",tip:"(Cum. overperf \u00f7 seasons) \u00f7 avg expected pts/season \u00d7 100"},
+{k:"ms",l:"MS",tip:"Managerial Score: sign(overperf) \u00d7 (100 \u2212 p), p = statistical significance"}];
+var wins=[{k:"all",l:"All",tip:"Full period (12 seasons)"},{k:"5y",l:"5yr",tip:"Trailing 5 seasons"},{k:"3y",l:"3yr",tip:"Trailing 3 seasons"}];
+var winN=win==="5y"?5:win==="3y"?3:99;
+function getSeasons(td){if(!td)return[];var d=td[3];if(winN>=d.length)return d;return d.slice(d.length-winN);}
+function getSummary(td){
+var sds=getSeasons(td);if(sds.length===0)return 0;
+var cumOP=0,cumExp=0,nS=sds.length;
+sds.forEach(function(sd){cumOP+=sd[3]-sd[2];cumExp+=sd[2];});
+if(mode==="pts")return Math.round(cumOP*10)/10;
+if(mode==="norm"){var avgExp=cumExp/nS;return avgExp>0?Math.round((cumOP/nS)/avgExp*1000)/10:0;}
+var p=pval(cumOP,nS*38);return Math.round((cumOP>=0?1:-1)*(100-p*100)*10)/10;}
+var tl=React.useMemo(function(){return Object.entries(teams).map(function(en){
+var nW=getSeasons(en[1]);return{n:en[0],c:getSummary(en[1]),ns:nW.length};}).sort(function(a,b){return b.c-a.c;});},[teams,mode,win]);
 var cols=[B,O,G,R,"#8B5CF6"];
 function tog(n){sSel(function(p){if(p.indexOf(n)>=0)return p.filter(function(x){return x!==n;});if(p.length<5)return p.concat([n]);return p;});}
-var cd=React.useMemo(function(){return ss.map(function(s){var r={s:s};sel.forEach(function(t){var td=teams[t];if(!td)return;var sd=td[3].find(function(x){return x[0]===s;});if(sd)r[t]=Math.round((sd[3]-sd[2])*10)/10;});return r;});},[sel,teams]);
-var cum=React.useMemo(function(){return ss.map(function(s,si){var r={s:s};sel.forEach(function(t){var td=teams[t];if(!td)return;var c=0;for(var i=0;i<=si;i++){var sd=td[3].find(function(x){return x[0]===ss[i];});if(sd)c+=sd[3]-sd[2];}r[t]=Math.round(c*10)/10;});return r;});},[sel,teams]);
-var teamListEl=h("div",{className:"overflow-y-auto rounded bg-gray-50 p-1 text-xs",style:{maxHeight:400}},tl.map(function(t){var idx=sel.indexOf(t.n);return h("div",{key:t.n,onClick:function(){tog(t.n);},className:"cursor-pointer px-1.5 py-0.5 rounded flex justify-between "+(idx>=0?"font-bold":"hover:bg-gray-100"),style:idx>=0?{background:cols[idx]+"20",color:cols[idx]}:{}},h("span",{className:"truncate"},t.n+" ("+t.ns+")"),h("span",{style:{color:t.c>=0?G:R}},(t.c>=0?"+":"")+t.c));}));
+var cd=React.useMemo(function(){var useS=winN<ss.length?ss.slice(ss.length-winN):ss;
+return useS.map(function(s){var r={s:s};sel.forEach(function(t){var td=teams[t];if(!td)return;
+var sd=td[3].find(function(x){return x[0]===s;});if(!sd)return;
+var d=sd[3]-sd[2];
+if(mode==="pts"){r[t]=Math.round(d*10)/10;}
+else if(mode==="norm"){r[t]=sd[2]>0?Math.round(d/sd[2]*1000)/10:0;}
+else{var p=pval(d,38);r[t]=Math.round((d>=0?1:-1)*(100-p*100)*10)/10;}});return r;});},[sel,teams,mode,win]);
+var cum=React.useMemo(function(){var useS=winN<ss.length?ss.slice(ss.length-winN):ss;
+return useS.map(function(s,si){var r={s:s};sel.forEach(function(t){var td=teams[t];if(!td)return;
+var cumOP=0,cumExp=0,n=0;
+for(var i=0;i<=si;i++){var sd=td[3].find(function(x){return x[0]===useS[i];});
+if(sd){cumOP+=sd[3]-sd[2];cumExp+=sd[2];n++;}}
+if(n===0)return;
+if(mode==="pts"){r[t]=Math.round(cumOP*10)/10;}
+else if(mode==="norm"){var avgExp=cumExp/n;r[t]=avgExp>0?Math.round((cumOP/n)/avgExp*1000)/10:0;}
+else{var p=pval(cumOP,n*38);r[t]=Math.round((cumOP>=0?1:-1)*(100-p*100)*10)/10;}});return r;});},[sel,teams,mode,win]);
+var sfx=mode==="pts"?"pts":mode==="norm"?"%":"";
+var teamListEl=h("div",{className:"overflow-y-auto rounded bg-gray-50 p-1 text-xs",style:{maxHeight:400}},tl.map(function(t){var idx=sel.indexOf(t.n);return h("div",{key:t.n,onClick:function(){tog(t.n);},className:"cursor-pointer px-1.5 py-0.5 rounded flex justify-between "+(idx>=0?"font-bold":"hover:bg-gray-100"),style:idx>=0?{background:cols[idx]+"20",color:cols[idx]}:{}},h("span",{className:"truncate"},t.n+" ("+t.ns+")"),h("span",{style:{color:t.c>=0?G:R}},(t.c>=0?"+":"")+t.c+sfx));}));
+var cumLabel=mode==="ms"?"Trailing MS":"Cumulative";
 return h("div",null,
-h("p",{className:"text-gray-500 text-sm mb-3"},"Select up to 5 teams to compare overperformance."),
+h("p",{className:"text-gray-500 text-sm mb-3"},"Compare overperformance across teams and seasons."),
+h("div",{className:"flex flex-wrap gap-3 items-end mb-3"},
 e(LP,{lg:lg,set:function(v){sLg(v);sSel(v==="ll"?["Villarreal","At Madrid","Valencia"]:["Liverpool","Man City","Man United"]);}}),
-h("div",{className:"flex gap-4 mt-3"},
+h("div",{className:"flex gap-1"},modes.map(function(m){return h("button",{key:m.k,title:m.tip,onClick:function(){setMode(m.k);},className:"px-2 py-0.5 rounded text-xs font-medium "+(mode===m.k?"text-white":"text-gray-500 bg-gray-100"),style:mode===m.k?{background:N}:{}},m.l);})),
+h("div",{className:"flex gap-1"},wins.map(function(w){return h("button",{key:w.k,title:w.tip,onClick:function(){setWin(w.k);},className:"px-2 py-0.5 rounded text-xs font-medium "+(win===w.k?"text-white":"text-gray-500 bg-gray-100"),style:win===w.k?{background:"#555"}:{}},w.l);}))),
+h("div",{className:"flex gap-4 mt-1"},
 h("div",{className:"hidden sm:block w-48 shrink-0"},teamListEl),
 h("div",{className:"flex-1",style:{minWidth:0}},
 h("div",{className:"sm:hidden mb-2"},h("button",{onClick:function(){setShowList(!showList);},className:"text-xs px-3 py-1 rounded bg-gray-100 text-gray-600"},showList?"Hide teams":"Select teams ("+sel.length+" selected)"),showList?teamListEl:null),
 h("div",{className:"text-sm font-semibold mb-1",style:{color:N}},"Season by season"),
 h("div",{style:{height:180}},e(RC.ResponsiveContainer,null,e(RC.BarChart,{data:cd},e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),e(RC.XAxis,{dataKey:"s",tick:{fontSize:8}}),e(RC.YAxis,{tick:{fontSize:9}}),e(RC.Tooltip,null),e(RC.ReferenceLine,{y:0,stroke:"#ccc"}),sel.map(function(t,i){return e(RC.Bar,{key:t,dataKey:t,fill:cols[i],opacity:0.7});})))),
-h("div",{className:"text-sm font-semibold mb-1 mt-3",style:{color:N}},"Cumulative"),
+h("div",{className:"text-sm font-semibold mb-1 mt-3",style:{color:N}},cumLabel),
 h("div",{style:{height:180}},e(RC.ResponsiveContainer,null,e(RC.LineChart,{data:cum},e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),e(RC.XAxis,{dataKey:"s",tick:{fontSize:8}}),e(RC.YAxis,{tick:{fontSize:9}}),e(RC.Tooltip,null),e(RC.ReferenceLine,{y:0,stroke:"#ccc"}),sel.map(function(t,i){return e(RC.Line,{key:t,dataKey:t,stroke:cols[i],strokeWidth:2,dot:{r:2}});})))))));
 }
 
@@ -428,11 +472,11 @@ h("th",{className:"text-center px-1 py-0.5",colSpan:8,style:{color:O,borderBotto
 iC&&posD.cur?h("th",{className:"text-center px-1 py-0.5",colSpan:8,style:{color:B,borderBottom:"2px solid "+B+"30",borderRight:"1px solid #e5e7eb",fontSize:10}},"Current forecast"):null,
 !iC?h("th",{className:"text-center px-1 py-0.5",rowSpan:2,style:{fontSize:10}},"Final"):null),
 h("tr",{style:{background:"#f9fafb",borderBottom:"2px solid #e5e7eb"}},
-h("th",{className:"text-right px-1 py-0.5",title:"Pre-season predicted rank",style:{color:O,fontSize:9}},"Rk"),
-h("th",{className:"text-right px-1 py-0.5",title:"Pre-season expected points",style:{color:O,fontSize:9}},"Exp"),
+e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Rk",tip:"Pre-season predicted rank"}),
+e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Exp",tip:"Pre-season expected points"}),
 cats.map(function(c){return h("th",{key:"p"+c.k,className:"text-right px-1 py-0.5",title:c.l,style:{color:c.c,fontSize:9}},c.l);}),
-iC&&posD.cur?h("th",{className:"text-right px-1 py-0.5",title:"Current predicted rank",style:{color:B,fontSize:9,borderLeft:"1px solid #e5e7eb"}},"Rk"):null,
-iC&&posD.cur?h("th",{className:"text-right px-1 py-0.5",title:"MC projected points",style:{color:B,fontSize:9}},"Proj"):null,
+iC&&posD.cur?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9,borderLeft:"1px solid #e5e7eb"}},label:"Rk",tip:"Current MC predicted rank"}):null,
+iC&&posD.cur?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"Proj",tip:"MC projected points"}):null,
 iC&&posD.cur?cats.map(function(c){return h("th",{key:"c"+c.k,className:"text-right px-1 py-0.5",title:c.l,style:{color:c.c,fontSize:9}},c.l);}):null)),
 h("tbody",null,tableData.map(function(r,ri){
 return h("tr",{key:r.t,style:{background:ri%2===0?"white":"#fafbfc",borderBottom:"1px solid #f0f0f0"}},
@@ -447,7 +491,7 @@ iC&&r.cur?cats.map(function(c){return pctCell(r.cur[c.k],c.k,"c"+c.k);}):null,
 !iC?h("td",{className:"px-2 py-0.5 text-right",style:{background:r.actPos?rkBg(r.actPos,r.preRk):"transparent"}},r.actPos?posLabel(r.actPos):"-"):null
 );})))));}
 
-var tabs=[{id:"tracker",l:"Season Tracker"},{id:"predictions",l:"Predictions"},{id:"badrun",l:"Bad Run Checker"},{id:"h2h",l:"Head to Head"},{id:"explorer",l:"Explorer"},{id:"calc",l:"Calculator"}];
+var tabs=[{id:"tracker",l:"Season Tracker"},{id:"predictions",l:"Predictions"},{id:"badrun",l:"Bad Run Checker"},{id:"h2h",l:"Head to Head"},{id:"explorer",l:"Overperformance"},{id:"calc",l:"Calculator"}];
 function App(){var _1=React.useState(getHash().tab||"tracker"),tab=_1[0],sTab0=_1[1];
 function sTab(v){sTab0(v);setHash("tab",v);}
 return h("div",{className:"min-h-screen bg-white"},
