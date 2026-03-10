@@ -283,12 +283,19 @@ var nGames=lW.length;
 var cA=[],cE=[],ca=0,ce=0;
 for(var i=0;i<lW.length;i++){ca+=lW[i][2];ce+=lW[i][3];cA.push(ca);cE.push(Math.round(ce*10)/10);}
 var B50="#7C3AED",B80="#2E75B6",B94="#10B981";
+var DG="#15803d",PG="#86efac",DR="#b91c1c",PR="#fca5a5";
 var cd=lW.map(function(m,i){var v=m[1]?"vs":"@",ex=cE[i],n=i+1;
-var s1=0.674*SIG*Math.sqrt(n),s2=1.28*SIG*Math.sqrt(n),s3=1.88*SIG*Math.sqrt(n);
+var s25=0.674*SIG*Math.sqrt(n),s3=1.88*SIG*Math.sqrt(n);
+var p3=Math.max(0,Math.round((ex-s3)*10)/10);
+var p25=Math.max(0,Math.round((ex-s25)*10)/10);
+var p75=Math.round((ex+s25)*10)/10;
+var p97=Math.round((ex+s3)*10)/10;
 return{opp:v+" "+m[0]+" (GW"+(gf+i)+")",actual:cA[i],expected:ex,
-b3lo:Math.max(0,Math.round((ex-s3)*10)/10),b3h:Math.round(s3*2*10)/10,
-b2lo:Math.max(0,Math.round((ex-s2)*10)/10),b2h:Math.round(s2*2*10)/10,
-b1lo:Math.max(0,Math.round((ex-s1)*10)/10),b1h:Math.round(s1*2*10)/10,
+zBase:p3,
+zPR:Math.round((p25-p3)*10)/10,
+zDR:Math.round((ex-p25)*10)/10,
+zDG:Math.round((p75-ex)*10)/10,
+zPG:Math.round((p97-p75)*10)/10,
 mp:m[2],me:m[3]};});
 var df=(ca-Math.round(ce*10)/10).toFixed(1);
 // Range slider component
@@ -303,7 +310,7 @@ h("div",{style:{position:"absolute",top:12,left:pctL+"%",width:(pctR-pctL)+"%",h
 h("input",{type:"range",min:1,max:nP,value:gf,onChange:function(ev){var v=Number(ev.target.value);if(v<gt)setFrom(v);},style:{position:"absolute",top:0,left:0,width:"100%",height:28,background:"transparent",WebkitAppearance:"none",pointerEvents:"none",zIndex:3},className:"range-thumb"}),
 h("input",{type:"range",min:1,max:nP,value:gt,onChange:function(ev){var v=Number(ev.target.value);if(v>gf)setTo(v);},style:{position:"absolute",top:0,left:0,width:"100%",height:28,background:"transparent",WebkitAppearance:"none",pointerEvents:"none",zIndex:4},className:"range-thumb"})));
 return h("div",null,
-e(Info,null,"The wage model produces expected points per match against each opponent. Over a short run of games, actual points can deviate from expectation due to randomness. The chart shows three probability bands: ",h("span",{style:{color:B50,fontWeight:600}},"purple")," = 50% (25th\u201375th percentile), ",h("span",{style:{color:B80,fontWeight:600}},"blue")," = 80% (10th\u201390th), ",h("span",{style:{color:B94,fontWeight:600}},"green")," = 94% (3rd\u201397th). If actual points fall outside the green band, the run is statistically unusual (<6% by chance)."),
+e(Info,null,"Evaluate whether a run of results is statistically unusual given the team\u2019s wage bill. The expected line (dashed) shows what the budget predicts. ",h("b",null,"Above the line = overperformance")," (green shading): dark green covers the most likely outcomes (50th\u201375th percentile), pale green extends to the 97th percentile. ",h("b",null,"Below the line = underperformance")," (red shading): dark red = 25th\u201350th percentile, pale red = down to the 3rd percentile. Results beyond the pale zone have less than 3% probability of occurring by chance in that direction."),
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},e(LP,{lg:lg,set:function(v){sLg(v);sSn(Object.keys(D.seasons[v]).sort().reverse()[0]);sSel(v==="ll"?"Barcelona":"Liverpool");}}),
 h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s);}))),
 h("div",{className:"flex flex-wrap gap-4 mb-3"},
@@ -312,22 +319,23 @@ rangeBar,
 h("div",{style:{height:240},className:"mb-2"},e(RC.ResponsiveContainer,null,
 e(RC.AreaChart,{data:cd,margin:{left:0,right:5,top:5,bottom:45}},
 e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),e(RC.XAxis,{dataKey:"opp",tick:{fontSize:8,angle:-35,textAnchor:"end"},height:55,interval:0}),e(RC.YAxis,{tick:{fontSize:9}}),e(RC.Tooltip,null),
-e(RC.Area,{dataKey:"b3lo",stackId:"b3",stroke:"none",fill:"transparent",isAnimationActive:false}),
-e(RC.Area,{dataKey:"b3h",stackId:"b3",stroke:"none",fill:B94,fillOpacity:0.18,isAnimationActive:false}),
-e(RC.Area,{dataKey:"b2lo",stackId:"b2",stroke:"none",fill:"transparent",isAnimationActive:false}),
-e(RC.Area,{dataKey:"b2h",stackId:"b2",stroke:"none",fill:B80,fillOpacity:0.18,isAnimationActive:false}),
-e(RC.Area,{dataKey:"b1lo",stackId:"b1",stroke:"none",fill:"transparent",isAnimationActive:false}),
-e(RC.Area,{dataKey:"b1h",stackId:"b1",stroke:"none",fill:B50,fillOpacity:0.22,isAnimationActive:false}),
+e(RC.Area,{dataKey:"zBase",stackId:"z",stroke:"none",fill:"transparent",isAnimationActive:false}),
+e(RC.Area,{dataKey:"zPR",stackId:"z",stroke:"none",fill:PR,fillOpacity:0.45,isAnimationActive:false}),
+e(RC.Area,{dataKey:"zDR",stackId:"z",stroke:"none",fill:DR,fillOpacity:0.18,isAnimationActive:false}),
+e(RC.Area,{dataKey:"zDG",stackId:"z",stroke:"none",fill:DG,fillOpacity:0.18,isAnimationActive:false}),
+e(RC.Area,{dataKey:"zPG",stackId:"z",stroke:"none",fill:PG,fillOpacity:0.45,isAnimationActive:false}),
 e(RC.Area,{dataKey:"expected",stroke:"#999",strokeDasharray:"5 3",strokeWidth:2,fill:"none",isAnimationActive:false}),e(RC.Area,{dataKey:"actual",stroke:N,strokeWidth:2.5,fill:"none",dot:{r:3,fill:N},isAnimationActive:false})))),
-h("div",{className:"flex flex-wrap gap-x-4 gap-y-1 mb-3 text-xs text-gray-500 justify-center"},
+h("div",{className:"flex flex-wrap gap-x-3 gap-y-1 mb-3 text-xs text-gray-500 justify-center"},
 h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,background:N,display:"inline-block"}}),h("span",null,"Actual")),
 h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:0,borderTop:"2px dashed #999",display:"inline-block"}}),h("span",null,"Expected")),
-h("span",{className:"flex items-center gap-1"},h("span",{style:{width:12,height:8,background:B50,display:"inline-block",opacity:0.5,borderRadius:2}}),h("span",null,"50%")),
-h("span",{className:"flex items-center gap-1"},h("span",{style:{width:12,height:8,background:B80,display:"inline-block",opacity:0.4,borderRadius:2}}),h("span",null,"80%")),
-h("span",{className:"flex items-center gap-1"},h("span",{style:{width:12,height:8,background:B94,display:"inline-block",opacity:0.35,borderRadius:2}}),h("span",null,"94%"))),
-h("div",{className:"p-4 rounded-xl text-center "+(Number(df)>=0?"bg-green-50":"bg-amber-50")},
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:10,height:8,background:DG,display:"inline-block",opacity:0.4,borderRadius:2}}),h("span",null,"Overperf (likely)")),
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:10,height:8,background:PG,display:"inline-block",opacity:0.6,borderRadius:2}}),h("span",null,"Overperf (<3%)")),
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:10,height:8,background:DR,display:"inline-block",opacity:0.4,borderRadius:2}}),h("span",null,"Underperf (likely)")),
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:10,height:8,background:PR,display:"inline-block",opacity:0.6,borderRadius:2}}),h("span",null,"Underperf (<3%)"))),
+h("div",{className:"p-4 rounded-xl text-center",style:{background:Number(df)>=0?"#f0fdf4":"#fef2f2"}},
 h("div",{className:"text-2xl font-bold",style:{color:Number(df)>=0?G:R}},(Number(df)>=0?"+":"")+df+" pts"),
-h("div",{className:"text-sm text-gray-600"},ca+" actual vs "+Math.round(ce*10)/10+" expected in "+nGames+" games (GW"+gf+"\u2013GW"+gt+")")),
+h("div",{className:"text-sm text-gray-600"},ca+" actual vs "+Math.round(ce*10)/10+" expected in "+nGames+" games (GW"+gf+"\u2013GW"+gt+")"),
+h("div",{className:"text-xs mt-1",style:{color:"#888"}},Number(df)>=0?"Overperforming":"Underperforming")),
 h("table",{className:"w-full text-xs mt-3"},
 h("thead",null,h("tr",{className:"text-gray-400 border-b"},h("th",{className:"text-left py-1"},"GW"),h("th",{className:"text-left"},"Opponent"),h("th",{className:"text-center"},"V"),h("th",{className:"text-right"},"Pts"),h("th",{className:"text-right"},"Exp"),h("th",{className:"text-right"},"+/-"))),
 h("tbody",null,lW.map(function(m,i){var d=m[2]-m[3];return h("tr",{key:i,className:"border-b border-gray-100"},h("td",{className:"py-0.5 text-gray-400"},gf+i),h("td",{className:"py-0.5"},m[0]),h("td",{className:"py-0.5 text-center"},m[1]?"H":"A"),h("td",{className:"py-0.5 text-right font-semibold"},m[2]),h("td",{className:"py-0.5 text-right text-gray-400"},m[3].toFixed(1)),h("td",{className:"py-0.5 text-right font-bold",style:{color:d>=0?G:R}},(d>=0?"+":"")+d.toFixed(1)));}))));
@@ -431,7 +439,7 @@ else if(mode==="norm"){var avgExp=cumExp/n;r[t]=avgExp>0?Math.round((cumOP/n)/av
 else{var p=pval(cumOP,n*38);r[t]=Math.round((cumOP>=0?1:-1)*(100-p*100)*10)/10;}});return r;});},[sel,teams,mode,win]);
 var sfx=mode==="pts"?"pts":mode==="norm"?"%":"";
 var teamListEl=h("div",{className:"overflow-y-auto rounded bg-gray-50 p-1 text-xs",style:{maxHeight:400}},tl.map(function(t){var idx=sel.indexOf(t.n);return h("div",{key:t.n,onClick:function(){tog(t.n);},className:"cursor-pointer px-1.5 py-0.5 rounded flex justify-between "+(idx>=0?"font-bold":"hover:bg-gray-100"),style:idx>=0?{background:cols[idx]+"20",color:cols[idx]}:{}},h("span",{className:"truncate"},t.n+" ("+t.ns+")"),h("span",{style:{color:t.c>=0?G:R}},(t.c>=0?"+":"")+t.c+(sfx||"")));}));
-var cumLabel=win==="all"?(mode==="ms"?"Trailing MS":"Cumulative"):"Trailing "+winN+"yr"+(mode==="ms"?" MS":"");
+var cumLabel=win==="all"?(mode==="ms"?"Trailing Managerial Score":"Cumulative"):"Trailing "+winN+"yr"+(mode==="ms"?" Managerial Score":"");
 return h("div",null,
 e(Info,null,"Overperformance = actual points minus wage-model expected points. A team that consistently beats its budget expectation is extracting extra value from its payroll (coaching, recruitment, culture). Three metrics: Extra pts (raw gap), Normalized (percentage gap adjusted for budget level: (cum. overperf \u00f7 seasons) \u00f7 avg expected pts \u00d7 100), and MS (Managerial Score: sign \u00d7 (100 \u2212 p), where p is the probability the result is due to chance alone). The time window controls the trailing period for the bottom chart: All shows full history, 5yr/3yr show a rolling window."),
 h("div",{className:"flex flex-wrap gap-3 items-end mb-3"},
@@ -646,9 +654,9 @@ h("p",null,"with \u03c3 \u2248 1.58 (match-level residual standard deviation) an
 
 e(Sec,{title:"Reference"},
 h("p",null,"For the full analysis, including regression diagnostics, Monte Carlo validation, and detailed discussion of results, see:"),
-h("p",{className:"mt-1"},h("a",{href:"https://talfarouriarte-cloud.github.io/what-money-cant-buy/What_Money_Cant_Buy_in_Football.pdf",target:"_blank",style:{color:B,textDecoration:"underline",fontWeight:600}},"\u201cWhat Money Can\u2019t Buy in Football\u201d")," (PDF)")));}
+h("p",{className:"mt-1"},h("a",{href:"https://talfarouriarte-cloud.github.io/what-money-cant-buy/What%20money%20cant%20buy.pdf",target:"_blank",style:{color:B,textDecoration:"underline",fontWeight:600}},"\u201cWhat Money Can\u2019t Buy in Football\u201d")," (PDF)")));}
 
-var tabs=[{id:"tracker",l:"Season Tracker"},{id:"predictions",l:"Predictions"},{id:"badrun",l:"Bad Run Checker"},{id:"h2h",l:"Head to Head"},{id:"explorer",l:"Overperformance"},{id:"calc",l:"Calculator"},{id:"method",l:"Methodology"}];
+var tabs=[{id:"tracker",l:"Season Tracker"},{id:"predictions",l:"Predictions"},{id:"badrun",l:"Run Evaluator"},{id:"h2h",l:"Head to Head"},{id:"explorer",l:"Overperformance"},{id:"calc",l:"Calculator"},{id:"method",l:"Methodology"}];
 function App(){useTHState();
 React.useEffect(function(){function close(){if(_thSet)_thSet(null);}document.addEventListener("click",close);return function(){document.removeEventListener("click",close);};},[]);
 var _1=React.useState(getHash().tab||"tracker"),tab=_1[0],sTab0=_1[1];
