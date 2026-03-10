@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What money can't buy</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body{margin:0;font-family:system-ui,sans-serif}</style>
+</head>
+<body>
+<div id="root"><p style="padding:40px;text-align:center;color:#888">Loading app...</p></div>
+<script>
+var e=React.createElement,RC=Recharts,D=null;
+var N="#1A3A6B",B="#2E75B6",O="#D4772C",G="#2E8B57",R="#C0392B",T=["#2E75B6","#D4772C","#2E8B57"];
+function h(t,p){var a=[t,p];for(var i=2;i<arguments.length;i++)a.push(arguments[i]);return e.apply(null,a);}
+var Sg=function(z){return 1/(1+Math.exp(-z));};
+
+function LP(p){return h("div",{className:"flex gap-1.5"},
+[["ll","La Liga"],["pl","Premier League"]].map(function(x){
+return h("button",{key:x[0],onClick:function(){p.set(x[0]);},
+className:"px-3 py-1 rounded-full text-sm font-semibold "+(p.lg===x[0]?"text-white":"text-gray-500 bg-gray-100"),
+style:p.lg===x[0]?{background:N}:{}},x[1]);}));}
+
+function Tracker(){
+var _1=React.useState("ll"),lg=_1[0],sLg=_1[1];
+var _2=React.useState(["Barcelona"]),sel=_2[0],sSel=_2[1];
+var _3=React.useState("25/26"),sn=_3[0],sSn=_3[1];
+var _4=React.useState(false),showList=_4[0],setShowList=_4[1];
+var sL=React.useMemo(function(){return Object.keys(D.seasons[lg]).sort();},[lg]);
+var sD=D.seasons[lg][sn]||{},multi=sel.length>1;
+var st=React.useMemo(function(){return Object.entries(sD).map(function(x){
+var n=x[0],d=x[1];return{n:n,p:d.a[d.a.length-1]||0,o:Math.round((d.a[d.a.length-1]||0)-(d.e[d.e.length-1]||0))};
+}).sort(function(a,b){return b.p-a.p;});},[sD]);
+React.useEffect(function(){var t=Object.keys(sD);if(t.length>0){
+t.sort(function(a,b){return(sD[b].a[sD[b].a.length-1]||0)-(sD[a].a[sD[a].a.length-1]||0);});
+var kept=sel.filter(function(s){return sD[s];});
+if(kept.length>0){sSel(kept);}else{sSel([t[0]]);}}},[sn]);
+function switchLg(v){sLg(v);var sd2=D.seasons[v]||{};var sKeys=Object.keys(sd2);if(sKeys.length>0){var lastS=sKeys.sort()[sKeys.length-1];sSn(lastS);var t2=Object.keys(sd2[lastS]||{});if(t2.length>0){t2.sort(function(a,b){return(sd2[lastS][b].a[sd2[lastS][b].a.length-1]||0)-(sd2[lastS][a].a[sd2[lastS][a].a.length-1]||0);});sSel([t2[0]]);}}}
+function tog(n){sSel(function(p){if(p.indexOf(n)>=0){if(p.length<=1)return p;return p.filter(function(x){return x!==n;});}if(p.length>=3)return[p[1],p[2],n];return p.concat([n]);});}
+var pr=sD[sel[0]];if(!pr){var fb=Object.keys(sD);if(fb.length>0){sSel([fb[0]]);return h("div",{style:{padding:20,color:"#aaa"}},"Loading...");}return h("div",{style:{padding:40,textAlign:"center",color:"#aaa"}},"No data");}
+var nP=pr.a.length,iC=sn==="25/26";
+var bd=iC&&!multi&&D.bands[lg]&&D.bands[lg][sel[0]]?D.bands[lg][sel[0]]:null;
+var pre=iC&&!multi&&D.pre[lg]&&D.pre[lg][sel[0]]?D.pre[lg][sel[0]]:null;
+var cd=React.useMemo(function(){var rows=[],mG=38;
+if(bd&&bd.p50.length>mG)mG=bd.p50.length;
+var expRate=pr.e.length>0?pr.e[pr.e.length-1]/pr.e.length:1.2;
+for(var i=0;i<mG;i++){var r={gw:i+1};
+if(!multi){
+if(i<nP){r.actual=pr.a[i];}
+if(i<pr.e.length){r.exp=pr.e[i];}else{r.exp=Math.round((pr.e[pr.e.length-1]+expRate*(i-pr.e.length+1))*10)/10;}
+if(bd&&bd.p10[i]!==undefined){
+var lastAct=nP>0?pr.a[nP-1]:0;
+if(i<nP){
+// Played: no band, median=actual
+r.curBase=pr.a[i];r.curBand=0;
+}else{
+// Projected: enforce p10 >= last actual (can't lose points)
+var p10=Math.max(bd.p10[i],lastAct);var p90=bd.p90[i];
+r.curBase=p10;r.curBand=p90-p10;
+}
+// Median: only from last played GW onwards to avoid overlapping actual
+if(i>=nP-1){r.curMed=i<nP?pr.a[i]:Math.max(bd.p50[i],lastAct);}
+}else if(!iC&&r.exp!==undefined){var sg=1.58*Math.sqrt(i+1);r.curBase=Math.max(0,Math.round(r.exp-1.28*sg));r.curBand=Math.round(2.56*sg);}
+if(pre&&pre.p10[i]!==undefined){r.preBase=pre.p10[i];r.preBand=pre.p90[i]-pre.p10[i];r.preMed=pre.p50[i];}
+if(iC&&bd){delete r.exp;}}
+else{for(var j=0;j<sel.length;j++){var t=sD[sel[j]];if(!t)continue;
+var tNP=t.a.length;var tLast=tNP>0?t.a[tNP-1]:0;
+if(i<tNP){r["a"+j]=t.a[i];}
+var jBd=iC&&D.bands[lg]&&D.bands[lg][sel[j]]?D.bands[lg][sel[j]]:null;
+if(!jBd){var tE=t.e.length>0?t.e[t.e.length-1]/t.e.length:1.2;
+if(i<t.e.length){r["e"+j]=t.e[i];}else{r["e"+j]=Math.round((t.e[t.e.length-1]+tE*(i-t.e.length+1))*10)/10;}}
+if(jBd){
+// Median: from last played GW onwards, connects to actual line
+if(i>=tNP-1){r["m"+j]=i<tNP?t.a[i]:Math.max(jBd.p50[i],tLast);}
+// Band: zero for played, fan out from last actual for projected
+if(i<tNP){r["bB"+j]=t.a[i];r["bD"+j]=0;}
+else{var jp10=Math.max(jBd.p10[i],tLast);r["bB"+j]=jp10;r["bD"+j]=jBd.p90[i]-jp10;}}
+else if(i<tNP){r["bB"+j]=t.a[i];r["bD"+j]=0;}}}rows.push(r);}
+return rows;},[sel,sD,multi,nP,bd,pre,iC,sn,lg]);
+var customTip=function(props){if(!props.active||!props.payload||!props.payload.length)return null;
+var d=props.payload[0].payload;var gw=d.gw;var isPast=gw<=nP;
+var rows=[];
+if(!multi){
+var line1="GW "+gw;if(iC){line1+=isPast?" (played)":" (projected)";}
+rows.push(h("div",{key:"h",className:"font-bold mb-1"},line1));
+if(d.actual!==undefined)rows.push(h("div",{key:"a",style:{color:B}},"Actual: "+d.actual+" pts"));
+if(d.curMed!==undefined)rows.push(h("div",{key:"m",style:{color:B,opacity:0.7}},"Proj median: "+d.curMed));
+if(d.curBase!==undefined&&d.curBand!==undefined&&d.curBand>0)rows.push(h("div",{key:"b",className:"text-gray-400"},"Range: "+d.curBase+"-"+(d.curBase+d.curBand)));
+if(d.exp!==undefined)rows.push(h("div",{key:"e",className:"text-gray-500"},"Expected: "+d.exp));
+if(d.preMed!==undefined)rows.push(h("div",{key:"p",style:{color:O}},"Pre-season: "+d.preMed));}
+else{rows.push(h("div",{key:"h",className:"font-bold mb-1"},"GW "+gw));
+for(var j=0;j<sel.length;j++){var parts=[];
+if(d["a"+j]!==undefined)parts.push(d["a"+j]+" pts");
+if(d["m"+j]!==undefined&&d["a"+j]===undefined)parts.push("proj "+d["m"+j]);
+if(d["bB"+j]!==undefined&&d["bD"+j]>0)parts.push(d["bB"+j]+"-"+(d["bB"+j]+d["bD"+j]));
+if(parts.length>0)rows.push(h("div",{key:"t"+j,style:{color:T[j]}},h("b",null,sel[j]),": "+parts.join(" | ")));}}
+return h("div",{style:{background:"white",border:"1px solid #e5e7eb",borderRadius:6,padding:8,fontSize:11,boxShadow:"0 2px 8px rgba(0,0,0,0.1)"}},rows);};
+var cc=[e(RC.CartesianGrid,{key:"g",strokeDasharray:"3 3",stroke:"#f0f0f0"}),e(RC.XAxis,{key:"x",dataKey:"gw",tick:{fontSize:9}}),e(RC.YAxis,{key:"y",tick:{fontSize:9}}),e(RC.Tooltip,{key:"t",content:customTip})];
+if(!multi){
+if(pre){cc.push(e(RC.Area,{key:"prB",dataKey:"preBase",stackId:"pre",stroke:"none",fill:"transparent",isAnimationActive:false}));
+cc.push(e(RC.Area,{key:"prD",dataKey:"preBand",stackId:"pre",stroke:"none",fill:O,fillOpacity:0.1,isAnimationActive:false}));
+cc.push(e(RC.Area,{key:"pM",dataKey:"preMed",stroke:O,strokeDasharray:"6 4",strokeWidth:1.2,fill:"none",strokeOpacity:0.6,isAnimationActive:false}));}
+if(bd||!iC){cc.push(e(RC.Area,{key:"cB",dataKey:"curBase",stackId:"cur",stroke:"none",fill:"transparent",isAnimationActive:false}));
+cc.push(e(RC.Area,{key:"cD",dataKey:"curBand",stackId:"cur",stroke:"none",fill:B,fillOpacity:0.15,isAnimationActive:false}));}
+if(bd){cc.push(e(RC.Area,{key:"cM",dataKey:"curMed",stroke:B,strokeDasharray:"4 3",strokeWidth:1.2,fill:"none",strokeOpacity:0.6,isAnimationActive:false}));}
+cc.push(e(RC.Area,{key:"ex",dataKey:"exp",stroke:"#999",strokeDasharray:"2 2",strokeWidth:1,fill:"none",isAnimationActive:false}));
+cc.push(e(RC.Area,{key:"ac",dataKey:"actual",stroke:B,strokeWidth:2.5,fill:"none",isAnimationActive:false}));}
+else{
+for(var j=0;j<sel.length;j++){
+if(iC){cc.push(e(RC.Area,{key:"bB"+j,dataKey:"bB"+j,stackId:"sb"+j,stroke:"none",fill:"transparent",isAnimationActive:false}));
+cc.push(e(RC.Area,{key:"bD"+j,dataKey:"bD"+j,stackId:"sb"+j,stroke:"none",fill:T[j],fillOpacity:0.07,isAnimationActive:false}));
+cc.push(e(RC.Area,{key:"m"+j,dataKey:"m"+j,stroke:T[j],strokeDasharray:"4 3",strokeWidth:1.2,fill:"none",strokeOpacity:0.5,isAnimationActive:false}));}
+cc.push(e(RC.Area,{key:"e"+j,dataKey:"e"+j,stroke:T[j],strokeDasharray:"2 2",strokeWidth:1,fill:"none",strokeOpacity:0.3,isAnimationActive:false}));
+cc.push(e(RC.Area,{key:"a"+j,dataKey:"a"+j,stroke:T[j],strokeWidth:2.5,fill:"none",isAnimationActive:false}));}}
+if(iC)cc.push(e(RC.ReferenceLine,{key:"now",x:nP,stroke:"#ddd",strokeDasharray:"2 2"}));
+var tG=38;if(bd&&bd.p50.length>tG)tG=bd.p50.length;
+var ops=sel.map(function(n){var t=sD[n];if(!t)return{name:n,op:"0",p:0};var ap=t.a[t.a.length-1]||0,ep=t.e[t.e.length-1]||0;return{name:n,op:(ap-ep).toFixed(1),p:ap};});
+var teamListEl=h("div",{className:"overflow-y-auto rounded bg-gray-50 p-1 text-xs",style:{maxHeight:400}},
+st.map(function(s,i){var idx=sel.indexOf(s.n);return h("div",{key:s.n,onClick:function(){tog(s.n);},className:"cursor-pointer px-1 py-0.5 rounded flex justify-between "+(idx>=0?"font-bold":"hover:bg-gray-100"),style:idx>=0?{background:T[idx]+"18",color:T[idx]}:{}},h("span",{className:"truncate"},i+1+". "+s.n),h("span",null,s.p));}));
+return h("div",null,
+h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},
+e(LP,{lg:lg,set:switchLg}),
+h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s+(s==="25/26"?" (current)":""));}))),
+h("div",{className:"flex gap-4"},
+h("div",{className:"hidden sm:block w-44 shrink-0"},teamListEl),
+h("div",{className:"flex-1",style:{minWidth:0}},
+h("div",{className:"sm:hidden mb-2"},h("button",{onClick:function(){setShowList(!showList);},className:"text-xs px-3 py-1 rounded bg-gray-100 text-gray-600"},showList?"Hide teams":"Show teams ("+sel.length+" selected)"),showList?teamListEl:null),
+h("div",{className:"flex gap-3 mb-2 flex-wrap text-sm"},ops.map(function(o,i){return h("span",{key:o.name,className:"flex items-center gap-1"},h("span",{style:{width:8,height:8,borderRadius:4,background:T[i],display:"inline-block"}}),h("b",{style:{color:T[i]}},o.name)," ",h("span",{className:"text-gray-400"},o.p+"pts"),h("span",{style:{color:Number(o.op)>=0?G:R,fontWeight:700}},(Number(o.op)>=0?"+":"")+o.op));})),
+h("div",{style:{height:300}},e(RC.ResponsiveContainer,null,e(RC.AreaChart,{data:cd,margin:{left:0,right:5,top:5,bottom:5}},cc))),
+!multi?h("div",{className:"flex flex-wrap gap-x-4 gap-y-1 mt-1 mb-2 text-xs text-gray-500 justify-center"},
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,background:B,display:"inline-block"}}),h("span",null,"Actual")),
+iC&&bd?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,background:B,borderTop:"1px dashed "+B,display:"inline-block",opacity:0.6}}),h("span",null,"MC projection (p50)")):null,
+iC&&bd?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:B,display:"inline-block",opacity:0.15,borderRadius:2}}),h("span",null,"MC range (p10-p90)")):null,
+pre?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,borderTop:"1px dashed "+O,display:"inline-block",opacity:0.6}}),h("span",null,"Pre-season (p50)")):null,
+pre?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:O,display:"inline-block",opacity:0.1,borderRadius:2}}),h("span",null,"Pre-season range")):null,
+!iC?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,borderTop:"1px dashed #999",display:"inline-block"}}),h("span",null,"Expected")):null,
+!iC?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:B,display:"inline-block",opacity:0.15,borderRadius:2}}),h("span",null,"Variance (p10-p90)")):null
+):h("div",{className:"flex flex-wrap gap-x-4 gap-y-1 mt-1 mb-2 text-xs text-gray-500 justify-center"},
+h("span",null,"\u2014 Actual"),
+iC?h("span",null,"- - MC projection"):null,
+iC?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:"#999",display:"inline-block",opacity:0.1,borderRadius:2}}),h("span",null,"MC range (p10-p90)")):null,
+!iC?h("span",null,"\u00B7\u00B7 Expected"):null),
+h("div",{className:"mt-3 overflow-x-auto"},
+h("table",{className:"w-full text-xs",style:{minWidth:400}},
+h("thead",null,h("tr",{className:"text-gray-400 border-b"},h("th",{className:"text-left py-1"},"Team"),h("th",{className:"text-right"},"Played"),h("th",{className:"text-right"},"Actual"),h("th",{className:"text-right"},"Expected"),h("th",{className:"text-right"},"+/-"),iC?h("th",{className:"text-right"},"p10"):null,iC?h("th",{className:"text-right"},"Proj"):null,iC?h("th",{className:"text-right"},"p90"):null,iC?h("th",{className:"text-right",style:{color:O}},"Pre"):null)),
+h("tbody",null,sel.map(function(n,i){var t=sD[n];if(!t)return null;
+var ap=t.a[t.a.length-1]||0,ep=t.e[t.e.length-1]||0,df=ap-ep;
+var jBd=iC&&D.bands[lg]&&D.bands[lg][n]?D.bands[lg][n]:null;
+var jPre=iC&&D.pre[lg]&&D.pre[lg][n]?D.pre[lg][n]:null;
+var fin=jBd?jBd.p50.length-1:0;
+var preFin=jPre?jPre.p50.length-1:0;
+return h("tr",{key:n,className:"border-b border-gray-100"},
+h("td",{className:"py-1 font-bold",style:{color:multi?T[i]:B}},n),
+h("td",{className:"py-1 text-right"},t.a.length),
+h("td",{className:"py-1 text-right font-semibold"},ap),
+h("td",{className:"py-1 text-right text-gray-500"},Math.round(ep)),
+h("td",{className:"py-1 text-right font-bold",style:{color:df>=0?G:R}},(df>=0?"+":"")+df.toFixed(1)),
+iC&&jBd?h("td",{className:"py-1 text-right text-gray-400"},jBd.p10[fin]):null,
+iC&&jBd?h("td",{className:"py-1 text-right font-semibold"},jBd.p50[fin]):null,
+iC&&jBd?h("td",{className:"py-1 text-right text-gray-400"},jBd.p90[fin]):null,
+iC&&jPre?h("td",{className:"py-1 text-right",style:{color:O}},jPre.p50[preFin]):null
+);})))))));
+}
+
+function BadRun(){
+var _1=React.useState("ll"),lg=_1[0],sLg=_1[1];
+var _2=React.useState("25/26"),sn=_2[0],sSn=_2[1];
+var _3=React.useState("Barcelona"),sel=_3[0],sSel=_3[1];
+var _4=React.useState(5),win=_4[0],sWin=_4[1];
+var sL=React.useMemo(function(){return Object.keys(D.seasons[lg]).sort();},[lg]);
+var sD=D.seasons[lg][sn]||{},tl=React.useMemo(function(){return Object.keys(sD).sort();},[sD]);
+var t=sD[sel];
+React.useEffect(function(){var ts=Object.keys(sD);if(ts.length>0&&!sD[sel])sSel(ts.sort()[0]);},[lg,sn]);
+if(!t)return h("div",{className:"p-8 text-center text-gray-400"},"No data");
+var nP=t.a.length,mW=Math.min(nP,20),w=Math.min(win,mW),lW=t.m.slice(nP-w);
+var cA=[],cE=[],ca=0,ce=0;
+for(var i=0;i<lW.length;i++){ca+=lW[i][2];ce+=lW[i][3];cA.push(ca);cE.push(Math.round(ce*10)/10);}
+var cd=lW.map(function(m,i){var v=m[1]?"vs":"@",ex=cE[i],sp=1.3*Math.sqrt(i+1)*1.5;
+return{opp:v+" "+m[0],actual:cA[i],expected:ex,base:Math.max(0,Math.round((ex-sp)*10)/10),range:Math.round(sp*2*10)/10,mp:m[2],me:m[3]};});
+var df=(ca-Math.round(ce*10)/10).toFixed(1);
+return h("div",null,
+h("p",{className:"text-gray-500 text-sm mb-3"},"Compare actual vs expected for specific opponents."),
+h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},e(LP,{lg:lg,set:function(v){sLg(v);sSn(Object.keys(D.seasons[v]).sort().pop());sSel(v==="ll"?"Barcelona":"Liverpool");sWin(5);}}),
+h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s);}))),
+h("div",{className:"flex flex-wrap gap-4 mb-4"},
+h("select",{value:sel,onChange:function(ev){sSel(ev.target.value);},className:"border rounded px-2 py-1.5 text-sm flex-shrink-0"},tl.map(function(x){return h("option",{key:x,value:x},x);})),
+h("div",{className:"flex-1",style:{minWidth:120}},h("div",{className:"text-xs text-gray-500 mb-1"},"Last "+w+" games"),h("input",{type:"range",min:1,max:mW,value:w,onChange:function(ev){sWin(Number(ev.target.value));},className:"w-full",style:{accentColor:B}}))),
+h("div",{style:{height:220},className:"mb-3"},e(RC.ResponsiveContainer,null,
+e(RC.AreaChart,{data:cd,margin:{left:0,right:5,top:5,bottom:45}},
+e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),e(RC.XAxis,{dataKey:"opp",tick:{fontSize:7,angle:-40,textAnchor:"end"},height:55,interval:0}),e(RC.YAxis,{tick:{fontSize:9}}),e(RC.Tooltip,null),
+e(RC.Area,{dataKey:"base",stackId:"b",stroke:"none",fill:"transparent",isAnimationActive:false}),e(RC.Area,{dataKey:"range",stackId:"b",stroke:"none",fill:B,fillOpacity:0.1,isAnimationActive:false}),
+e(RC.Area,{dataKey:"expected",stroke:"#999",strokeDasharray:"5 3",strokeWidth:2,fill:"none",isAnimationActive:false}),e(RC.Area,{dataKey:"actual",stroke:B,strokeWidth:2.5,fill:"none",dot:{r:3,fill:B},isAnimationActive:false})))),
+h("div",{className:"p-4 rounded-xl text-center "+(Number(df)>=0?"bg-green-50":"bg-amber-50")},
+h("div",{className:"text-2xl font-bold",style:{color:Number(df)>=0?G:R}},(Number(df)>=0?"+":"")+df+" pts"),
+h("div",{className:"text-sm text-gray-600"},ca+" actual vs "+Math.round(ce*10)/10+" expected in "+w+" matches")),
+h("table",{className:"w-full text-xs mt-3"},
+h("thead",null,h("tr",{className:"text-gray-400 border-b"},h("th",{className:"text-left py-1"},"Opponent"),h("th",{className:"text-center"},"V"),h("th",{className:"text-right"},"Pts"),h("th",{className:"text-right"},"Exp"),h("th",{className:"text-right"},"+/-"))),
+h("tbody",null,lW.map(function(m,i){var d=m[2]-m[3];return h("tr",{key:i,className:"border-b border-gray-100"},h("td",{className:"py-0.5"},m[0]),h("td",{className:"py-0.5 text-center"},m[1]?"H":"A"),h("td",{className:"py-0.5 text-right font-semibold"},m[2]),h("td",{className:"py-0.5 text-right text-gray-400"},m[3].toFixed(1)),h("td",{className:"py-0.5 text-right font-bold",style:{color:d>=0?G:R}},(d>=0?"+":"")+d.toFixed(1)));}))));
+}
+
+function H2H(){
+var _1=React.useState("ll"),lg=_1[0],sLg=_1[1];
+var _2=React.useState("Real Madrid"),tA=_2[0],sTA=_2[1];
+var _3=React.useState("At Madrid"),tB=_3[0],sTB=_3[1];
+var sL=React.useMemo(function(){return Object.keys(D.seasons[lg]).sort();},[lg]);
+var allT=React.useMemo(function(){var s={};sL.forEach(function(sn){Object.keys(D.seasons[lg][sn]||{}).forEach(function(t){s[t]=true;});});return Object.keys(s).sort();},[lg,sL]);
+var mt=React.useMemo(function(){var res=[];sL.forEach(function(sn){var sd=D.seasons[lg][sn];if(!sd||!sd[tA])return;
+sd[tA].m.forEach(function(m){if(m[0]===tB){var isH=m[1]===1,pA=m[2],eA=m[3],pB=pA===3?0:pA===0?3:1,eB=0;
+var tb=sd[tB];if(tb)tb.m.forEach(function(mb){if(mb[0]===tA&&mb[1]!==m[1])eB=mb[3];});
+res.push({sn:sn,hm:isH?tA:tB,pA:pA,pB:pB,eA:eA,eB:eB});}});});return res;},[lg,sL,tA,tB]);
+var sm=React.useMemo(function(){var wA=0,wB=0,dr=0,tpA=0,tpB=0,teA=0,teB=0;
+mt.forEach(function(m){tpA+=m.pA;tpB+=m.pB;teA+=m.eA;teB+=m.eB;if(m.pA===3)wA++;else if(m.pB===3)wB++;else dr++;});
+return{wA:wA,wB:wB,dr:dr,n:mt.length,tpA:tpA,tpB:tpB,teA:Math.round(teA*10)/10,teB:Math.round(teB*10)/10};},[mt]);
+var cumD=React.useMemo(function(){var cA=0,cB=0,ceA=0,ceB=0;return mt.map(function(m){cA+=m.pA;cB+=m.pB;ceA+=m.eA;ceB+=m.eB;
+return{lb:m.sn+(m.hm===tA?" (H)":" (A)"),cA:cA,cB:cB,eA:Math.round(ceA*10)/10,eB:Math.round(ceB*10)/10};});},[mt,tA]);
+return h("div",null,
+h("p",{className:"text-gray-500 text-sm mb-3"},"Head-to-head record with actual vs expected."),
+e(LP,{lg:lg,set:function(v){sLg(v);if(v==="ll"){sTA("Real Madrid");sTB("At Madrid");}else{sTA("Liverpool");sTB("Man United");}}}),
+h("div",{className:"flex gap-3 mb-5 flex-wrap mt-3"},
+h("div",null,h("label",{className:"text-xs text-gray-500 block mb-1"},"Team A"),h("select",{value:tA,onChange:function(ev){sTA(ev.target.value);},className:"border rounded px-2 py-1.5 text-sm",style:{minWidth:150,color:B,fontWeight:600}},allT.map(function(t){return h("option",{key:t,value:t},t);}))),
+h("div",{className:"flex items-end pb-1 text-gray-400 font-bold"},"vs"),
+h("div",null,h("label",{className:"text-xs text-gray-500 block mb-1"},"Team B"),h("select",{value:tB,onChange:function(ev){sTB(ev.target.value);},className:"border rounded px-2 py-1.5 text-sm",style:{minWidth:150,color:O,fontWeight:600}},allT.map(function(t){return h("option",{key:t,value:t},t);})))),
+mt.length===0?h("div",{className:"text-gray-400 text-center py-8"},"No matches found."):
+h("div",null,
+h("div",{className:"grid grid-cols-3 gap-2 sm:gap-3 mb-5"},
+h("div",{className:"p-3 rounded-lg text-center",style:{background:B+"10",border:"2px solid "+B+"30"}},h("div",{className:"text-2xl font-bold",style:{color:B}},sm.wA),h("div",{className:"text-xs text-gray-500"},tA+" wins"),h("div",{className:"text-sm mt-1"},h("b",null,sm.tpA)," pts ",h("span",{className:"text-gray-400"},"(exp "+sm.teA+")")),h("div",{className:"text-xs font-bold",style:{color:sm.tpA-sm.teA>=0?G:R}},(sm.tpA-sm.teA>=0?"+":"")+(sm.tpA-sm.teA).toFixed(1))),
+h("div",{className:"p-3 rounded-lg text-center bg-gray-50"},h("div",{className:"text-2xl font-bold text-gray-500"},sm.dr),h("div",{className:"text-xs text-gray-500"},"Draws"),h("div",{className:"text-sm text-gray-400 mt-1"},sm.n+" matches")),
+h("div",{className:"p-3 rounded-lg text-center",style:{background:O+"10",border:"2px solid "+O+"30"}},h("div",{className:"text-2xl font-bold",style:{color:O}},sm.wB),h("div",{className:"text-xs text-gray-500"},tB+" wins"),h("div",{className:"text-sm mt-1"},h("b",null,sm.tpB)," pts ",h("span",{className:"text-gray-400"},"(exp "+sm.teB+")")),h("div",{className:"text-xs font-bold",style:{color:sm.tpB-sm.teB>=0?G:R}},(sm.tpB-sm.teB>=0?"+":"")+(sm.tpB-sm.teB).toFixed(1)))),
+h("div",{className:"text-sm font-semibold mb-1",style:{color:N}},"Cumulative points"),
+h("div",{style:{height:220}},e(RC.ResponsiveContainer,null,e(RC.LineChart,{data:cumD,margin:{left:0,right:5,top:5,bottom:30}},
+e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),e(RC.XAxis,{dataKey:"lb",tick:{fontSize:7,angle:-45,textAnchor:"end"},height:50,interval:Math.max(0,Math.floor(cumD.length/12)-1)}),e(RC.YAxis,{tick:{fontSize:9}}),e(RC.Tooltip,null),
+e(RC.Line,{dataKey:"eA",stroke:B,strokeDasharray:"4 3",strokeWidth:1.2,strokeOpacity:0.4,dot:false,name:tA+" exp"}),e(RC.Line,{dataKey:"eB",stroke:O,strokeDasharray:"4 3",strokeWidth:1.2,strokeOpacity:0.4,dot:false,name:tB+" exp"}),
+e(RC.Line,{dataKey:"cA",stroke:B,strokeWidth:2.5,dot:{r:2,fill:B},name:tA}),e(RC.Line,{dataKey:"cB",stroke:O,strokeWidth:2.5,dot:{r:2,fill:O},name:tB})))),
+h("div",{className:"text-sm font-semibold mb-1 mt-4",style:{color:N}},"Match record"),
+h("div",{className:"overflow-x-auto"},
+h("table",{className:"w-full text-xs",style:{minWidth:400}},
+h("thead",null,h("tr",{className:"text-gray-400 border-b"},h("th",{className:"text-left py-1"},"Season"),h("th",{className:"text-left"},"Home"),h("th",{className:"text-right",style:{color:B}},tA.split(" ")[0]),h("th",{className:"text-right text-gray-300"},"exp"),h("th",{className:"text-center"},""),h("th",{className:"text-right text-gray-300"},"exp"),h("th",{className:"text-right",style:{color:O}},tB.split(" ")[0]))),
+h("tbody",null,mt.map(function(m,i){var col=m.pA>m.pB?B:m.pB>m.pA?O:"#888";var lb=m.pA>m.pB?tA.split(" ")[0]:m.pB>m.pA?tB.split(" ")[0]:"Draw";
+return h("tr",{key:i,className:"border-b border-gray-100"},h("td",{className:"py-0.5"},m.sn),h("td",{className:"py-0.5 text-gray-500"},m.hm),h("td",{className:"py-0.5 text-right font-semibold",style:{color:B}},m.pA),h("td",{className:"py-0.5 text-right text-gray-300"},m.eA.toFixed(1)),h("td",{className:"py-0.5 text-center font-bold",style:{color:col}},lb),h("td",{className:"py-0.5 text-right text-gray-300"},m.eB.toFixed(1)),h("td",{className:"py-0.5 text-right font-semibold",style:{color:O}},m.pB));})),
+h("tfoot",null,h("tr",{className:"border-t-2 font-bold"},h("td",{className:"py-1",colSpan:2},"Total ("+sm.n+")"),h("td",{className:"py-1 text-right",style:{color:B}},sm.tpA),h("td",{className:"py-1 text-right text-gray-400"},sm.teA),h("td",{className:"py-1 text-center",style:{color:sm.tpA>sm.tpB?B:O}},(sm.tpA>sm.tpB?"+":"")+(sm.tpA-sm.tpB)),h("td",{className:"py-1 text-right text-gray-400"},sm.teB),h("td",{className:"py-1 text-right",style:{color:O}},sm.tpB)))))));
+}
+
+function Explorer(){
+var _1=React.useState("ll"),lg=_1[0],sLg=_1[1];
+var _2=React.useState(["Villarreal","At Madrid","Valencia"]),sel=_2[0],sSel=_2[1];
+var _5=React.useState(false),showList=_5[0],setShowList=_5[1];
+var teams=lg==="ll"?D.cumulative.ll:D.cumulative.pl;
+var ss=["13/14","14/15","15/16","16/17","17/18","18/19","19/20","20/21","21/22","22/23","23/24","24/25"];
+var tl=React.useMemo(function(){return Object.entries(teams).map(function(en){return{n:en[0],c:en[1][0],ns:en[1][1]};}).sort(function(a,b){return b.c-a.c;});},[teams]);
+var cols=[B,O,G,R,"#8B5CF6"];
+function tog(n){sSel(function(p){if(p.indexOf(n)>=0)return p.filter(function(x){return x!==n;});if(p.length<5)return p.concat([n]);return p;});}
+var cd=React.useMemo(function(){return ss.map(function(s){var r={s:s};sel.forEach(function(t){var td=teams[t];if(!td)return;var sd=td[3].find(function(x){return x[0]===s;});if(sd)r[t]=Math.round((sd[3]-sd[2])*10)/10;});return r;});},[sel,teams]);
+var cum=React.useMemo(function(){return ss.map(function(s,si){var r={s:s};sel.forEach(function(t){var td=teams[t];if(!td)return;var c=0;for(var i=0;i<=si;i++){var sd=td[3].find(function(x){return x[0]===ss[i];});if(sd)c+=sd[3]-sd[2];}r[t]=Math.round(c*10)/10;});return r;});},[sel,teams]);
+var teamListEl=h("div",{className:"overflow-y-auto rounded bg-gray-50 p-1 text-xs",style:{maxHeight:400}},tl.map(function(t){var idx=sel.indexOf(t.n);return h("div",{key:t.n,onClick:function(){tog(t.n);},className:"cursor-pointer px-1.5 py-0.5 rounded flex justify-between "+(idx>=0?"font-bold":"hover:bg-gray-100"),style:idx>=0?{background:cols[idx]+"20",color:cols[idx]}:{}},h("span",{className:"truncate"},t.n+" ("+t.ns+")"),h("span",{style:{color:t.c>=0?G:R}},(t.c>=0?"+":"")+t.c));}));
+return h("div",null,
+h("p",{className:"text-gray-500 text-sm mb-3"},"Select up to 5 teams to compare overperformance."),
+e(LP,{lg:lg,set:function(v){sLg(v);sSel(v==="ll"?["Villarreal","At Madrid","Valencia"]:["Liverpool","Man City","Man United"]);}}),
+h("div",{className:"flex gap-4 mt-3"},
+h("div",{className:"hidden sm:block w-48 shrink-0"},teamListEl),
+h("div",{className:"flex-1",style:{minWidth:0}},
+h("div",{className:"sm:hidden mb-2"},h("button",{onClick:function(){setShowList(!showList);},className:"text-xs px-3 py-1 rounded bg-gray-100 text-gray-600"},showList?"Hide teams":"Select teams ("+sel.length+" selected)"),showList?teamListEl:null),
+h("div",{className:"text-sm font-semibold mb-1",style:{color:N}},"Season by season"),
+h("div",{style:{height:180}},e(RC.ResponsiveContainer,null,e(RC.BarChart,{data:cd},e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),e(RC.XAxis,{dataKey:"s",tick:{fontSize:8}}),e(RC.YAxis,{tick:{fontSize:9}}),e(RC.Tooltip,null),e(RC.ReferenceLine,{y:0,stroke:"#ccc"}),sel.map(function(t,i){return e(RC.Bar,{key:t,dataKey:t,fill:cols[i],opacity:0.7});})))),
+h("div",{className:"text-sm font-semibold mb-1 mt-3",style:{color:N}},"Cumulative"),
+h("div",{style:{height:180}},e(RC.ResponsiveContainer,null,e(RC.LineChart,{data:cum},e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),e(RC.XAxis,{dataKey:"s",tick:{fontSize:8}}),e(RC.YAxis,{tick:{fontSize:9}}),e(RC.Tooltip,null),e(RC.ReferenceLine,{y:0,stroke:"#ccc"}),sel.map(function(t,i){return e(RC.Line,{key:t,dataKey:t,stroke:cols[i],strokeWidth:2,dot:{r:2}});})))))));
+}
+
+function Calc(){
+var _1=React.useState("laliga"),lg=_1[0],sLg=_1[1];
+var _2=React.useState(100),hW=_2[0],sH=_2[1];var _3=React.useState(50),aW=_3[0],sA=_3[1];
+var m=D.model[lg],cur=lg==="laliga"?"\u20ac":"\u00a3";
+var x=Math.log2(aW/hW),pa=Sg(m.theta1+m.beta*x),ph=1-Sg(m.theta2+m.beta*x),pd=1-ph-pa;
+return h("div",{style:{maxWidth:500,margin:"0 auto"}},
+h("div",{className:"flex gap-2 mb-4"},[["laliga","La Liga"],["pl","Premier League"]].map(function(p){return h("button",{key:p[0],onClick:function(){sLg(p[0]);},className:"px-3 py-1 rounded-full text-sm font-semibold "+(lg===p[0]?"text-white":"text-gray-500 bg-gray-100"),style:lg===p[0]?{background:N}:{}},p[1]);})),
+h("div",{className:"grid grid-cols-2 gap-4 mb-4"},[["Home",hW,sH,B],["Away",aW,sA,O]].map(function(a){return h("div",{key:a[0],className:"p-3 rounded-lg",style:{background:a[3]+"10",border:"2px solid "+a[3]+"30"}},h("div",{className:"font-bold text-sm",style:{color:a[3]}},a[0]),h("div",{className:"text-2xl font-bold",style:{color:N}},cur+a[1]+"M"),h("input",{type:"range",min:5,max:400,value:a[1],onChange:function(ev){a[2](Number(ev.target.value));},className:"w-full",style:{accentColor:a[3]}}));})),
+h("div",{className:"space-y-2"},[["Home win",ph,B],["Draw",pd,"#888"],["Away win",pa,O]].map(function(a){return h("div",{key:a[0]},h("div",{className:"flex justify-between text-sm"},h("span",{style:{color:a[2]}},a[0]),h("b",{style:{color:a[2]}},(a[1]*100).toFixed(1)+"%")),h("div",{className:"bg-gray-200 rounded-full h-4"},h("div",{className:"h-full rounded-full",style:{width:(a[1]*100)+"%",background:a[2]}})));})));}
+
+var tabs=[{id:"tracker",l:"Season Tracker"},{id:"badrun",l:"Bad Run Checker"},{id:"h2h",l:"Head to Head"},{id:"explorer",l:"Explorer"},{id:"calc",l:"Calculator"}];
+function App(){var _1=React.useState("tracker"),tab=_1[0],sTab=_1[1];
+return h("div",{className:"min-h-screen bg-white"},
+h("div",{className:"py-4 px-5",style:{background:N}},h("h1",{className:"text-xl font-bold text-white",style:{fontFamily:"Georgia,serif"}},"What money can\u2019t buy"),h("p",{className:"text-blue-200 text-xs"},"La Liga & Premier League | 9,008 matches | 13 seasons")),
+h("div",{className:"border-b bg-gray-50 sticky top-0 z-10 flex overflow-x-auto"},tabs.map(function(t){return h("button",{key:t.id,onClick:function(){sTab(t.id);},className:"px-4 py-2 text-sm font-medium border-b-2 "+(tab===t.id?"border-current":"border-transparent text-gray-500"),style:tab===t.id?{color:N}:{}},t.l);})),
+h("div",{style:{maxWidth:950,margin:"0 auto",padding:16}},tab==="tracker"?e(Tracker):null,tab==="badrun"?e(BadRun):null,tab==="h2h"?e(H2H):null,tab==="explorer"?e(Explorer):null,tab==="calc"?e(Calc):null),
+h("div",{className:"text-center text-xs text-gray-400 py-3 border-t"},"Ordered logit + Monte Carlo | whatmoneycantbuyfootball@gmail.com"));}
+
+fetch("data.json").then(function(r){return r.json();}).then(function(d){D=d;ReactDOM.render(e(App),document.getElementById("root"));}).catch(function(err){document.getElementById("root").innerHTML="<p style='padding:40px;text-align:center;color:red'>Error: "+err.message+"</p>";});
+</script>
+</body>
+</html>
