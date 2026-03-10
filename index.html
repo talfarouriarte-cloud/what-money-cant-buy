@@ -9,7 +9,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
-<style>body{margin:0;font-family:system-ui,sans-serif}</style>
+<style>body{margin:0;font-family:system-ui,sans-serif}
+.range-thumb::-webkit-slider-thumb{-webkit-appearance:none;pointer-events:all;width:16px;height:16px;border-radius:50%;background:white;border:2px solid #2E75B6;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.2);}
+.range-thumb::-moz-range-thumb{pointer-events:all;width:14px;height:14px;border-radius:50%;background:white;border:2px solid #2E75B6;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.2);}
+.range-thumb::-webkit-slider-runnable-track{-webkit-appearance:none;background:transparent;}
+.range-thumb::-moz-range-track{background:transparent;}</style>
 </head>
 <body>
 <div id="root"><p style="padding:40px;text-align:center;color:#888">Loading app...</p></div>
@@ -26,6 +30,8 @@ var _thId=0;
 function TH(props){var myId=React.useMemo(function(){return++_thId;},[]);
 return h("th",Object.assign({},props.sty,{onClick:function(ev){ev.stopPropagation();if(_thSet)_thSet(_thOpen===myId?null:myId);},style:Object.assign({},props.sty.style||{},{cursor:"help",position:"relative"})}),props.label,
 _thOpen===myId?h("div",{style:{position:"absolute",top:"100%",right:0,zIndex:50,background:"#4A5568",color:"#fff",padding:"4px 8px",borderRadius:6,fontSize:10,fontWeight:400,whiteSpace:"nowrap",boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}},props.tip):null);}
+function Info(props){var _s=React.useState(false),open=_s[0],setOpen=_s[1];
+return h("div",{className:"mb-3"},h("button",{onClick:function(){setOpen(!open);},className:"flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600",style:{cursor:"pointer"}},h("span",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:8,border:"1px solid #ccc",fontSize:10,fontWeight:600,color:"#999"}},open?"\u2212":"\u2139"),h("span",null,open?"Hide info":"About this tab")),open?h("div",{className:"mt-2 p-3 rounded-lg text-xs text-gray-600 leading-relaxed",style:{background:"#f8f9fa",border:"1px solid #e9ecef"}},props.children):null);}
 function rkBg(rk,preRk){if(rk===null||preRk===null)return"transparent";if(rk<preRk)return"rgba(46,139,87,0.12)";if(rk>preRk)return"rgba(192,57,43,0.1)";return"transparent";}
 function getHash(){try{var h=window.location.hash.slice(1);var o={};h.split("&").forEach(function(p){var kv=p.split("=");if(kv[0])o[kv[0]]=decodeURIComponent(kv[1]||"");});return o;}catch(e){return {};}}
 function setHash(k,v){var o=getHash();o[k]=v;var parts=[];for(var key in o){if(o[key])parts.push(key+"="+encodeURIComponent(o[key]));}window.location.hash=parts.join("&");}
@@ -111,7 +117,7 @@ if(d.actual!==undefined)rows.push(h("div",{key:"a",style:{color:B}},"Actual: "+d
 if(d.curMed!==undefined&&!isPast)rows.push(h("div",{key:"m",style:{color:B,opacity:0.7}},"Proj median: "+d.curMed));
 if(d.curBase!==undefined&&d.curBand!==undefined&&d.curBand>0)rows.push(h("div",{key:"b",className:"text-gray-400"},"Range: "+d.curBase+"-"+(d.curBase+d.curBand)));
 if(d.exp!==undefined)rows.push(h("div",{key:"e",className:"text-gray-500"},"Expected: "+d.exp));
-if(d.preMed!==undefined)rows.push(h("div",{key:"p",style:{color:O}},"Pre-season: "+d.preMed));
+if(d.preMed!==undefined)rows.push(h("div",{key:"p",style:{color:O}},"Budget: "+d.preMed));
 if(rData){rows.push(h("div",{key:"pr",className:"mt-1 pt-1",style:{borderTop:"1px solid #eee"}},
 h("div",{className:"flex gap-1 items-center",style:{fontSize:10}},
 h("span",{style:{color:G,fontWeight:600}},"W "+Math.round(rData[2]*100)+"%"),
@@ -180,6 +186,7 @@ return h("div",null,
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},
 e(LP,{lg:lg,set:switchLg}),
 h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s+(s==="25/26"?" (current)":""));}))),
+e(Info,null,"Each team\u2019s annual wage bill is fed into an ordered logistic regression to predict match-by-match win/draw/loss probabilities. These are summed across all 38 matchdays to produce expected points (Budget forecast). As the season progresses, played results are locked in and only the remaining fixtures are simulated 10,000 times (Updated forecast). ",h("br"),h("br"),h("b",null,"Single team view:")," solid line = actual points; dashed line = median projection (p50); shaded band = p10\u2013p90 range (80% of simulations fall within this corridor). Orange = budget forecast (pre-season, from wages only). Blue = updated forecast (actual results + remaining simulations).",h("br"),h("br"),h("b",null,"Multi-team view (up to 3):")," compare actual trajectories side by side, each with its own updated median and p10\u2013p90 band. The faint dashed line shows the budget forecast median for reference."),
 h("div",{className:"flex gap-4"},
 h("div",{className:"hidden sm:block w-44 shrink-0"},teamListEl),
 h("div",{className:"flex-1",style:{minWidth:0}},
@@ -187,42 +194,41 @@ h("div",{className:"sm:hidden mb-2"},h("button",{onClick:function(){setShowList(
 h("div",{className:"flex gap-3 mb-2 flex-wrap text-sm"},ops.map(function(o,i){return h("span",{key:o.name,className:"flex items-center gap-1"},h("span",{style:{width:8,height:8,borderRadius:4,background:T[i],display:"inline-block"}}),h("b",{style:{color:T[i]}},o.name)," ",h("span",{className:"text-gray-400"},o.p+"pts"),h("span",{style:{color:Number(o.op)>=0?G:R,fontWeight:700}},(Number(o.op)>=0?"+":"")+o.op));})),
 h("div",{style:{height:300}},e(RC.ResponsiveContainer,null,e(RC.AreaChart,{data:cd,margin:{left:0,right:5,top:5,bottom:5}},cc))),
 !multi?h("div",{className:"flex flex-wrap gap-x-4 gap-y-1 mt-1 mb-2 text-xs text-gray-500 justify-center"},
-h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,background:B,display:"inline-block"}}),h("span",null,"Actual")),
-iC&&bd?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,background:B,borderTop:"1px dashed "+B,display:"inline-block",opacity:0.6}}),h("span",null,"MC projection (p50)")):null,
-iC&&bd?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:B,display:"inline-block",opacity:0.15,borderRadius:2}}),h("span",null,"MC range (p10-p90)")):null,
-iC&&bd?h("div",{className:"w-full text-center mt-1",style:{fontSize:9,color:"#aaa"}},"MC = Monte Carlo: 10,000 simulations of remaining matches using the ordered logit wage model"):null,
-pre?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,borderTop:"1px dashed "+O,display:"inline-block",opacity:0.6}}),h("span",null,"Pre-season (p50)")):null,
-pre?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:O,display:"inline-block",opacity:0.1,borderRadius:2}}),h("span",null,"Pre-season range")):null,
-!iC?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,borderTop:"1px dashed #999",display:"inline-block"}}),h("span",null,"Expected")):null,
-!iC?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:B,display:"inline-block",opacity:0.15,borderRadius:2}}),h("span",null,"Variance (p10-p90)")):null
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,background:B,display:"inline-block"}}),h("span",null,"Actual points")),
+iC&&bd?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:0,borderTop:"2px dashed "+B,display:"inline-block",opacity:0.6}}),h("span",null,"Updated median (p50)")):null,
+iC&&bd?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:B,display:"inline-block",opacity:0.15,borderRadius:2,border:"1px solid "+B+"30"}}),h("span",null,"Updated p10\u2013p90 range")):null,
+pre?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:0,borderTop:"2px dashed "+O,display:"inline-block",opacity:0.6}}),h("span",null,"Budget median (p50)")):null,
+pre?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:O,display:"inline-block",opacity:0.1,borderRadius:2,border:"1px solid "+O+"30"}}),h("span",null,"Budget p10\u2013p90 range")):null,
+!iC?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:0,borderTop:"2px dashed #999",display:"inline-block"}}),h("span",null,"Expected (budget model)")):null,
+!iC?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:B,display:"inline-block",opacity:0.15,borderRadius:2,border:"1px solid "+B+"30"}}),h("span",null,"p10\u2013p90 range")):null
 ):h("div",{className:"flex flex-wrap gap-x-4 gap-y-1 mt-1 mb-2 text-xs text-gray-500 justify-center"},
-h("span",null,"\u2014 Actual"),
-iC?h("span",null,"- - MC projection"):null,
-iC?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:"#999",display:"inline-block",opacity:0.1,borderRadius:2}}),h("span",null,"MC range")):null,
-iC?h("span",null,"\u00B7\u00B7\u00B7 Pre-season"):null,
-!iC?h("span",null,"\u00B7\u00B7 Expected"):null),
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,background:"#777",display:"inline-block"}}),h("span",null,"Actual points")),
+iC?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:0,borderTop:"2px dashed #777",display:"inline-block",opacity:0.6}}),h("span",null,"Updated median (p50)")):null,
+iC?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:"#777",display:"inline-block",opacity:0.1,borderRadius:2,border:"1px solid #99999930"}}),h("span",null,"Updated p10\u2013p90")):null,
+iC?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:0,borderTop:"2px dashed #777",display:"inline-block",opacity:0.25}}),h("span",null,"Budget median (p50)")):null,
+!iC?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:0,borderTop:"2px dashed #999",display:"inline-block"}}),h("span",null,"Expected (budget)")):null),
 h("div",{className:"mt-3 overflow-x-auto rounded-lg",style:{border:"1px solid #e5e7eb"}},
 h("table",{className:"w-full",style:{minWidth:450,fontSize:11,borderCollapse:"collapse"}},
 h("thead",null,
 h("tr",{style:{background:"#f9fafb"}},
 h("th",{className:"text-left px-2 py-1",rowSpan:2,style:{borderRight:"1px solid #e5e7eb",fontWeight:600}},"Team"),
-iC?h("th",{className:"text-center px-1 py-0.5",colSpan:3,rowSpan:1,style:{borderBottom:"1px solid #e5e7eb",borderRight:"1px solid #e5e7eb",fontSize:9}},"Actual"):
-h("th",{className:"text-center px-1 py-0.5",colSpan:4,rowSpan:1,style:{borderBottom:"1px solid #e5e7eb",borderRight:"1px solid #e5e7eb",fontSize:9}},"Actual"),
-h("th",{className:"text-center px-1 py-0.5",colSpan:3,style:{color:O,borderBottom:"2px solid "+O+"30",borderRight:"1px solid #e5e7eb",fontSize:9}},"Pre-season"),
-iC?h("th",{className:"text-center px-1 py-0.5",colSpan:5,style:{color:B,borderBottom:"2px solid "+B+"30",fontSize:9}},"Current forecast (MC)"):null),
+iC?h("th",{className:"text-center px-1 py-0.5",colSpan:3,rowSpan:1,style:{borderBottom:"1px solid #e5e7eb",borderRight:"1px solid #e5e7eb",fontSize:9}},"Results"):
+h("th",{className:"text-center px-1 py-0.5",colSpan:4,rowSpan:1,style:{borderBottom:"1px solid #e5e7eb",borderRight:"1px solid #e5e7eb",fontSize:9}},"Results"),
+h("th",{className:"text-center px-1 py-0.5",colSpan:3,style:{color:O,borderBottom:"2px solid "+O+"30",borderRight:"1px solid #e5e7eb",fontSize:9}},"Budget forecast"),
+iC?h("th",{className:"text-center px-1 py-0.5",colSpan:5,style:{color:B,borderBottom:"2px solid "+B+"30",fontSize:9}},"Updated forecast"):null),
 h("tr",{style:{background:"#f9fafb",borderBottom:"2px solid #e5e7eb"}},
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{fontSize:9}},label:"GW",tip:"Matchweeks played"}),
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{fontSize:9}},label:"Pts",tip:"Actual points"}),
 !iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{fontSize:9}},label:"Rk",tip:"Actual final rank"}):null,
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{fontSize:9,borderRight:"1px solid #e5e7eb"}},label:"+/-",tip:"Actual minus expected points"}),
-e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Rk",tip:"Pre-season predicted rank"}),
-e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Exp",tip:"Pre-season expected points"}),
-e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9,borderRight:"1px solid #e5e7eb"}},label:"P1",tip:"Pre-season P(champion)"}),
-iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"Rk",tip:"Monte Carlo predicted rank (10,000 simulations)"}):null,
-iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"p10",tip:"Monte Carlo 10th percentile (optimistic floor)"}):null,
-iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"Med",tip:"Monte Carlo median projection (50th percentile)"}):null,
-iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"p90",tip:"Monte Carlo 90th percentile (pessimistic ceiling)"}):null,
-iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"P1",tip:"Monte Carlo probability of finishing 1st"}):null)),
+e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Rk",tip:"Budget forecast predicted rank"}),
+e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Exp",tip:"Budget forecast expected points"}),
+e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9,borderRight:"1px solid #e5e7eb"}},label:"P1",tip:"Budget forecast P(champion)"}),
+iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"Rk",tip:"Updated forecast predicted rank (10,000 simulations)"}):null,
+iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"p10",tip:"Updated forecast 10th percentile (optimistic floor)"}):null,
+iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"Med",tip:"Updated forecast median projection (50th percentile)"}):null,
+iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"p90",tip:"Updated forecast 90th percentile (pessimistic ceiling)"}):null,
+iC?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"P1",tip:"Updated forecast probability of finishing 1st"}):null)),
 h("tbody",null,sel.map(function(n,i){var t=sD[n];if(!t)return null;
 var ap=t.a[t.a.length-1]||0,ep=t.e[t.e.length-1]||0,df2=ap-ep;
 var jBd=iC&&D.bands[lg]&&D.bands[lg][n]?D.bands[lg][n]:null;
@@ -258,39 +264,101 @@ var hh=getHash();
 var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
 var _2=React.useState(hh.sn||"25/26"),sn=_2[0],sSn0=_2[1];
 var _3=React.useState(hh.br||"Barcelona"),sel=_3[0],sSel0=_3[1];
-var _4=React.useState(5),win=_4[0],sWin=_4[1];
+var _4=React.useState(hh.rf?Number(hh.rf):0),gwFrom=_4[0],setFrom0=_4[1];
+var _5=React.useState(hh.rt?Number(hh.rt):0),gwTo=_5[0],setTo0=_5[1];
+var _6=React.useState(hh.rq||"5"),qSel=_6[0],setQSel0=_6[1];
 function sLg(v){sLg0(v);setHash("lg",v);}
 function sSn(v){sSn0(v);setHash("sn",v);}
 function sSel(v){sSel0(v);setHash("br",v);}
+function setFrom(v){setFrom0(v);setHash("rf",String(v));}
+function setTo(v){setTo0(v);setHash("rt",String(v));}
+function setQSel(v){setQSel0(v);setHash("rq",v);}
+function quickSet(q,nPl){setQSel(q);
+if(q==="all"){setFrom(1);setTo(nPl);}
+else{var nw=Math.min(Number(q),nPl);setFrom(Math.max(1,nPl-nw+1));setTo(nPl);}}
 var sL=React.useMemo(function(){return Object.keys(D.seasons[lg]).sort().reverse();},[lg]);
 var sD=D.seasons[lg][sn]||{},tl=React.useMemo(function(){return Object.keys(sD).sort();},[sD]);
 var t=sD[sel];
 React.useEffect(function(){var ts=Object.keys(sD);if(ts.length>0&&!sD[sel])sSel(ts.sort()[0]);},[lg,sn]);
+React.useEffect(function(){if(t&&!hh.rf){var nP=t.a.length;quickSet("5",nP);}},[sel,sn,lg]);
 if(!t)return h("div",{className:"p-8 text-center text-gray-400"},"No data");
-var nP=t.a.length,mW=Math.min(nP,20),w=Math.min(win,mW),lW=t.m.slice(nP-w);
+var SIG=1.58;
+var nP=t.a.length;
+var gf=Math.max(1,Math.min(gwFrom||1,nP-1)),gt=Math.max(gf+1,Math.min(gwTo||nP,nP));
+var lW=t.m.slice(gf-1,gt);
+var nGames=lW.length;
 var cA=[],cE=[],ca=0,ce=0;
 for(var i=0;i<lW.length;i++){ca+=lW[i][2];ce+=lW[i][3];cA.push(ca);cE.push(Math.round(ce*10)/10);}
-var cd=lW.map(function(m,i){var v=m[1]?"vs":"@",ex=cE[i],sp=1.3*Math.sqrt(i+1)*1.5;
-return{opp:v+" "+m[0],actual:cA[i],expected:ex,base:Math.max(0,Math.round((ex-sp)*10)/10),range:Math.round(sp*2*10)/10,mp:m[2],me:m[3]};});
+var DG="#166534",PG="#bbf7d0",DR="#991b1b",PR="#fecaca";
+var cd=lW.map(function(m,i){var v=m[1]?"vs":"@",ex=cE[i],n=i+1;
+var s25=0.674*SIG*Math.sqrt(n),s3=1.88*SIG*Math.sqrt(n);
+var p3=Math.max(0,Math.round((ex-s3)*10)/10);
+var p25=Math.max(0,Math.round((ex-s25)*10)/10);
+var p75=Math.round((ex+s25)*10)/10;
+var p97=Math.round((ex+s3)*10)/10;
+return{opp:v+" "+m[0]+" (GW"+(gf+i)+")",actual:cA[i],expected:ex,
+zBase:p3,zPR:Math.round((p25-p3)*10)/10,zDR:Math.round((ex-p25)*10)/10,
+zDG:Math.round((p75-ex)*10)/10,zPG:Math.round((p97-p75)*10)/10,
+mp:m[2],me:m[3]};});
 var df=(ca-Math.round(ce*10)/10).toFixed(1);
+var normCDF2=function(z){var t=1/(1+0.2316419*Math.abs(z));var d=0.3989423*Math.exp(-z*z/2);var p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return z>0?1-p:p;};
+var runPct=(function(){if(nGames<=0||Number(df)===0)return 50;var z=Math.abs(Number(df))/(SIG*Math.sqrt(nGames));return(1-normCDF2(z))*100;})();
+var freqStr=(function(){if(runPct>=50)return null;var target=100/runPct;
+var bestX=1,bestY=Math.round(target),bestErr=999;
+function gcd(a,b){return b===0?a:gcd(b,a%b);}
+for(var x=1;x<=10;x++){var y=Math.round(target*x);if(y<1)y=1;var err=Math.abs(y/x-target)/target;if(err<bestErr){bestErr=err;bestX=x;bestY=y;}if(err<0.05)break;}
+var g=gcd(bestX,bestY);bestX=bestX/g;bestY=bestY/g;
+if(bestX>=bestY)return bestX+" every season";
+if(bestX===1)return "1 every "+bestY+" season"+(bestY>1?"s":"");
+return bestX+" every "+bestY+" seasons";})();
+var pctStr=runPct>=1?Math.round(runPct)+"%":runPct>=0.1?runPct.toFixed(1)+"%":"<0.1%";
+var dir=Number(df)>=0?"overperformance":"underperformance";
+var probSentence="This level of "+dir+" occurs in "+pctStr+" of similar-length runs"+(freqStr?", i.e. roughly "+freqStr:"")+".";
+// Build GW options
+var fromOpts=[];for(var gi=1;gi<nP;gi++)fromOpts.push(gi);
+var toOpts=[];for(var gi2=gf+1;gi2<=nP;gi2++)toOpts.push(gi2);
+var qBtn=function(label,val){return h("button",{onClick:function(){quickSet(val,nP);},
+className:"text-xs px-2.5 py-1 rounded font-medium "+(qSel===val?"text-white":"text-gray-600 bg-gray-100"),
+style:qSel===val?{background:N}:{}},label);};
 return h("div",null,
-h("p",{className:"text-gray-500 text-sm mb-3"},"Compare actual vs expected for specific opponents."),
-h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},e(LP,{lg:lg,set:function(v){sLg(v);sSn(Object.keys(D.seasons[v]).sort().reverse()[0]);sSel(v==="ll"?"Barcelona":"Liverpool");sWin(5);}}),
+e(Info,null,"Evaluate whether a run of results is statistically unusual given the team\u2019s wage bill. The expected line (dashed) shows what the budget predicts. ",h("b",null,"Above the line = overperformance")," (green shading): dark green = 50th\u201375th percentile (normal), pale green = 75th\u201397th percentile (unusual). ",h("b",null,"Below the line = underperformance")," (red shading): dark red = 25th\u201350th percentile (normal), pale red = 3rd\u201325th percentile (unusual). Results beyond the pale zone have less than 3% probability of occurring by chance in that direction."),
+h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},e(LP,{lg:lg,set:function(v){sLg(v);sSn(Object.keys(D.seasons[v]).sort().reverse()[0]);sSel(v==="ll"?"Barcelona":"Liverpool");}}),
 h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s);}))),
-h("div",{className:"flex flex-wrap gap-4 mb-4"},
-h("select",{value:sel,onChange:function(ev){sSel(ev.target.value);},className:"border rounded px-2 py-1.5 text-sm flex-shrink-0"},tl.map(function(x){return h("option",{key:x,value:x},x);})),
-h("div",{className:"flex-1",style:{minWidth:120}},h("div",{className:"text-xs text-gray-500 mb-1"},"Last "+w+" games"),h("input",{type:"range",min:1,max:mW,value:w,onChange:function(ev){sWin(Number(ev.target.value));},className:"w-full",style:{accentColor:B}}))),
-h("div",{style:{height:220},className:"mb-3"},e(RC.ResponsiveContainer,null,
+h("div",{className:"flex flex-wrap gap-4 mb-3"},
+h("select",{value:sel,onChange:function(ev){sSel(ev.target.value);},className:"border rounded px-2 py-1.5 text-base font-semibold flex-shrink-0",style:{minWidth:160}},tl.map(function(x){return h("option",{key:x,value:x},x);}))),
+h("div",{className:"flex flex-wrap items-center gap-3 mb-4"},
+h("div",{className:"flex items-center gap-1.5"},
+h("span",{className:"text-xs text-gray-500"},"From"),
+h("select",{value:gf,onChange:function(ev){setFrom(Number(ev.target.value));setQSel("");},className:"border rounded px-1.5 py-1 text-sm"},fromOpts.map(function(g){return h("option",{key:g,value:g},"GW "+g);}))),
+h("div",{className:"flex items-center gap-1.5"},
+h("span",{className:"text-xs text-gray-500"},"To"),
+h("select",{value:gt,onChange:function(ev){setTo(Number(ev.target.value));setQSel("");},className:"border rounded px-1.5 py-1 text-sm"},toOpts.map(function(g){return h("option",{key:g,value:g},"GW "+g);}))),
+h("span",{className:"text-xs text-gray-400"},nGames+" games"),
+h("span",{className:"text-gray-300"},"|"),
+qBtn("Last 5","5"),qBtn("Last 10","10"),qBtn("All","all")),
+h("div",{style:{height:240},className:"mb-2"},e(RC.ResponsiveContainer,null,
 e(RC.AreaChart,{data:cd,margin:{left:0,right:5,top:5,bottom:45}},
-e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),e(RC.XAxis,{dataKey:"opp",tick:{fontSize:7,angle:-40,textAnchor:"end"},height:55,interval:0}),e(RC.YAxis,{tick:{fontSize:9}}),e(RC.Tooltip,null),
-e(RC.Area,{dataKey:"base",stackId:"b",stroke:"none",fill:"transparent",isAnimationActive:false}),e(RC.Area,{dataKey:"range",stackId:"b",stroke:"none",fill:B,fillOpacity:0.1,isAnimationActive:false}),
-e(RC.Area,{dataKey:"expected",stroke:"#999",strokeDasharray:"5 3",strokeWidth:2,fill:"none",isAnimationActive:false}),e(RC.Area,{dataKey:"actual",stroke:B,strokeWidth:2.5,fill:"none",dot:{r:3,fill:B},isAnimationActive:false})))),
-h("div",{className:"p-4 rounded-xl text-center "+(Number(df)>=0?"bg-green-50":"bg-amber-50")},
+e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),e(RC.XAxis,{dataKey:"opp",tick:{fontSize:10,fontWeight:600,angle:-35,textAnchor:"end"},height:60,interval:0}),e(RC.YAxis,{tick:{fontSize:9}}),e(RC.Tooltip,null),
+e(RC.Area,{dataKey:"zBase",stackId:"z",stroke:"none",fill:"transparent",isAnimationActive:false}),
+e(RC.Area,{dataKey:"zPR",stackId:"z",stroke:"none",fill:PR,fillOpacity:0.5,isAnimationActive:false}),
+e(RC.Area,{dataKey:"zDR",stackId:"z",stroke:"none",fill:DR,fillOpacity:0.35,isAnimationActive:false}),
+e(RC.Area,{dataKey:"zDG",stackId:"z",stroke:"none",fill:DG,fillOpacity:0.35,isAnimationActive:false}),
+e(RC.Area,{dataKey:"zPG",stackId:"z",stroke:"none",fill:PG,fillOpacity:0.5,isAnimationActive:false}),
+e(RC.Area,{dataKey:"expected",stroke:"#999",strokeDasharray:"5 3",strokeWidth:2,fill:"none",isAnimationActive:false}),e(RC.Area,{dataKey:"actual",stroke:N,strokeWidth:2.5,fill:"none",dot:{r:3,fill:N},isAnimationActive:false})))),
+h("div",{className:"flex flex-wrap gap-x-3 gap-y-1 mb-3 text-xs text-gray-500 justify-center"},
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,background:N,display:"inline-block"}}),h("span",null,"Actual")),
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:0,borderTop:"2px dashed #999",display:"inline-block"}}),h("span",null,"Expected")),
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:10,height:8,background:DG,display:"inline-block",opacity:0.5,borderRadius:2}}),h("span",null,"Overperf 50\u201375%")),
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:10,height:8,background:PG,display:"inline-block",opacity:0.7,borderRadius:2}}),h("span",null,"Overperf 75\u201397%")),
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:10,height:8,background:DR,display:"inline-block",opacity:0.5,borderRadius:2}}),h("span",null,"Underperf 25\u201350%")),
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:10,height:8,background:PR,display:"inline-block",opacity:0.7,borderRadius:2}}),h("span",null,"Underperf 3\u201325%"))),
+h("div",{className:"p-4 rounded-xl text-center",style:{background:Number(df)>=0?"#f0fdf4":"#fef2f2"}},
 h("div",{className:"text-2xl font-bold",style:{color:Number(df)>=0?G:R}},(Number(df)>=0?"+":"")+df+" pts"),
-h("div",{className:"text-sm text-gray-600"},ca+" actual vs "+Math.round(ce*10)/10+" expected in "+w+" matches")),
+h("div",{className:"text-sm text-gray-600"},ca+" actual vs "+Math.round(ce*10)/10+" expected in "+nGames+" games (GW"+gf+"\u2013GW"+gt+")"),
+h("div",{className:"text-xs mt-2",style:{color:"#555",fontStyle:"italic"}},probSentence)),
 h("table",{className:"w-full text-xs mt-3"},
-h("thead",null,h("tr",{className:"text-gray-400 border-b"},h("th",{className:"text-left py-1"},"Opponent"),h("th",{className:"text-center"},"V"),h("th",{className:"text-right"},"Pts"),h("th",{className:"text-right"},"Exp"),h("th",{className:"text-right"},"+/-"))),
-h("tbody",null,lW.map(function(m,i){var d=m[2]-m[3];return h("tr",{key:i,className:"border-b border-gray-100"},h("td",{className:"py-0.5"},m[0]),h("td",{className:"py-0.5 text-center"},m[1]?"H":"A"),h("td",{className:"py-0.5 text-right font-semibold"},m[2]),h("td",{className:"py-0.5 text-right text-gray-400"},m[3].toFixed(1)),h("td",{className:"py-0.5 text-right font-bold",style:{color:d>=0?G:R}},(d>=0?"+":"")+d.toFixed(1)));}))));
+h("thead",null,h("tr",{className:"text-gray-400 border-b"},h("th",{className:"text-left py-1"},"GW"),h("th",{className:"text-left"},"Opponent"),h("th",{className:"text-center"},"V"),h("th",{className:"text-right"},"Pts"),h("th",{className:"text-right"},"Exp"),h("th",{className:"text-right"},"+/-"))),
+h("tbody",null,lW.map(function(m,i){var d=m[2]-m[3];return h("tr",{key:i,className:"border-b border-gray-100"},h("td",{className:"py-0.5 text-gray-400"},gf+i),h("td",{className:"py-0.5"},m[0]),h("td",{className:"py-0.5 text-center"},m[1]?"H":"A"),h("td",{className:"py-0.5 text-right font-semibold"},m[2]),h("td",{className:"py-0.5 text-right text-gray-400"},m[3].toFixed(1)),h("td",{className:"py-0.5 text-right font-bold",style:{color:d>=0?G:R}},(d>=0?"+":"")+d.toFixed(1)));}))));
 }
 
 function H2H(){
@@ -314,6 +382,7 @@ var cumD=React.useMemo(function(){var cA=0,cB=0,ceA=0,ceB=0;return mt.map(functi
 return{lb:m.sn+(m.hm===tA?" (H)":" (A)"),cA:cA,cB:cB,eA:Math.round(ceA*10)/10,eB:Math.round(ceB*10)/10};});},[mt,tA]);
 return h("div",null,
 h("p",{className:"text-gray-500 text-sm mb-3"},"Head-to-head record with actual vs expected."),
+e(Info,null,"Head-to-head record between two teams across all available seasons. Points and expected points are computed from the wage model for each individual match, and cumulative overperformance shows whether one team consistently beats its budget-based expectation against the other."),
 e(LP,{lg:lg,set:function(v){sLg(v);if(v==="ll"){sTA("Real Madrid");sTB("At Madrid");}else{sTA("Liverpool");sTB("Man United");}}}),
 h("div",{className:"flex gap-3 mb-5 flex-wrap mt-3"},
 h("div",null,h("label",{className:"text-xs text-gray-500 block mb-1"},"Team A"),h("select",{value:tA,onChange:function(ev){sTA(ev.target.value);},className:"border rounded px-2 py-1.5 text-sm",style:{minWidth:150,color:B,fontWeight:600}},allT.map(function(t){return h("option",{key:t,value:t},t);}))),
@@ -358,7 +427,7 @@ function pval(cumOP,nMatches){if(nMatches<=0||cumOP===0)return 1;var z=Math.abs(
 var modes=[
 {k:"pts",l:"Extra pts",tip:"Raw overperformance: actual minus expected points per season"},
 {k:"norm",l:"Normalized",tip:"(Cum. overperf \u00f7 seasons) \u00f7 avg expected pts/season \u00d7 100"},
-{k:"ms",l:"MS",tip:"Managerial Score: sign(overperf) \u00d7 (100 \u2212 p), p = statistical significance"}];
+{k:"ms",l:"Man. Score",tip:"Managerial Score: sign(overperf) \u00d7 (100 \u2212 p), p = statistical significance"}];
 var wins=[{k:"all",l:"All",tip:"Full period (12 seasons)"},{k:"5y",l:"5yr",tip:"Trailing 5 seasons"},{k:"3y",l:"3yr",tip:"Trailing 3 seasons"}];
 var winN=win==="5y"?5:win==="3y"?3:99;
 function getSeasons(td){if(!td)return[];var d=td[3];if(winN>=d.length)return d;return d.slice(d.length-winN);}
@@ -389,10 +458,10 @@ if(mode==="pts"){r[t]=Math.round(cumOP*10)/10;}
 else if(mode==="norm"){var avgExp=cumExp/n;r[t]=avgExp>0?Math.round((cumOP/n)/avgExp*1000)/10:0;}
 else{var p=pval(cumOP,n*38);r[t]=Math.round((cumOP>=0?1:-1)*(100-p*100)*10)/10;}});return r;});},[sel,teams,mode,win]);
 var sfx=mode==="pts"?"pts":mode==="norm"?"%":"";
-var teamListEl=h("div",{className:"overflow-y-auto rounded bg-gray-50 p-1 text-xs",style:{maxHeight:400}},tl.map(function(t){var idx=sel.indexOf(t.n);return h("div",{key:t.n,onClick:function(){tog(t.n);},className:"cursor-pointer px-1.5 py-0.5 rounded flex justify-between "+(idx>=0?"font-bold":"hover:bg-gray-100"),style:idx>=0?{background:cols[idx]+"20",color:cols[idx]}:{}},h("span",{className:"truncate"},t.n+" ("+t.ns+")"),h("span",{style:{color:t.c>=0?G:R}},(t.c>=0?"+":"")+t.c+sfx));}));
-var cumLabel=win==="all"?(mode==="ms"?"Trailing MS":"Cumulative"):"Trailing "+winN+"yr"+(mode==="ms"?" MS":"");
+var teamListEl=h("div",{className:"overflow-y-auto rounded bg-gray-50 p-1 text-xs",style:{maxHeight:400}},tl.map(function(t){var idx=sel.indexOf(t.n);return h("div",{key:t.n,onClick:function(){tog(t.n);},className:"cursor-pointer px-1.5 py-0.5 rounded flex justify-between "+(idx>=0?"font-bold":"hover:bg-gray-100"),style:idx>=0?{background:cols[idx]+"20",color:cols[idx]}:{}},h("span",{className:"truncate"},t.n+" ("+t.ns+")"),h("span",{style:{color:t.c>=0?G:R}},(t.c>=0?"+":"")+t.c+(sfx||"")));}));
+var cumLabel=win==="all"?(mode==="ms"?"Trailing Managerial Score":"Cumulative"):"Trailing "+winN+"yr"+(mode==="ms"?" Managerial Score":"");
 return h("div",null,
-h("p",{className:"text-gray-500 text-sm mb-3"},"Compare overperformance across teams and seasons."),
+e(Info,null,"Overperformance = actual points minus wage-model expected points. A team that consistently beats its budget expectation is extracting extra value from its payroll (coaching, recruitment, culture). Three metrics: Extra pts (raw gap), Normalized (percentage gap adjusted for budget level: (cum. overperf \u00f7 seasons) \u00f7 avg expected pts \u00d7 100), and Managerial Score (sign \u00d7 (100 \u2212 p), where p is the probability the result is due to chance alone). The time window controls the trailing period for the bottom chart: All shows full history, 5yr/3yr show a rolling window."),
 h("div",{className:"flex flex-wrap gap-3 items-end mb-3"},
 e(LP,{lg:lg,set:function(v){sLg(v);sSel(v==="ll"?["Villarreal","At Madrid","Valencia"]:["Liverpool","Man City","Man United"]);}}),
 h("div",{className:"flex gap-1"},modes.map(function(m){return h("button",{key:m.k,title:m.tip,onClick:function(){setMode(m.k);},className:"px-2 py-0.5 rounded text-xs font-medium "+(mode===m.k?"text-white":"text-gray-500 bg-gray-100"),style:mode===m.k?{background:N}:{}},m.l);})),
@@ -410,11 +479,34 @@ h("div",{style:{height:180}},e(RC.ResponsiveContainer,null,e(RC.LineChart,{data:
 function Calc(){
 var _1=React.useState("laliga"),lg=_1[0],sLg=_1[1];
 var _2=React.useState(100),hW=_2[0],sH=_2[1];var _3=React.useState(50),aW=_3[0],sA=_3[1];
+var _4=React.useState(""),hTeam=_4[0],sHT=_4[1];var _5=React.useState(""),aTeam=_5[0],sAT=_5[1];
+// Get teams with wages for current season (25/26)
+var lgKey=lg==="laliga"?"ll":"pl";
+var teamWages=React.useMemo(function(){var sd=D.seasons[lgKey]["25/26"]||{};var tw=[];Object.keys(sd).forEach(function(t){var w=sd[t].w;if(w>0)tw.push({n:t,w:w});});tw.sort(function(a,b){return b.w-a.w;});return tw;},[lgKey]);
+function pickTeam(side,name){var tw=teamWages.find(function(t){return t.n===name;});if(!tw)return;if(side==="h"){sHT(name);sH(tw.w);}else{sAT(name);sA(tw.w);}}
 var m=D.model[lg],cur=lg==="laliga"?"\u20ac":"\u00a3";
 var x=Math.log2(aW/hW),pa=Sg(m.theta1+m.beta*x),ph=1-Sg(m.theta2+m.beta*x),pd=1-ph-pa;
-return h("div",{style:{maxWidth:500,margin:"0 auto"}},
-h("div",{className:"flex gap-2 mb-4"},[["laliga","La Liga"],["pl","Premier League"]].map(function(p){return h("button",{key:p[0],onClick:function(){sLg(p[0]);},className:"px-3 py-1 rounded-full text-sm font-semibold "+(lg===p[0]?"text-white":"text-gray-500 bg-gray-100"),style:lg===p[0]?{background:N}:{}},p[1]);})),
-h("div",{className:"grid grid-cols-2 gap-4 mb-4"},[["Home",hW,sH,B],["Away",aW,sA,O]].map(function(a){return h("div",{key:a[0],className:"p-3 rounded-lg",style:{background:a[3]+"10",border:"2px solid "+a[3]+"30"}},h("div",{className:"font-bold text-sm",style:{color:a[3]}},a[0]),h("div",{className:"text-2xl font-bold",style:{color:N}},cur+a[1]+"M"),h("input",{type:"range",min:5,max:400,value:a[1],onChange:function(ev){a[2](Number(ev.target.value));},className:"w-full",style:{accentColor:a[3]}}));})),
+// Expected points per match
+var hExp=ph*3+pd*1,aExp=pa*3+pd*1;
+return h("div",{style:{maxWidth:540,margin:"0 auto"}},
+e(Info,null,"The ordered logit model converts a wage-bill ratio into match probabilities. Select two teams or set custom wage values to see how budget differences translate into home win, draw, and away win probabilities. The model captures a fundamental asymmetry: doubling your wage bill does not double your win probability, because football outcomes are bounded and draws absorb part of the budget advantage."),
+h("p",{className:"text-gray-600 text-sm mb-4"},"Select teams from 25/26 or use the sliders to set custom wage bills. The model converts the wage ratio into match probabilities."),
+h("div",{className:"flex gap-2 mb-4"},
+[["laliga","La Liga"],["pl","Prem. League"]].map(function(p){return h("button",{key:p[0],onClick:function(){sLg(p[0]);sHT("");sAT("");sH(100);sA(50);},className:"px-3 py-1 rounded-full text-sm font-semibold "+(lg===p[0]?"text-white":"text-gray-500 bg-gray-100"),style:lg===p[0]?{background:N}:{}},p[1]);})),
+h("div",{className:"grid grid-cols-2 gap-4 mb-4",style:{position:"relative"}},
+h("div",{className:"absolute left-1/2 top-1/2",style:{transform:"translate(-50%,-50%)",zIndex:5}},
+h("button",{onClick:function(){var tH=hW,tA=aW,tHT=hTeam,tAT=aTeam;sH(tA);sA(tH);sHT(tAT);sAT(tHT);},className:"flex items-center justify-center",style:{width:28,height:28,borderRadius:14,background:"white",border:"2px solid #ddd",cursor:"pointer",fontSize:12,boxShadow:"0 1px 3px rgba(0,0,0,0.1)"}},"\u21c4")),
+[["Home",hW,sH,B,hTeam,sHT,"h"],["Away",aW,sA,O,aTeam,sAT,"a"]].map(function(a){
+return h("div",{key:a[0],className:"p-3 rounded-lg",style:{background:a[3]+"10",border:"2px solid "+a[3]+"30"}},
+h("div",{className:"font-bold text-sm mb-1",style:{color:a[3]}},a[0]),
+h("select",{value:a[4],onChange:function(ev){pickTeam(a[6],ev.target.value);},className:"w-full border rounded px-1 py-0.5 text-xs mb-2"},
+h("option",{value:""},"Custom / select team..."),
+teamWages.map(function(t){return h("option",{key:t.n,value:t.n},t.n+" ("+cur+t.w+"M)");})),
+h("div",{className:"text-2xl font-bold",style:{color:N}},cur+a[1]+"M"),
+h("input",{type:"range",min:5,max:lg==="laliga"?400:300,value:a[1],onChange:function(ev){a[2](Number(ev.target.value));a[5]("");},className:"w-full",style:{accentColor:a[3]}}));})),
+h("div",{className:"rounded-lg p-3 mb-3",style:{background:"#f8f9fa",border:"1px solid #e9ecef"}},
+h("div",{className:"text-xs text-gray-500 mb-1"},"Wage ratio: ",h("b",null,(aW/hW).toFixed(2))," | log\u2082 = ",h("b",null,x.toFixed(2))),
+h("div",{className:"text-xs text-gray-500"},"Expected pts/match: Home ",h("b",{style:{color:B}},hExp.toFixed(2))," | Away ",h("b",{style:{color:O}},aExp.toFixed(2)))),
 h("div",{className:"space-y-2"},[["Home win",ph,B],["Draw",pd,"#888"],["Away win",pa,O]].map(function(a){return h("div",{key:a[0]},h("div",{className:"flex justify-between text-sm"},h("span",{style:{color:a[2]}},a[0]),h("b",{style:{color:a[2]}},(a[1]*100).toFixed(1)+"%")),h("div",{className:"bg-gray-200 rounded-full h-4"},h("div",{className:"h-full rounded-full",style:{width:(a[1]*100)+"%",background:a[2]}})));})));}
 
 function Predictions(){
@@ -462,7 +554,7 @@ if(p===7)return h("span",{style:{color:"#27AE60"}},p+sfx);
 if(p<=17)return h("span",{className:"text-gray-400"},p+sfx);
 return h("span",{style:{color:"#E74C3C",fontWeight:700}},p+sfx);}
 return h("div",null,
-h("p",{className:"text-gray-500 text-sm mb-3"},"Probability of finishing in each position group. ",h("span",{className:"text-gray-400"},"MC = Monte Carlo: 10,000 full-league simulations using the ordered logit wage model.")),
+e(Info,null,"Position probabilities come from 10,000 joint league simulations: all 20 teams play each fixture simultaneously in every iteration, producing a full league table. The fraction of iterations where a team finishes in each zone (1st, top 4, 5th\u20136th, 7th, 8th\u201317th, 18th\u201320th) gives the probability. Budget forecast simulates the full season using only wage data. Updated forecast locks in actual results and simulates remaining fixtures. Rank is derived from projected final points."),
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},
 e(LP,{lg:lg,set:function(v){sLg(v);var sk=Object.keys(D.pos&&D.pos[v]||{}).sort().reverse();if(sk.length>0)sSn(sk[0]);}}),
 h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s+(s==="25/26"?" (current)":""));}))),
@@ -472,20 +564,20 @@ h("thead",null,
 h("tr",{style:{background:"#f9fafb"}},
 h("th",{className:"text-left px-2 py-1",rowSpan:2,style:{borderRight:"1px solid #e5e7eb",fontWeight:600}},"Team"),
 e(TH,{sty:{className:"text-center px-1 py-1",rowSpan:2,style:{borderRight:"1px solid #e5e7eb",fontSize:10}},label:"Pts",tip:iC?"Current actual points":"Final actual points"}),
-h("th",{className:"text-center px-1 py-0.5",colSpan:8,style:{color:O,borderBottom:"2px solid "+O+"30",borderRight:"1px solid #e5e7eb",fontSize:10}},"Pre-season forecast"),
-iC&&posD.cur?h("th",{className:"text-center px-1 py-0.5",colSpan:8,style:{color:B,borderBottom:"2px solid "+B+"30",borderRight:"1px solid #e5e7eb",fontSize:10}},"Current forecast (MC)"):null,
+h("th",{className:"text-center px-1 py-0.5",colSpan:8,style:{color:O,borderBottom:"2px solid "+O+"30",borderRight:"1px solid #e5e7eb",fontSize:10}},"Budget forecast"),
+iC&&posD.cur?h("th",{className:"text-center px-1 py-0.5",colSpan:8,style:{color:B,borderBottom:"2px solid "+B+"30",borderRight:"1px solid #e5e7eb",fontSize:10}},"Updated forecast"):null,
 !iC?e(TH,{sty:{className:"text-center px-1 py-0.5",rowSpan:2,style:{fontSize:10}},label:"Final",tip:"Actual final league position"}):null),
 h("tr",{style:{background:"#f9fafb",borderBottom:"2px solid #e5e7eb"}},
-e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Rk",tip:"Pre-season predicted rank (by expected points)"}),
-e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Exp",tip:"Pre-season expected points (from wage model)"}),
+e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Rk",tip:"Budget forecast predicted rank (by expected points)"}),
+e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},label:"Exp",tip:"Budget forecast expected points (from wage model)"}),
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#FFD700",fontSize:9}},label:"1st",tip:"Probability of winning the league (10,000 simulations)"}),
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#1A56DB",fontSize:9}},label:"UCL",tip:"Probability of finishing in top 4 (Champions League)"}),
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#E67E22",fontSize:9}},label:"UEL",tip:"Probability of finishing 5th-6th (Europa League)"}),
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#27AE60",fontSize:9}},label:"Conf",tip:"Probability of finishing 7th (Conference League)"}),
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#95A5A6",fontSize:9}},label:"Mid",tip:"Probability of finishing 8th-17th"}),
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#E74C3C",fontSize:9}},label:"Rel",tip:"Probability of relegation (18th-20th)"}),
-iC&&posD.cur?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9,borderLeft:"1px solid #e5e7eb"}},label:"Rk",tip:"Monte Carlo predicted rank (by projected points)"}):null,
-iC&&posD.cur?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"Proj",tip:"Monte Carlo projected final points (median of 10,000 simulations)"}):null,
+iC&&posD.cur?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9,borderLeft:"1px solid #e5e7eb"}},label:"Rk",tip:"Updated forecast predicted rank (by projected points)"}):null,
+iC&&posD.cur?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},label:"Proj",tip:"Updated forecast projected points (median of 10,000 simulations)"}):null,
 iC&&posD.cur?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#FFD700",fontSize:9}},label:"1st",tip:"Current probability of winning the league"}):null,
 iC&&posD.cur?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#1A56DB",fontSize:9}},label:"UCL",tip:"Current probability of top 4"}):null,
 iC&&posD.cur?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#E67E22",fontSize:9}},label:"UEL",tip:"Current probability of 5th-6th"}):null,
@@ -505,7 +597,86 @@ iC&&r.cur?cats.map(function(c){return pctCell(r.cur[c.k],c.k,"c"+c.k);}):null,
 !iC?h("td",{className:"px-2 py-0.5 text-right",style:{background:r.actPos?rkBg(r.actPos,r.preRk):"transparent"}},r.actPos?posLabel(r.actPos):"-"):null
 );})))));}
 
-var tabs=[{id:"tracker",l:"Season Tracker"},{id:"predictions",l:"Predictions"},{id:"badrun",l:"Bad Run Checker"},{id:"h2h",l:"Head to Head"},{id:"explorer",l:"Overperformance"},{id:"calc",l:"Calculator"}];
+function Methodology(){
+var F=function(t){return h("span",{style:{fontFamily:"serif",fontStyle:"italic"}},t);};
+var Eq=function(props){return h("div",{className:"my-3 px-4 py-2 rounded text-center",style:{background:"#f8f9fa",border:"1px solid #e9ecef",fontFamily:"serif",fontSize:13}},props.children);};
+var Sec=function(props){return h("div",{className:"mb-6"},h("h3",{className:"font-bold text-sm mb-2",style:{color:N}},props.title),props.children);};
+// Wage data toggle
+var _w=React.useState(false),showW=_w[0],setShowW=_w[1];
+var _wl=React.useState("ll"),wLg=_wl[0],setWLg=_wl[1];
+var wSeasons=React.useMemo(function(){return Object.keys(D.seasons[wLg]).sort().reverse();},[wLg]);
+var wData=React.useMemo(function(){var rows=[];wSeasons.forEach(function(sn){var sd=D.seasons[wLg][sn];Object.keys(sd).forEach(function(t){var w=sd[t].w;if(w>0)rows.push({sn:sn,t:t,w:w});});});return rows;},[wLg,wSeasons]);
+var wBySeason=React.useMemo(function(){var m={};wData.forEach(function(r){if(!m[r.sn])m[r.sn]=[];m[r.sn].push(r);});Object.keys(m).forEach(function(sn){m[sn].sort(function(a,b){return b.w-a.w;});});return m;},[wData]);
+var cur=wLg==="ll"?"\u20ac":"\u00a3";
+return h("div",{style:{maxWidth:700,margin:"0 auto"},className:"text-sm text-gray-700 leading-relaxed"},
+h("h2",{className:"text-lg font-bold mb-4",style:{color:N,fontFamily:"Georgia,serif"}},"Methodology"),
+
+e(Sec,{title:"Why wages?"},
+h("p",null,"A football club\u2019s wage bill is the single best publicly available predictor of league performance. Unlike transfer fees (one-off, volatile, and affected by sell-on clauses), wages reflect the sustained commitment to squad quality: they capture not just star signings but also squad depth, youth development, and retention. Across 9,008 matches in La Liga and the Premier League, the log-ratio of wage bills between two teams explains match outcomes better than any other single variable."),
+h("p",{className:"mt-2"},"The key insight is that spending does not translate linearly into results. Doubling a wage bill does not double the probability of winning. Returns diminish sharply at the top: the difference between \u20ac50M and \u20ac100M matters far more than the difference between \u20ac250M and \u20ac300M. The ordered logit model captures this non-linearity naturally through the logistic function.")),
+
+e(Sec,{title:"The ordered logit model"},
+h("p",null,"Each match has three possible outcomes for the home team: win, draw, or loss. These are ordered categories, making the ",h("b",null,"ordered logistic regression")," a natural choice. The single predictor is the log-ratio of wage bills:"),
+e(Eq,null,F("x")," = log",h("sub",null,"2"),"(",F("W"),h("sub",null,"away")," / ",F("W"),h("sub",null,"home"),")"),
+h("p",null,"When ",F("x")," = 0, both teams earn the same wages and the model gives a baseline home advantage. When ",F("x")," > 0, the away team earns more, shifting probabilities in their favour. The model estimates three parameters: ",F("\u03b2")," (sensitivity to budget ratio), and two cut-points ",F("\u03b8"),h("sub",null,"1"),", ",F("\u03b8"),h("sub",null,"2")," that partition the latent scale into win/draw/loss zones:"),
+e(Eq,null,"P(home win) = 1 \u2212 \u03c3(",F("\u03b8"),h("sub",null,"2")," + ",F("\u03b2"),F("x"),")"),
+e(Eq,null,"P(draw) = \u03c3(",F("\u03b8"),h("sub",null,"2")," + ",F("\u03b2"),F("x"),") \u2212 \u03c3(",F("\u03b8"),h("sub",null,"1")," + ",F("\u03b2"),F("x"),")"),
+e(Eq,null,"P(away win) = \u03c3(",F("\u03b8"),h("sub",null,"1")," + ",F("\u03b2"),F("x"),")"),
+h("p",null,"where \u03c3(",F("z"),") = 1/(1+e",h("sup",null,"\u2212z"),") is the logistic function. The log",h("sub",null,"2")," transform means each doubling of the wage ratio produces a constant shift in the odds \u2014 matching the empirical observation that budget advantages compound proportionally, not additively.")),
+
+e(Sec,{title:"Estimated parameters"},
+h("p",{className:"mb-2"},"Separate models are estimated for each league, reflecting structural differences in competitiveness. The Premier League\u2019s higher ",F("\u03b2")," means wage differences translate more strongly into results there than in La Liga:"),
+h("div",{className:"overflow-x-auto"},h("table",{className:"text-xs w-full",style:{borderCollapse:"collapse"}},
+h("thead",null,h("tr",{style:{borderBottom:"2px solid #ddd",background:"#f9fafb"}},h("th",{className:"text-left pr-4 py-1.5"},"League"),h("th",{className:"text-right px-3"},F("\u03b2")),h("th",{className:"text-right px-3"},F("\u03b8"),h("sub",null,"1")),h("th",{className:"text-right px-3"},F("\u03b8"),h("sub",null,"2")),h("th",{className:"text-right px-3"},"Matches"),h("th",{className:"text-right px-3"},"Seasons"))),
+h("tbody",null,
+h("tr",{style:{borderBottom:"1px solid #eee"}},h("td",{className:"py-1.5 pr-4"},"La Liga"),h("td",{className:"text-right px-3"},"0.4719"),h("td",{className:"text-right px-3"},"\u22121.0404"),h("td",{className:"text-right px-3"},"0.2081"),h("td",{className:"text-right px-3"},"4,448"),h("td",{className:"text-right px-3"},"13")),
+h("tr",null,h("td",{className:"py-1.5 pr-4"},"Premier League"),h("td",{className:"text-right px-3"},"0.6760"),h("td",{className:"text-right px-3"},"\u22120.8358"),h("td",{className:"text-right px-3"},"0.2422"),h("td",{className:"text-right px-3"},"4,560"),h("td",{className:"text-right px-3"},"13")))))),
+
+e(Sec,{title:"Data sources"},
+h("p",null,h("b",null,"Match results"),": ",h("a",{href:"https://www.football-data.co.uk",target:"_blank",style:{color:B,textDecoration:"underline"}},"football-data.co.uk"),". Complete match-by-match results for La Liga and the Premier League from 2013/14 to present, downloaded and processed daily."),
+h("p",{className:"mt-2"},h("b",null,"Wage data"),": ",h("a",{href:"https://www.capology.com",target:"_blank",style:{color:B,textDecoration:"underline"}},"Capology")," and ",h("a",{href:"https://fbref.com",target:"_blank",style:{color:B,textDecoration:"underline"}},"FBref"),". Annual gross wage bills per club (in \u20acM for La Liga, \u00a3M for the Premier League). Reliable coverage starts in 2013/14. Some promoted teams in 25/26 use estimates where Capology data is not yet available."),
+h("p",{className:"mt-2"},h("b",null,"Coverage"),": 9,008 matches, 480+ team-seasons, 13 seasons (2013/14\u20132025/26). Three team-seasons in La Liga lack wage data (Espanyol 13/14\u201314/15, Deportivo 14/15) and are excluded from the model estimation.")),
+
+e(Sec,{title:"Wage data by team"},
+h("div",{className:"flex gap-2 mb-2"},
+h("button",{onClick:function(){setShowW(!showW);},className:"text-xs px-3 py-1 rounded "+(showW?"bg-gray-200":"bg-gray-100")+" text-gray-600"},showW?"Hide wage table":"Show wage table"),
+showW?h("div",{className:"flex gap-1"},
+h("button",{onClick:function(){setWLg("ll");},className:"px-2 py-0.5 rounded text-xs "+(wLg==="ll"?"text-white":"text-gray-500 bg-gray-100"),style:wLg==="ll"?{background:N}:{}},"La Liga"),
+h("button",{onClick:function(){setWLg("pl");},className:"px-2 py-0.5 rounded text-xs "+(wLg==="pl"?"text-white":"text-gray-500 bg-gray-100"),style:wLg==="pl"?{background:N}:{}},"Premier League")):null),
+showW?h("div",{className:"overflow-x-auto",style:{maxHeight:400,overflowY:"auto"}},
+wSeasons.map(function(sn){var teams=wBySeason[sn];if(!teams)return null;
+return h("div",{key:sn,className:"mb-3"},
+h("div",{className:"text-xs font-bold mb-1",style:{color:N}},sn),
+h("div",{className:"flex flex-wrap gap-x-3 gap-y-0 text-xs"},
+teams.map(function(t){return h("span",{key:t.t,className:"text-gray-600"},t.t," ",h("span",{className:"text-gray-400"},cur+t.w+"M"));})));})):null),
+
+e(Sec,{title:"Budget forecast"},
+h("p",null,"Before the season starts, each of the 380 league matches is assigned win/draw/loss probabilities from the ordered logit model using that season\u2019s wage data. The full season is then simulated 10,000 times. In each simulation, every match is drawn independently from its probability distribution, producing a complete league table. Expected points = the mean across all 10,000 simulations.")),
+
+e(Sec,{title:"Updated forecast"},
+h("p",null,"As the season progresses, played matches are locked at their actual result. Only remaining fixtures are simulated (10,000 times), using the same wage-based probabilities. This produces updated projections (median, p10, p90) that narrow as the season advances. By matchday 38, the projection converges to the actual result.")),
+
+e(Sec,{title:"Position probabilities"},
+h("p",null,"Unlike individual team simulations, position probabilities require a ",h("b",null,"joint")," simulation: all 20 teams play in the same iteration. Each of the 10,000 iterations produces a full ranked table. The probability of, say, qualifying for the Champions League is the fraction of iterations where a team finishes in the top 4. This captures the crucial interdependence: one team\u2019s extra points come at the expense of their opponents.")),
+
+e(Sec,{title:"Overperformance metrics"},
+h("p",null,"The difference between actual and expected points \u2014 ",h("b",null,"overperformance")," \u2014 isolates what the wage bill cannot explain: coaching, recruitment strategy, culture, luck. Three metrics quantify this:"),
+h("p",{className:"mt-2 font-semibold"},"1. Extra points (raw):"),
+e(Eq,null,"Extra pts = actual \u2212 expected"),
+h("p",{className:"mt-2 font-semibold"},"2. Normalized overperformance:"),
+e(Eq,null,"Norm = (cum. overperf \u00f7 ",F("n"),h("sub",null,"seasons"),") \u00f7 avg expected pts/season \u00d7 100"),
+h("p",null,"This adjusts for budget level: +10 points on 45 expected is more impressive than +10 on 80 expected."),
+h("p",{className:"mt-2 font-semibold"},"3. Managerial Score:"),
+e(Eq,null,"MS = sign(overperf) \u00d7 (100 \u2212 ",F("p"),")"),
+h("p",null,"where ",F("p")," is the two-tailed probability that the cumulative overperformance occurred by chance:"),
+e(Eq,null,F("p")," = 2 \u00d7 [1 \u2212 \u03a6(|cum. overperf| / (\u03c3 \u00d7 \u221a",F("n"),h("sub",null,"matches"),"))]"),
+h("p",null,"with \u03c3 \u2248 1.58 (match-level residual standard deviation) and \u03a6 the standard normal CDF. MS ranges from \u2212100 (certain underperformance) to +100 (certain overperformance), with 0 indicating pure chance.")),
+
+e(Sec,{title:"Reference"},
+h("p",null,"For the full analysis, including regression diagnostics, Monte Carlo validation, and detailed discussion of results, see:"),
+h("p",{className:"mt-1"},h("a",{href:"https://talfarouriarte-cloud.github.io/what-money-cant-buy/What%20money%20cant%20buy.pdf",target:"_blank",style:{color:B,textDecoration:"underline",fontWeight:600}},"\u201cWhat Money Can\u2019t Buy in Football\u201d")," (PDF)")));}
+
+var tabs=[{id:"tracker",l:"Season Tracker"},{id:"predictions",l:"Predictions"},{id:"badrun",l:"Run Evaluator"},{id:"h2h",l:"Head to Head"},{id:"explorer",l:"Overperformance"},{id:"calc",l:"Calculator"},{id:"method",l:"Methodology"}];
 function App(){useTHState();
 React.useEffect(function(){function close(){if(_thSet)_thSet(null);}document.addEventListener("click",close);return function(){document.removeEventListener("click",close);};},[]);
 var _1=React.useState(getHash().tab||"tracker"),tab=_1[0],sTab0=_1[1];
@@ -513,7 +684,7 @@ function sTab(v){sTab0(v);setHash("tab",v);}
 return h("div",{className:"min-h-screen bg-white"},
 h("div",{className:"py-4 px-5",style:{background:N}},h("h1",{className:"text-xl font-bold text-white",style:{fontFamily:"Georgia,serif"}},"What money can\u2019t buy"),h("p",{className:"text-blue-200 text-xs"},"La Liga & Premier League | 9,008 matches | 13 seasons")),
 h("div",{className:"border-b bg-gray-50 sticky top-0 z-10 flex overflow-x-auto"},tabs.map(function(t){return h("button",{key:t.id,onClick:function(){sTab(t.id);},className:"px-4 py-2 text-sm font-medium border-b-2 "+(tab===t.id?"border-current":"border-transparent text-gray-500"),style:tab===t.id?{color:N}:{}},t.l);})),
-h("div",{style:{maxWidth:950,margin:"0 auto",padding:16}},tab==="tracker"?e(Tracker):null,tab==="predictions"?e(Predictions):null,tab==="badrun"?e(BadRun):null,tab==="h2h"?e(H2H):null,tab==="explorer"?e(Explorer):null,tab==="calc"?e(Calc):null),
+h("div",{style:{maxWidth:950,margin:"0 auto",padding:16}},tab==="tracker"?e(Tracker):null,tab==="predictions"?e(Predictions):null,tab==="badrun"?e(BadRun):null,tab==="h2h"?e(H2H):null,tab==="explorer"?e(Explorer):null,tab==="calc"?e(Calc):null,tab==="method"?e(Methodology):null),
 h("div",{className:"text-center text-xs text-gray-400 py-3 border-t"},"Ordered logit + Monte Carlo | whatmoneycantbuyfootball@gmail.com"));}
 
 fetch("data.json").then(function(r){return r.json();}).then(function(d){D=d;ReactDOM.render(e(App),document.getElementById("root"));}).catch(function(err){document.getElementById("root").innerHTML="<p style='padding:40px;text-align:center;color:red'>Error: "+err.message+"</p>";});
