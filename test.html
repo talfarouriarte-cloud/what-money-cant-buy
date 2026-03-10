@@ -20,9 +20,12 @@ function h(t,p){var a=[t,p];for(var i=2;i<arguments.length;i++)a.push(arguments[
 var Sg=function(z){return 1/(1+Math.exp(-z));};
 function expPos(p){if(!p)return 20;return 1*p["1st"]+3*(p.ucl-p["1st"])+5.5*p.uel+7*p.ucol+12.5*p.mid+19*p.rel;}
 function rankByPts(teamsObj){var arr=Object.entries(teamsObj).sort(function(a,b){return b[1]-a[1];});var r={};arr.forEach(function(x,i){r[x[0]]=i+1;});return r;}
-function TH(props){var _s=React.useState(false),show=_s[0],setShow=_s[1];
-return h("th",Object.assign({},props.sty,{onClick:function(){setShow(!show);},style:Object.assign({},props.sty.style||{},{cursor:"help",position:"relative"})}),props.label,
-show?h("div",{style:{position:"absolute",top:"100%",right:0,zIndex:50,background:"#333",color:"#fff",padding:"4px 8px",borderRadius:4,fontSize:10,fontWeight:400,whiteSpace:"nowrap",boxShadow:"0 2px 8px rgba(0,0,0,0.2)"},onClick:function(ev){ev.stopPropagation();}},props.tip):null);}
+var _thOpen=null,_thSet=null;
+function useTHState(){var s=React.useState(null);_thOpen=s[0];_thSet=s[1];}
+var _thId=0;
+function TH(props){var myId=React.useMemo(function(){return++_thId;},[]);
+return h("th",Object.assign({},props.sty,{onClick:function(ev){ev.stopPropagation();if(_thSet)_thSet(_thOpen===myId?null:myId);},style:Object.assign({},props.sty.style||{},{cursor:"help",position:"relative"})}),props.label,
+_thOpen===myId?h("div",{style:{position:"absolute",top:"100%",right:0,zIndex:50,background:"#4A5568",color:"#fff",padding:"4px 8px",borderRadius:6,fontSize:10,fontWeight:400,whiteSpace:"nowrap",boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}},props.tip):null);}
 function rkBg(rk,preRk){if(rk===null||preRk===null)return"transparent";if(rk<preRk)return"rgba(46,139,87,0.12)";if(rk>preRk)return"rgba(192,57,43,0.1)";return"transparent";}
 function getHash(){try{var h=window.location.hash.slice(1);var o={};h.split("&").forEach(function(p){var kv=p.split("=");if(kv[0])o[kv[0]]=decodeURIComponent(kv[1]||"");});return o;}catch(e){return {};}}
 function setHash(k,v){var o=getHash();o[k]=v;var parts=[];for(var key in o){if(o[key])parts.push(key+"="+encodeURIComponent(o[key]));}window.location.hash=parts.join("&");}
@@ -346,10 +349,10 @@ function setMode(v){setMode0(v);setHash("om",v);}
 function setWin(v){setWin0(v);setHash("ow",v);}
 React.useEffect(function(){setHash("ex",sel.join(","));},[sel]);
 var teams=lg==="ll"?D.cumulative.ll:D.cumulative.pl;
-var ss=["13/14","14/15","15/16","16/17","17/18","18/19","19/20","20/21","21/22","22/23","23/24","24/25"];
+var ss=["13/14","14/15","15/16","16/17","17/18","18/19","19/20","20/21","21/22","22/23","23/24","24/25","25/26"];
 var SIG=1.58;
 function normCDF(z){var t=1/(1+0.2316419*Math.abs(z));var d=0.3989423*Math.exp(-z*z/2);var p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return z>0?1-p:p;}
-function pval(cumOP,nMatches){if(nMatches<=0)return 1;var z=Math.abs(cumOP)/(SIG*Math.sqrt(nMatches));return 2*(1-normCDF(z));}
+function pval(cumOP,nMatches){if(nMatches<=0||cumOP===0)return 1;var z=Math.abs(cumOP)/(SIG*Math.sqrt(nMatches));return 2*(1-normCDF(z));}
 var modes=[
 {k:"pts",l:"Extra pts",tip:"Raw overperformance: actual minus expected points per season"},
 {k:"norm",l:"Normalized",tip:"(Cum. overperf \u00f7 seasons) \u00f7 avg expected pts/season \u00d7 100"},
@@ -492,7 +495,9 @@ iC&&r.cur?cats.map(function(c){return pctCell(r.cur[c.k],c.k,"c"+c.k);}):null,
 );})))));}
 
 var tabs=[{id:"tracker",l:"Season Tracker"},{id:"predictions",l:"Predictions"},{id:"badrun",l:"Bad Run Checker"},{id:"h2h",l:"Head to Head"},{id:"explorer",l:"Overperformance"},{id:"calc",l:"Calculator"}];
-function App(){var _1=React.useState(getHash().tab||"tracker"),tab=_1[0],sTab0=_1[1];
+function App(){useTHState();
+React.useEffect(function(){function close(){if(_thSet)_thSet(null);}document.addEventListener("click",close);return function(){document.removeEventListener("click",close);};},[]);
+var _1=React.useState(getHash().tab||"tracker"),tab=_1[0],sTab0=_1[1];
 function sTab(v){sTab0(v);setHash("tab",v);}
 return h("div",{className:"min-h-screen bg-white"},
 h("div",{className:"py-4 px-5",style:{background:N}},h("h1",{className:"text-xl font-bold text-white",style:{fontFamily:"Georgia,serif"}},"What money can\u2019t buy"),h("p",{className:"text-blue-200 text-xs"},"La Liga & Premier League | 9,008 matches | 13 seasons")),
