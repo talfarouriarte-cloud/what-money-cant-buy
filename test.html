@@ -80,12 +80,12 @@ else{for(var j=0;j<sel.length;j++){var t=sD[sel[j]];if(!t)continue;
 var tNP=t.a.length;var tLast=tNP>0?t.a[tNP-1]:0;
 if(i<tNP){r["a"+j]=t.a[i];}
 var jBd=iC&&D.bands[lg]&&D.bands[lg][sel[j]]?D.bands[lg][sel[j]]:null;
+var jPr=iC&&D.pre&&D.pre[lg]&&D.pre[lg][sel[j]]?D.pre[lg][sel[j]]:null;
 if(!jBd){var tE=t.e.length>0?t.e[t.e.length-1]/t.e.length:1.2;
 if(i<t.e.length){r["e"+j]=t.e[i];}else{r["e"+j]=Math.round((t.e[t.e.length-1]+tE*(i-t.e.length+1))*10)/10;}}
+if(jPr&&jPr.p50[i]!==undefined){r["p"+j]=jPr.p50[i];}
 if(jBd){
-// Median: from last played GW onwards, connects to actual line
 if(i>=tNP-1){r["m"+j]=i<tNP?t.a[i]:Math.max(jBd.p50[i],tLast);}
-// Band: zero for played, fan out from last actual for projected
 if(i<tNP){r["bB"+j]=t.a[i];r["bD"+j]=0;}
 else{var jp10=Math.max(jBd.p10[i],tLast);r["bB"+j]=jp10;r["bD"+j]=jBd.p90[i]-jp10;}}
 else if(i<tNP){r["bB"+j]=t.a[i];r["bD"+j]=0;}}}rows.push(r);}
@@ -151,6 +151,7 @@ for(var j=0;j<sel.length;j++){
 if(iC){cc.push(e(RC.Area,{key:"bB"+j,dataKey:"bB"+j,stackId:"sb"+j,stroke:"none",fill:"transparent",isAnimationActive:false}));
 cc.push(e(RC.Area,{key:"bD"+j,dataKey:"bD"+j,stackId:"sb"+j,stroke:"none",fill:T[j],fillOpacity:0.07,isAnimationActive:false}));
 cc.push(e(RC.Area,{key:"m"+j,dataKey:"m"+j,stroke:T[j],strokeDasharray:"4 3",strokeWidth:1.2,fill:"none",strokeOpacity:0.5,isAnimationActive:false}));}
+if(iC){cc.push(e(RC.Area,{key:"p"+j,dataKey:"p"+j,stroke:T[j],strokeDasharray:"8 4",strokeWidth:1,fill:"none",strokeOpacity:0.25,isAnimationActive:false}));}
 cc.push(e(RC.Area,{key:"e"+j,dataKey:"e"+j,stroke:T[j],strokeDasharray:"2 2",strokeWidth:1,fill:"none",strokeOpacity:0.3,isAnimationActive:false}));
 cc.push(e(RC.Area,{key:"a"+j,dataKey:"a"+j,stroke:T[j],strokeWidth:2.5,fill:"none",isAnimationActive:false}));}}
 if(iC)cc.push(e(RC.ReferenceLine,{key:"now",x:nP,stroke:"#ddd",strokeDasharray:"2 2"}));
@@ -189,60 +190,53 @@ pre?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,hei
 ):h("div",{className:"flex flex-wrap gap-x-4 gap-y-1 mt-1 mb-2 text-xs text-gray-500 justify-center"},
 h("span",null,"\u2014 Actual"),
 iC?h("span",null,"- - MC projection"):null,
-iC?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:"#999",display:"inline-block",opacity:0.1,borderRadius:2}}),h("span",null,"MC range (p10-p90)")):null,
+iC?h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:8,background:"#999",display:"inline-block",opacity:0.1,borderRadius:2}}),h("span",null,"MC range")):null,
+iC?h("span",null,"\u00B7\u00B7\u00B7 Pre-season"):null,
 !iC?h("span",null,"\u00B7\u00B7 Expected"):null),
 h("div",{className:"mt-3 overflow-x-auto rounded-lg",style:{border:"1px solid #e5e7eb"}},
 h("table",{className:"w-full",style:{minWidth:450,fontSize:11,borderCollapse:"collapse"}},
 h("thead",null,
-iC&&hasTitleCur?h("tr",{style:{background:"#f9fafb"}},
+h("tr",{style:{background:"#f9fafb"}},
 h("th",{className:"text-left px-2 py-1",rowSpan:2,style:{borderRight:"1px solid #e5e7eb",fontWeight:600}},"Team"),
-h("th",{className:"text-right px-1 py-1",rowSpan:2},"GW"),
-h("th",{className:"text-right px-1 py-1",rowSpan:2,style:{borderRight:"1px solid #e5e7eb"}},"Pts"),
-h("th",{className:"text-right px-1 py-1",rowSpan:2,style:{borderRight:"1px solid #e5e7eb"}},"+/-"),
+iC?h("th",{className:"text-center px-1 py-0.5",colSpan:3,rowSpan:1,style:{borderBottom:"1px solid #e5e7eb",borderRight:"1px solid #e5e7eb",fontSize:9}},"Actual"):
+h("th",{className:"text-center px-1 py-0.5",colSpan:4,rowSpan:1,style:{borderBottom:"1px solid #e5e7eb",borderRight:"1px solid #e5e7eb",fontSize:9}},"Actual"),
 h("th",{className:"text-center px-1 py-0.5",colSpan:3,style:{color:O,borderBottom:"2px solid "+O+"30",borderRight:"1px solid #e5e7eb",fontSize:9}},"Pre-season"),
-h("th",{className:"text-center px-1 py-0.5",colSpan:5,style:{color:B,borderBottom:"2px solid "+B+"30",fontSize:9}},"Current MC")):
+iC?h("th",{className:"text-center px-1 py-0.5",colSpan:5,style:{color:B,borderBottom:"2px solid "+B+"30",fontSize:9}},"Current MC"):null),
 h("tr",{style:{background:"#f9fafb",borderBottom:"2px solid #e5e7eb"}},
-h("th",{className:"text-left px-2 py-1",style:{fontWeight:600}},"Team"),
-h("th",{className:"text-right px-1 py-1"},"GW"),
-h("th",{className:"text-right px-1 py-1"},"Pts"),
-h("th",{className:"text-right px-1 py-1"},"Exp"),
-h("th",{className:"text-right px-1 py-1"},"+/-"),
-hasTitlePre?h("th",{className:"text-right px-1 py-1",style:{color:O,fontSize:9}},"Rk"):null,
-hasTitlePre?h("th",{className:"text-right px-1 py-1",style:{color:O,fontSize:9}},"Exp pts"):null,
-hasTitlePre?h("th",{className:"text-right px-1 py-1",style:{color:O,fontSize:9}},"P(1st)"):null),
-iC&&hasTitleCur?h("tr",{style:{background:"#f9fafb",borderBottom:"2px solid #e5e7eb"}},
-h("th",{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},"Rk"),
-h("th",{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9}},"Exp pts"),
-h("th",{className:"text-right px-1 py-0.5",style:{color:O,fontSize:9,borderRight:"1px solid #e5e7eb"}},"P(1st)"),
-h("th",{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},"Rk"),
-h("th",{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},"p10"),
-h("th",{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},"Proj"),
-h("th",{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},"p90"),
-h("th",{className:"text-right px-1 py-0.5",style:{color:B,fontSize:9}},"P(1st)")):null),
+h("th",{className:"text-right px-1 py-0.5",title:"Matchweeks played",style:{fontSize:9}},"GW"),
+h("th",{className:"text-right px-1 py-0.5",title:"Actual points",style:{fontSize:9}},"Pts"),
+!iC?h("th",{className:"text-right px-1 py-0.5",title:"Actual final rank",style:{fontSize:9}},"Rk"):null,
+h("th",{className:"text-right px-1 py-0.5",title:"Overperformance vs expected",style:{fontSize:9,borderRight:"1px solid #e5e7eb"}},"+/-"),
+h("th",{className:"text-right px-1 py-0.5",title:"Pre-season predicted rank",style:{color:O,fontSize:9}},"Rk"),
+h("th",{className:"text-right px-1 py-0.5",title:"Pre-season expected points",style:{color:O,fontSize:9}},"Exp"),
+h("th",{className:"text-right px-1 py-0.5",title:"Pre-season probability of 1st",style:{color:O,fontSize:9,borderRight:"1px solid #e5e7eb"}},"P1"),
+iC?h("th",{className:"text-right px-1 py-0.5",title:"Current MC predicted rank",style:{color:B,fontSize:9}},"Rk"):null,
+iC?h("th",{className:"text-right px-1 py-0.5",title:"MC 10th percentile",style:{color:B,fontSize:9}},"p10"):null,
+iC?h("th",{className:"text-right px-1 py-0.5",title:"MC median projection",style:{color:B,fontSize:9}},"Med"):null,
+iC?h("th",{className:"text-right px-1 py-0.5",title:"MC 90th percentile",style:{color:B,fontSize:9}},"p90"):null,
+iC?h("th",{className:"text-right px-1 py-0.5",title:"Current probability of 1st",style:{color:B,fontSize:9}},"P1"):null)),
 h("tbody",null,sel.map(function(n,i){var t=sD[n];if(!t)return null;
 var ap=t.a[t.a.length-1]||0,ep=t.e[t.e.length-1]||0,df2=ap-ep;
 var jBd=iC&&D.bands[lg]&&D.bands[lg][n]?D.bands[lg][n]:null;
 var jPre=iC&&D.pre[lg]&&D.pre[lg][n]?D.pre[lg][n]:null;
 var fin=jBd?jBd.p50.length-1:0;
-var preFin=jPre?jPre.p50.length-1:0;
 var tPre=hasTitlePre&&titleD.pre[n]?titleD.pre[n]["1st"]:null;
 var tCur=hasTitleCur&&titleD.cur[n]?titleD.cur[n]["1st"]:null;
 var preRk=trkPreRks[n]||null;
 var curRk=trkCurRks[n]||null;
 var prePts=trkPrePts[n]||null;
-var curPts=trkCurPts[n]||null;
+// Actual rank for past seasons
+var actRk=null;if(!iC){var allT2=Object.entries(sD).map(function(e2){return{n:e2[0],p:e2[1].a[e2[1].a.length-1]||0};}).sort(function(a,b){return b.p-a.p;});
+for(var k2=0;k2<allT2.length;k2++){if(allT2[k2].n===n){actRk=k2+1;break;}}}
 return h("tr",{key:n,style:{background:i%2===0?"white":"#fafbfc",borderBottom:"1px solid #f0f0f0"}},
 h("td",{className:"px-2 py-0.5",style:{fontWeight:600,color:multi?T[i]:B,borderRight:"1px solid #f0f0f0"}},n),
 h("td",{className:"px-1 py-0.5 text-right"},t.a.length),
-h("td",{className:"px-1 py-0.5 text-right font-semibold",style:{borderRight:iC?"1px solid #f0f0f0":"none"}},ap),
-!iC?h("td",{className:"px-1 py-0.5 text-right text-gray-500"},Math.round(ep)):null,
-h("td",{className:"px-1 py-0.5 text-right",style:{fontWeight:600,color:df2>=0?G:R,borderRight:iC?"1px solid #f0f0f0":"none"}},(df2>=0?"+":"")+df2.toFixed(1)),
-iC?h("td",{className:"px-1 py-0.5 text-right",style:{color:O,fontSize:10}},preRk||"-"):null,
-iC?h("td",{className:"px-1 py-0.5 text-right",style:{color:O}},prePts||"-"):null,
-iC?h("td",{className:"px-1 py-0.5 text-right",style:{color:O,borderRight:"1px solid #f0f0f0"}},tPre!==null?Math.round(tPre*100)+"%":"-"):null,
-!iC&&preRk?h("td",{className:"px-1 py-0.5 text-right",style:{color:O,fontSize:10}},preRk):null,
-!iC&&preRk?h("td",{className:"px-1 py-0.5 text-right",style:{color:O}},prePts):null,
-!iC&&hasTitlePre?h("td",{className:"px-1 py-0.5 text-right",style:{color:O}},tPre!==null?Math.round(tPre*100)+"%":"-"):null,
+h("td",{className:"px-1 py-0.5 text-right font-semibold"},ap),
+!iC&&actRk?h("td",{className:"px-1 py-0.5 text-right",style:{background:rkBg(actRk,preRk)}},(actRk<=3?actRk+"":actRk)+""):null,
+h("td",{className:"px-1 py-0.5 text-right",style:{fontWeight:600,color:df2>=0?G:R,borderRight:"1px solid #f0f0f0"}},(df2>=0?"+":"")+df2.toFixed(1)),
+h("td",{className:"px-1 py-0.5 text-right",style:{color:O,fontSize:10}},preRk||"-"),
+h("td",{className:"px-1 py-0.5 text-right",style:{color:O}},prePts||"-"),
+h("td",{className:"px-1 py-0.5 text-right",style:{color:O,borderRight:"1px solid #f0f0f0"}},tPre!==null?Math.round(tPre*100)+"%":"-"),
 iC?h("td",{className:"px-1 py-0.5 text-right",style:{color:B,fontSize:10,background:rkBg(curRk,preRk)}},curRk||"-"):null,
 iC&&jBd?h("td",{className:"px-1 py-0.5 text-right text-gray-400"},jBd.p10[fin]):null,
 iC&&jBd?h("td",{className:"px-1 py-0.5 text-right font-semibold"},jBd.p50[fin]):null,
@@ -427,30 +421,28 @@ h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"bor
 !posD?h("div",{className:"text-gray-400 text-center py-8"},"No data for this season"):
 h("div",{className:"overflow-x-auto rounded-lg",style:{border:"1px solid #e5e7eb"}},h("table",{className:"w-full",style:{minWidth:680,fontSize:11,borderCollapse:"collapse"}},
 h("thead",null,
-iC&&posD.cur?h("tr",{style:{background:"#f9fafb"}},h("th",{className:"text-left px-2 py-1.5",rowSpan:2,style:{borderRight:"1px solid #e5e7eb",fontWeight:600}},"Team"),h("th",{className:"text-right px-1 py-1.5",rowSpan:2,style:{borderRight:"1px solid #e5e7eb"}},"Pts"),
-h("th",{className:"text-center px-1 py-1",colSpan:8,style:{color:O,borderBottom:"2px solid "+O+"30",borderRight:"1px solid #e5e7eb",fontSize:10}},"Pre-season forecast"),
-h("th",{className:"text-center px-1 py-1",colSpan:8,style:{color:B,borderBottom:"2px solid "+B+"30",fontSize:10}},"Current forecast")):
-h("tr",{style:{background:"#f9fafb"}},h("th",{className:"text-left px-2 py-1.5",style:{fontWeight:600}},"Team"),h("th",{className:"text-right px-1 py-1.5"},"Pts"),
-h("th",{key:"prk",className:"text-right px-1 py-1.5",style:{fontSize:10}},"Rk"),
-h("th",{key:"pep",className:"text-right px-1 py-1.5",style:{fontSize:10}},"Exp"),
-cats.map(function(c){return h("th",{key:c.k,className:"text-right px-1 py-1.5",style:{color:c.c,fontSize:10}},c.l);}),
-!iC?h("th",{className:"text-right px-2 py-1.5",style:{fontSize:10}},"Final"):null),
-iC&&posD.cur?h("tr",{style:{background:"#f9fafb",borderBottom:"2px solid #e5e7eb"}},
-h("th",{key:"prk",className:"text-right px-1 py-0.5",style:{color:O,fontSize:9,fontWeight:500}},"Rk"),
-h("th",{key:"pep",className:"text-right px-1 py-0.5",style:{color:O,fontSize:9,fontWeight:500}},"Exp"),
-cats.map(function(c){return h("th",{key:"p"+c.k,className:"text-right px-1 py-0.5",style:{color:O,fontSize:9,fontWeight:500}},c.l);}),
-h("th",{key:"crk",className:"text-right px-1 py-0.5",style:{color:B,fontSize:9,fontWeight:500}},"Rk"),
-h("th",{key:"cep",className:"text-right px-1 py-0.5",style:{color:B,fontSize:9,fontWeight:500}},"Proj"),
-cats.map(function(c){return h("th",{key:"c"+c.k,className:"text-right px-1 py-0.5",style:{color:B,fontSize:9,fontWeight:500}},c.l);})):null),
+h("tr",{style:{background:"#f9fafb"}},
+h("th",{className:"text-left px-2 py-1",rowSpan:2,style:{borderRight:"1px solid #e5e7eb",fontWeight:600}},"Team"),
+!iC?h("th",{className:"text-center px-1 py-1",rowSpan:2,style:{borderRight:"1px solid #e5e7eb",fontSize:10}},"Pts"):h("th",{className:"text-center px-1 py-1",rowSpan:2,style:{borderRight:"1px solid #e5e7eb",fontSize:10}},"Pts"),
+h("th",{className:"text-center px-1 py-0.5",colSpan:8,style:{color:O,borderBottom:"2px solid "+O+"30",borderRight:"1px solid #e5e7eb",fontSize:10}},"Pre-season forecast"),
+iC&&posD.cur?h("th",{className:"text-center px-1 py-0.5",colSpan:8,style:{color:B,borderBottom:"2px solid "+B+"30",borderRight:"1px solid #e5e7eb",fontSize:10}},"Current forecast"):null,
+!iC?h("th",{className:"text-center px-1 py-0.5",rowSpan:2,style:{fontSize:10}},"Final"):null),
+h("tr",{style:{background:"#f9fafb",borderBottom:"2px solid #e5e7eb"}},
+h("th",{className:"text-right px-1 py-0.5",title:"Pre-season predicted rank",style:{color:O,fontSize:9}},"Rk"),
+h("th",{className:"text-right px-1 py-0.5",title:"Pre-season expected points",style:{color:O,fontSize:9}},"Exp"),
+cats.map(function(c){return h("th",{key:"p"+c.k,className:"text-right px-1 py-0.5",title:c.l,style:{color:c.c,fontSize:9}},c.l);}),
+iC&&posD.cur?h("th",{className:"text-right px-1 py-0.5",title:"Current predicted rank",style:{color:B,fontSize:9,borderLeft:"1px solid #e5e7eb"}},"Rk"):null,
+iC&&posD.cur?h("th",{className:"text-right px-1 py-0.5",title:"MC projected points",style:{color:B,fontSize:9}},"Proj"):null,
+iC&&posD.cur?cats.map(function(c){return h("th",{key:"c"+c.k,className:"text-right px-1 py-0.5",title:c.l,style:{color:c.c,fontSize:9}},c.l);}):null)),
 h("tbody",null,tableData.map(function(r,ri){
 return h("tr",{key:r.t,style:{background:ri%2===0?"white":"#fafbfc",borderBottom:"1px solid #f0f0f0"}},
 h("td",{className:"px-2 py-0.5",style:{fontWeight:600,fontSize:11,borderRight:"1px solid #f0f0f0"}},r.t),
 h("td",{className:"px-1 py-0.5 text-right",style:{fontWeight:600,borderRight:"1px solid #f0f0f0"}},r.pts),
-h("td",{key:"prk",className:"px-1 py-0.5 text-right",style:{color:O,fontWeight:600,fontSize:10}},r.preRk),
-h("td",{key:"pep",className:"px-1 py-0.5 text-right",style:{color:O,fontSize:10}},r.prePts||"-"),
+h("td",{className:"px-1 py-0.5 text-right",style:{color:O,fontWeight:600,fontSize:10}},r.preRk),
+h("td",{className:"px-1 py-0.5 text-right",style:{color:O,fontSize:10}},r.prePts||"-"),
 cats.map(function(c){return pctCell(r.pre[c.k],c.k,"p"+c.k);}),
-iC&&r.cur?h("td",{key:"crk",className:"px-1 py-0.5 text-right",style:{color:B,fontWeight:600,fontSize:10,borderLeft:"1px solid #e5e7eb",background:rkBg(r.curRk,r.preRk)}},r.curRk):null,
-iC&&r.cur?h("td",{key:"cep",className:"px-1 py-0.5 text-right",style:{color:B,fontSize:10}},r.curPts||"-"):null,
+iC&&r.cur?h("td",{className:"px-1 py-0.5 text-right",style:{color:B,fontWeight:600,fontSize:10,borderLeft:"1px solid #e5e7eb",background:rkBg(r.curRk,r.preRk)}},r.curRk):null,
+iC&&r.cur?h("td",{className:"px-1 py-0.5 text-right",style:{color:B,fontSize:10}},r.curPts||"-"):null,
 iC&&r.cur?cats.map(function(c){return pctCell(r.cur[c.k],c.k,"c"+c.k);}):null,
 !iC?h("td",{className:"px-2 py-0.5 text-right",style:{background:r.actPos?rkBg(r.actPos,r.preRk):"transparent"}},r.actPos?posLabel(r.actPos):"-"):null
 );})))));}
