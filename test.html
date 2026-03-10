@@ -107,8 +107,9 @@ h("span",{style:{color:R,fontWeight:600}},"L "+Math.round(rData[4]*100)+"%"))));
 if(isPast&&mData){var mExp=mData[3];var mDiff=mData[2]-mExp;
 // Compute W/D/L probabilities on the fly
 var oppD=sD[mData[0]];var oppW=oppD?oppD.w:20;var myW=pr.w||20;
-var wH=mData[1]?myW:oppW;var wA=mData[1]?oppW:myW;
-var xT=Math.log2(wA/wH);var mod=D.model[lg];
+var modK=lg==="ll"?"laliga":lg;var mod=D.model[modK];
+if(mod&&myW>0){var wH=mData[1]?myW:oppW;var wA=mData[1]?oppW:myW;
+var xT=Math.log2(wA/wH);
 var phT=1-Sg(mod.theta2+mod.beta*xT);var pdT=Sg(mod.theta2+mod.beta*xT)-Sg(mod.theta1+mod.beta*xT);var paT=1-phT-pdT;
 var pW=mData[1]?phT:paT;var pD=pdT;var pL=mData[1]?paT:phT;
 rows.push(h("div",{key:"pr2",className:"mt-1 pt-1",style:{borderTop:"1px solid #eee"}},
@@ -117,7 +118,7 @@ h("span",{style:{color:G,fontWeight:600}},"W "+Math.round(pW*100)+"%"),
 h("span",{className:"text-gray-400"},"|"),
 h("span",{style:{color:"#888",fontWeight:600}},"D "+Math.round(pD*100)+"%"),
 h("span",{className:"text-gray-400"},"|"),
-h("span",{style:{color:R,fontWeight:600}},"L "+Math.round(pL*100)+"%"))));
+h("span",{style:{color:R,fontWeight:600}},"L "+Math.round(pL*100)+"%"))));}
 rows.push(h("div",{key:"md",className:"text-gray-400",style:{fontSize:10}},"Match: "+mData[2]+"pts (exp "+mExp.toFixed(1)+", "+(mDiff>=0?"+":"")+mDiff.toFixed(1)+")"));}}
 else{rows.push(h("div",{key:"h",className:"font-bold mb-1"},"GW "+gw));
 for(var j=0;j<sel.length;j++){var parts=[];
