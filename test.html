@@ -264,25 +264,31 @@ var hh=getHash();
 var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
 var _2=React.useState(hh.sn||"25/26"),sn=_2[0],sSn0=_2[1];
 var _3=React.useState(hh.br||"Barcelona"),sel=_3[0],sSel0=_3[1];
-var _4=React.useState(1),gwFrom=_4[0],setFrom=_4[1];
-var _5=React.useState(0),gwTo=_5[0],setTo=_5[1];
+var _4=React.useState(hh.rf?Number(hh.rf):0),gwFrom=_4[0],setFrom0=_4[1];
+var _5=React.useState(hh.rt?Number(hh.rt):0),gwTo=_5[0],setTo0=_5[1];
+var _6=React.useState(hh.rq||"5"),qSel=_6[0],setQSel0=_6[1];
 function sLg(v){sLg0(v);setHash("lg",v);}
 function sSn(v){sSn0(v);setHash("sn",v);}
 function sSel(v){sSel0(v);setHash("br",v);}
+function setFrom(v){setFrom0(v);setHash("rf",String(v));}
+function setTo(v){setTo0(v);setHash("rt",String(v));}
+function setQSel(v){setQSel0(v);setHash("rq",v);}
+function quickSet(q,nPl){setQSel(q);
+if(q==="all"){setFrom(1);setTo(nPl);}
+else{var nw=Math.min(Number(q),nPl);setFrom(Math.max(1,nPl-nw+1));setTo(nPl);}}
 var sL=React.useMemo(function(){return Object.keys(D.seasons[lg]).sort().reverse();},[lg]);
 var sD=D.seasons[lg][sn]||{},tl=React.useMemo(function(){return Object.keys(sD).sort();},[sD]);
 var t=sD[sel];
 React.useEffect(function(){var ts=Object.keys(sD);if(ts.length>0&&!sD[sel])sSel(ts.sort()[0]);},[lg,sn]);
-React.useEffect(function(){if(t){var nP=t.a.length;setFrom(Math.max(1,nP-4));setTo(nP);}},[sel,sn,lg]);
+React.useEffect(function(){if(t&&!hh.rf){var nP=t.a.length;quickSet("5",nP);}},[sel,sn,lg]);
 if(!t)return h("div",{className:"p-8 text-center text-gray-400"},"No data");
 var SIG=1.58;
 var nP=t.a.length;
-var gf=Math.max(1,Math.min(gwFrom,nP-1)),gt=Math.max(gf+1,Math.min(gwTo||nP,nP));
+var gf=Math.max(1,Math.min(gwFrom||1,nP-1)),gt=Math.max(gf+1,Math.min(gwTo||nP,nP));
 var lW=t.m.slice(gf-1,gt);
 var nGames=lW.length;
 var cA=[],cE=[],ca=0,ce=0;
 for(var i=0;i<lW.length;i++){ca+=lW[i][2];ce+=lW[i][3];cA.push(ca);cE.push(Math.round(ce*10)/10);}
-var B50="#7C3AED",B80="#2E75B6",B94="#10B981";
 var DG="#166534",PG="#bbf7d0",DR="#991b1b",PR="#fecaca";
 var cd=lW.map(function(m,i){var v=m[1]?"vs":"@",ex=cE[i],n=i+1;
 var s25=0.674*SIG*Math.sqrt(n),s3=1.88*SIG*Math.sqrt(n);
@@ -291,19 +297,13 @@ var p25=Math.max(0,Math.round((ex-s25)*10)/10);
 var p75=Math.round((ex+s25)*10)/10;
 var p97=Math.round((ex+s3)*10)/10;
 return{opp:v+" "+m[0]+" (GW"+(gf+i)+")",actual:cA[i],expected:ex,
-zBase:p3,
-zPR:Math.round((p25-p3)*10)/10,
-zDR:Math.round((ex-p25)*10)/10,
-zDG:Math.round((p75-ex)*10)/10,
-zPG:Math.round((p97-p75)*10)/10,
+zBase:p3,zPR:Math.round((p25-p3)*10)/10,zDR:Math.round((ex-p25)*10)/10,
+zDG:Math.round((p75-ex)*10)/10,zPG:Math.round((p97-p75)*10)/10,
 mp:m[2],me:m[3]};});
 var df=(ca-Math.round(ce*10)/10).toFixed(1);
-// Probability sentence
 var normCDF2=function(z){var t=1/(1+0.2316419*Math.abs(z));var d=0.3989423*Math.exp(-z*z/2);var p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return z>0?1-p:p;};
 var runPct=(function(){if(nGames<=0||Number(df)===0)return 50;var z=Math.abs(Number(df))/(SIG*Math.sqrt(nGames));return(1-normCDF2(z))*100;})();
-var freqStr=(function(){
-if(runPct>=50)return null;
-var target=100/runPct;
+var freqStr=(function(){if(runPct>=50)return null;var target=100/runPct;
 var bestX=1,bestY=Math.round(target),bestErr=999;
 function gcd(a,b){return b===0?a:gcd(b,a%b);}
 for(var x=1;x<=10;x++){var y=Math.round(target*x);if(y<1)y=1;var err=Math.abs(y/x-target)/target;if(err<bestErr){bestErr=err;bestX=x;bestY=y;}if(err<0.05)break;}
@@ -314,26 +314,28 @@ return bestX+" every "+bestY+" seasons";})();
 var pctStr=runPct>=1?Math.round(runPct)+"%":runPct>=0.1?runPct.toFixed(1)+"%":"<0.1%";
 var dir=Number(df)>=0?"overperformance":"underperformance";
 var probSentence="This level of "+dir+" occurs in "+pctStr+" of similar-length runs"+(freqStr?", i.e. roughly "+freqStr:"")+".";
-// Range slider component
-var rangeBar=h("div",{className:"mb-4"},
-h("div",{className:"flex items-center gap-3 flex-wrap"},
-h("div",{className:"flex items-center gap-2"},
-h("span",{className:"text-xs text-gray-500"},"From GW"),
-h("input",{type:"number",min:1,max:nP-1,value:gf,onChange:function(ev){var v=Math.max(1,Math.min(Number(ev.target.value),gt-1));setFrom(v);},className:"border rounded px-2 py-1 text-sm w-14 text-center"})),
-h("div",{className:"flex items-center gap-2"},
-h("span",{className:"text-xs text-gray-500"},"To GW"),
-h("input",{type:"number",min:2,max:nP,value:gt,onChange:function(ev){var v=Math.max(gf+1,Math.min(Number(ev.target.value),nP));setTo(v);},className:"border rounded px-2 py-1 text-sm w-14 text-center"})),
-h("span",{className:"text-xs text-gray-500"},nGames+" games"),
-h("button",{onClick:function(){var nw=Math.min(5,nP);setFrom(Math.max(1,nP-nw+1));setTo(nP);},className:"text-xs px-2 py-1 rounded bg-gray-100 text-gray-600"},"Last 5"),
-h("button",{onClick:function(){var nw=Math.min(10,nP);setFrom(Math.max(1,nP-nw+1));setTo(nP);},className:"text-xs px-2 py-1 rounded bg-gray-100 text-gray-600"},"Last 10"),
-h("button",{onClick:function(){setFrom(1);setTo(nP);},className:"text-xs px-2 py-1 rounded bg-gray-100 text-gray-600"},"All")));
+// Build GW options
+var fromOpts=[];for(var gi=1;gi<nP;gi++)fromOpts.push(gi);
+var toOpts=[];for(var gi2=gf+1;gi2<=nP;gi2++)toOpts.push(gi2);
+var qBtn=function(label,val){return h("button",{onClick:function(){quickSet(val,nP);},
+className:"text-xs px-2.5 py-1 rounded font-medium "+(qSel===val?"text-white":"text-gray-600 bg-gray-100"),
+style:qSel===val?{background:N}:{}},label);};
 return h("div",null,
-e(Info,null,"Evaluate whether a run of results is statistically unusual given the team\u2019s wage bill. The expected line (dashed) shows what the budget predicts. ",h("b",null,"Above the line = overperformance")," (green shading): dark green covers the most likely outcomes (50th\u201375th percentile), pale green extends to the 97th percentile. ",h("b",null,"Below the line = underperformance")," (red shading): dark red = 25th\u201350th percentile, pale red = down to the 3rd percentile. Results beyond the pale zone have less than 3% probability of occurring by chance in that direction."),
+e(Info,null,"Evaluate whether a run of results is statistically unusual given the team\u2019s wage bill. The expected line (dashed) shows what the budget predicts. ",h("b",null,"Above the line = overperformance")," (green shading): dark green = 50th\u201375th percentile (normal), pale green = 75th\u201397th percentile (unusual). ",h("b",null,"Below the line = underperformance")," (red shading): dark red = 25th\u201350th percentile (normal), pale red = 3rd\u201325th percentile (unusual). Results beyond the pale zone have less than 3% probability of occurring by chance in that direction."),
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},e(LP,{lg:lg,set:function(v){sLg(v);sSn(Object.keys(D.seasons[v]).sort().reverse()[0]);sSel(v==="ll"?"Barcelona":"Liverpool");}}),
 h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s);}))),
 h("div",{className:"flex flex-wrap gap-4 mb-3"},
 h("select",{value:sel,onChange:function(ev){sSel(ev.target.value);},className:"border rounded px-2 py-1.5 text-base font-semibold flex-shrink-0",style:{minWidth:160}},tl.map(function(x){return h("option",{key:x,value:x},x);}))),
-rangeBar,
+h("div",{className:"flex flex-wrap items-center gap-3 mb-4"},
+h("div",{className:"flex items-center gap-1.5"},
+h("span",{className:"text-xs text-gray-500"},"From"),
+h("select",{value:gf,onChange:function(ev){setFrom(Number(ev.target.value));setQSel("");},className:"border rounded px-1.5 py-1 text-sm"},fromOpts.map(function(g){return h("option",{key:g,value:g},"GW "+g);}))),
+h("div",{className:"flex items-center gap-1.5"},
+h("span",{className:"text-xs text-gray-500"},"To"),
+h("select",{value:gt,onChange:function(ev){setTo(Number(ev.target.value));setQSel("");},className:"border rounded px-1.5 py-1 text-sm"},toOpts.map(function(g){return h("option",{key:g,value:g},"GW "+g);}))),
+h("span",{className:"text-xs text-gray-400"},nGames+" games"),
+h("span",{className:"text-gray-300"},"|"),
+qBtn("Last 5","5"),qBtn("Last 10","10"),qBtn("All","all")),
 h("div",{style:{height:240},className:"mb-2"},e(RC.ResponsiveContainer,null,
 e(RC.AreaChart,{data:cd,margin:{left:0,right:5,top:5,bottom:45}},
 e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),e(RC.XAxis,{dataKey:"opp",tick:{fontSize:10,fontWeight:600,angle:-35,textAnchor:"end"},height:60,interval:0}),e(RC.YAxis,{tick:{fontSize:9}}),e(RC.Tooltip,null),
@@ -346,10 +348,10 @@ e(RC.Area,{dataKey:"expected",stroke:"#999",strokeDasharray:"5 3",strokeWidth:2,
 h("div",{className:"flex flex-wrap gap-x-3 gap-y-1 mb-3 text-xs text-gray-500 justify-center"},
 h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,background:N,display:"inline-block"}}),h("span",null,"Actual")),
 h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:0,borderTop:"2px dashed #999",display:"inline-block"}}),h("span",null,"Expected")),
-h("span",{className:"flex items-center gap-1"},h("span",{style:{width:10,height:8,background:DG,display:"inline-block",opacity:0.4,borderRadius:2}}),h("span",null,"Overperf (likely)")),
-h("span",{className:"flex items-center gap-1"},h("span",{style:{width:10,height:8,background:PG,display:"inline-block",opacity:0.6,borderRadius:2}}),h("span",null,"Overperf (<3%)")),
-h("span",{className:"flex items-center gap-1"},h("span",{style:{width:10,height:8,background:DR,display:"inline-block",opacity:0.4,borderRadius:2}}),h("span",null,"Underperf (likely)")),
-h("span",{className:"flex items-center gap-1"},h("span",{style:{width:10,height:8,background:PR,display:"inline-block",opacity:0.6,borderRadius:2}}),h("span",null,"Underperf (<3%)"))),
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:10,height:8,background:DG,display:"inline-block",opacity:0.5,borderRadius:2}}),h("span",null,"Overperf 50\u201375%")),
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:10,height:8,background:PG,display:"inline-block",opacity:0.7,borderRadius:2}}),h("span",null,"Overperf 75\u201397%")),
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:10,height:8,background:DR,display:"inline-block",opacity:0.5,borderRadius:2}}),h("span",null,"Underperf 25\u201350%")),
+h("span",{className:"flex items-center gap-1"},h("span",{style:{width:10,height:8,background:PR,display:"inline-block",opacity:0.7,borderRadius:2}}),h("span",null,"Underperf 3\u201325%"))),
 h("div",{className:"p-4 rounded-xl text-center",style:{background:Number(df)>=0?"#f0fdf4":"#fef2f2"}},
 h("div",{className:"text-2xl font-bold",style:{color:Number(df)>=0?G:R}},(Number(df)>=0?"+":"")+df+" pts"),
 h("div",{className:"text-sm text-gray-600"},ca+" actual vs "+Math.round(ce*10)/10+" expected in "+nGames+" games (GW"+gf+"\u2013GW"+gt+")"),
