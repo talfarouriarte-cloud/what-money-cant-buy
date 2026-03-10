@@ -166,17 +166,55 @@ def run_mc_simulation(season_data, wages, beta, t1, t2, remaining_fixtures, n_si
     return bands
 
 
-def simulate_title_probability(season_data, wages, beta, t1, t2, remaining_fixtures, n_sims=10000):
-    """Joint league simulation: all teams simulated together per iteration.
-    Returns {team: probability_of_finishing_1st}."""
-    teams = list(season_data.keys())
+def simulate_position_probs(teams, current_pts, match_list, n_sims=10000):
+    """Core joint simulation. Returns {team: {cat: probability}} for position categories."""
     n_teams = len(teams)
+    n_matches = len(match_list)
     
-    # Current points for each team
-    current_pts = np.array([season_data[t]['a'][-1] if season_data[t]['a'] else 0 for t in teams])
+    if n_matches == 0:
+        # Season complete — use actual final standings
+        order = np.argsort(-current_pts)
+        pos_counts = np.zeros((n_teams, n_teams), dtype=int)
+        for rank, idx in enumerate(order):
+            pos_counts[idx, rank] = n_sims
+    else:
+        pos_counts = np.zeros((n_teams, n_teams), dtype=int)  # [team_idx, position] count
+        rng = np.random.random((n_sims, n_matches))
+        
+        for s in range(n_sims):
+            pts = current_pts.copy()
+            for m_idx, (h_idx, a_idx, ph, pd_) in enumerate(match_list):
+                r = rng[s, m_idx]
+                if r < ph:
+                    pts[h_idx] += 3
+                elif r < ph + pd_:
+                    pts[h_idx] += 1
+                    pts[a_idx] += 1
+                else:
+                    pts[a_idx] += 3
+            # Rank teams (randomize ties)
+            noise = np.random.random(n_teams) * 0.001
+            order = np.argsort(-(pts + noise))
+            for rank, idx in enumerate(order):
+                pos_counts[idx, rank] += 1
     
-    # Build match list: all remaining matches as (home_idx, away_idx, p_home, p_draw)
-    # We need to avoid double-counting: each match appears once
+    # Convert to category probabilities
+    result = {}
+    for i, team in enumerate(teams):
+        counts = pos_counts[i]
+        result[team] = {
+            "1st": round(float(counts[0] / n_sims), 4),
+            "ucl": round(float(counts[:4].sum() / n_sims), 4),
+            "uel": round(float(counts[4:6].sum() / n_sims), 4),
+            "ucol": round(float(counts[6] / n_sims), 4),
+            "mid": round(float(counts[7:17].sum() / n_sims), 4),
+            "rel": round(float(counts[17:].sum() / n_sims), 4)
+        }
+    return result
+
+
+def build_match_list(teams, wages, remaining_fixtures, beta, t1, t2):
+    """Build deduplicated match list with probabilities."""
     matches_seen = set()
     match_list = []
     for t_idx, team in enumerate(teams):
@@ -195,43 +233,22 @@ def simulate_title_probability(season_data, wages, beta, t1, t2, remaining_fixtu
                 ph = 1 - expit(t2 + beta * x)
                 pd_ = expit(t2 + beta * x) - expit(t1 + beta * x)
                 match_list.append((h_idx, a_idx, ph, pd_))
-    
-    n_matches = len(match_list)
-    if n_matches == 0:
-        # Season complete — winner is known
-        winner_idx = int(np.argmax(current_pts))
-        return {t: 1.0 if i == winner_idx else 0.0 for i, t in enumerate(teams)}
-    
-    # Simulate
-    wins = np.zeros(n_teams, dtype=int)
-    rng = np.random.random((n_sims, n_matches))
-    
-    for s in range(n_sims):
-        pts = current_pts.copy()
-        for m_idx, (h_idx, a_idx, ph, pd_) in enumerate(match_list):
-            r = rng[s, m_idx]
-            if r < ph:
-                pts[h_idx] += 3
-            elif r < ph + pd_:
-                pts[h_idx] += 1
-                pts[a_idx] += 1
-            else:
-                pts[a_idx] += 3
-        winner = np.argmax(pts)
-        # Handle ties: random among tied teams
-        max_pts = pts[winner]
-        tied = np.where(pts == max_pts)[0]
-        if len(tied) > 1:
-            winner = tied[np.random.randint(len(tied))]
-        wins[winner] += 1
-    
-    return {t: round(float(wins[i] / n_sims), 4) for i, t in enumerate(teams)}
+    return match_list
 
 
-def compute_preseason_title(wages, beta, t1, t2, fixture_calendar, n_sims=10000):
-    """Pre-season title probability: simulate full season from scratch."""
+def simulate_current_positions(season_data, wages, beta, t1, t2, remaining_fixtures, n_sims=10000):
+    """Current season: lock in played results, simulate remaining."""
+    teams = list(season_data.keys())
+    current_pts = np.array([season_data[t]['a'][-1] if season_data[t]['a'] else 0 for t in teams])
+    match_list = build_match_list(teams, wages, remaining_fixtures, beta, t1, t2)
+    return simulate_position_probs(teams, current_pts, match_list, n_sims)
+
+
+def simulate_preseason_positions(wages, beta, t1, t2, fixture_calendar, n_sims=10000):
+    """Pre-season: simulate full season from scratch using fixture calendar."""
     teams = list(wages.keys())
     n_teams = len(teams)
+    current_pts = np.zeros(n_teams)
     
     # Build all matches from fixture calendar
     matches_seen = set()
@@ -253,75 +270,67 @@ def compute_preseason_title(wages, beta, t1, t2, fixture_calendar, n_sims=10000)
                 pd_ = expit(t2 + beta * x) - expit(t1 + beta * x)
                 match_list.append((h_idx, a_idx, ph, pd_))
     
-    n_matches = len(match_list)
-    wins = np.zeros(n_teams, dtype=int)
-    rng = np.random.random((n_sims, n_matches))
-    
-    for s in range(n_sims):
-        pts = np.zeros(n_teams, dtype=int)
-        for m_idx, (h_idx, a_idx, ph, pd_) in enumerate(match_list):
-            r = rng[s, m_idx]
-            if r < ph:
-                pts[h_idx] += 3
-            elif r < ph + pd_:
-                pts[h_idx] += 1
-                pts[a_idx] += 1
-            else:
-                pts[a_idx] += 3
-        max_pts = pts.max()
-        tied = np.where(pts == max_pts)[0]
-        winner = tied[np.random.randint(len(tied))] if len(tied) > 1 else np.argmax(pts)
-        wins[winner] += 1
-    
-    return {t: round(float(wins[i] / n_sims), 4) for i, t in enumerate(teams)}
+    return simulate_position_probs(teams, current_pts, match_list, n_sims)
 
 
-def compute_historical_title_probs(data, fixtures_cal):
-    """Compute pre-season title probabilities for all historical seasons."""
-    title = data.get('title', {})
+def compute_all_position_probs(data, fixtures_cal):
+    """Compute position probabilities for all seasons."""
+    pos = data.get('pos', {})
     
     for lg in ['ll', 'pl']:
-        if lg not in title:
-            title[lg] = {}
+        if lg not in pos:
+            pos[lg] = {}
         p = PARAMS[lg]
         
-        for sn in data['seasons'][lg]:
-            if sn == '25/26':
-                continue  # handled separately
-            if sn in title[lg] and 'pre' in title[lg][sn]:
-                continue  # already computed
-            
+        for sn in sorted(data['seasons'][lg].keys()):
             sd = data['seasons'][lg][sn]
             wages = {t: sd[t].get('w', 0) for t in sd if sd[t].get('w', 0) > 0}
             if len(wages) < 15:
                 continue
             
-            # For historical seasons, build fixture calendar from played matches
-            # All matches are played, so we use the actual match order
+            # Skip if already computed (for historical seasons)
+            if sn != '25/26' and sn in pos[lg] and 'pre' in pos[lg][sn]:
+                continue
+            
+            if sn not in pos[lg]:
+                pos[lg][sn] = {}
+            
+            # Build fixture calendar from played matches
             teams = list(sd.keys())
-            all_fixtures = []
-            matches_seen = set()
+            ms = set()
             for team in teams:
                 for m in sd[team]['m']:
-                    opp, ih = m[0], m[1]
-                    h_t = team if ih else opp
-                    a_t = opp if ih else team
-                    if (h_t, a_t) not in matches_seen:
-                        matches_seen.add((h_t, a_t))
+                    ht = team if m[1] else m[0]
+                    at = m[0] if m[1] else team
+                    ms.add((ht, at))
+            cal = [{"gw": 1, "matches": [[h, a] for h, a in ms]}]
             
-            # Build as fixture calendar format
-            gw_matches = list(matches_seen)
-            cal = [{"gw": 1, "matches": [[h, a] for h, a in gw_matches]}]
+            # Pre-season
+            if sn == '25/26' and fixtures_cal and lg in fixtures_cal and '25/26' in fixtures_cal[lg]:
+                cal_data = fixtures_cal[lg]['25/26']
+                cal_list = cal_data.get('calendar', cal_data) if isinstance(cal_data, dict) else cal_data
+                pre = simulate_preseason_positions(wages, p['beta'], p['theta1'], p['theta2'], cal_list)
+            else:
+                pre = simulate_preseason_positions(wages, p['beta'], p['theta1'], p['theta2'], cal)
+            pos[lg][sn]['pre'] = pre
             
-            pre = compute_preseason_title(wages, p['beta'], p['theta1'], p['theta2'], cal, n_sims=10000)
-            title[lg][sn] = {"pre": pre}
+            # Current (only for 25/26)
+            if sn == '25/26':
+                remaining = get_remaining_fixtures(sd, fixtures_cal, lg)
+                cur = simulate_current_positions(sd, wages, p['beta'], p['theta1'], p['theta2'], remaining)
+                pos[lg][sn]['cur'] = cur
             
-            # Show top 3
-            top = sorted(pre.items(), key=lambda x: -x[1])[:3]
-            top_str = ", ".join([f"{t} {p*100:.0f}%" for t, p in top])
-            print(f"    {lg} {sn}: {top_str}")
+            # Log top 3
+            top = sorted(pre.items(), key=lambda x: -x[1]['1st'])[:3]
+            top_str = ", ".join([f"{t} {d['1st']*100:.0f}%" for t, d in top])
+            cur_str = ""
+            if 'cur' in pos[lg][sn]:
+                top_c = sorted(pos[lg][sn]['cur'].items(), key=lambda x: -x[1]['1st'])[:3]
+                cur_str = " | cur: " + ", ".join([f"{t} {d['1st']*100:.0f}%" for t, d in top_c])
+            print(f"    {lg} {sn}: {top_str}{cur_str}")
     
-    return title
+    return pos
+
 
 def update():
     print(f"=== Update: {datetime.now().strftime('%Y-%m-%d %H:%M')} ===")
@@ -401,32 +410,10 @@ def update():
             result[team]['r'] = r_list
         data['seasons'][lg]['25/26'] = result
         print(f"  Added remaining fixtures: {len(result[sample].get('r',[]))} per team")
-        
-        # Compute current title probability
-        print(f"  Computing title probabilities...")
-        title_cur = simulate_title_probability(result, wages, p['beta'], p['theta1'], p['theta2'], remaining)
-        if 'title' not in data:
-            data['title'] = {}
-        if lg not in data['title']:
-            data['title'][lg] = {}
-        if '25/26' not in data['title'][lg]:
-            data['title'][lg]['25/26'] = {}
-        data['title'][lg]['25/26']['cur'] = title_cur
-        top = sorted(title_cur.items(), key=lambda x: -x[1])[:3]
-        print(f"    Current: {', '.join([f'{t} {p*100:.0f}%' for t,p in top])}")
-        
-        # Compute pre-season title probability (uses fixture calendar)
-        if fixtures_cal and lg in fixtures_cal and '25/26' in fixtures_cal[lg]:
-            cal_data = fixtures_cal[lg]['25/26']
-            cal_list = cal_data.get('calendar', cal_data) if isinstance(cal_data, dict) else cal_data
-            pre_title = compute_preseason_title(wages, p['beta'], p['theta1'], p['theta2'], cal_list)
-            data['title'][lg]['25/26']['pre'] = pre_title
-            top_pre = sorted(pre_title.items(), key=lambda x: -x[1])[:3]
-            print(f"    Pre-season: {', '.join([f'{t} {p*100:.0f}%' for t,p in top_pre])}")
     
-    # Compute historical title probabilities (one-time, skips already computed)
-    print("  Computing historical title probabilities...")
-    data['title'] = compute_historical_title_probs(data, fixtures_cal)
+    # Compute position probabilities for all seasons
+    print("  Computing position probabilities...")
+    data['pos'] = compute_all_position_probs(data, fixtures_cal)
     
     # Save
     out = json.dumps(data, separators=(',',':'), ensure_ascii=False)
