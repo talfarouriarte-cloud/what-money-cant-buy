@@ -1,11 +1,11 @@
 {
   "app_title": [
-    "What money can’t buy",
-    "Lo que el dinero no puede comprar"
+    "Football beyond money",
+    "Fútbol más allá del dinero"
   ],
   "app_subtitle": [
-    "Fact-based football results analysis",
-    "Análisis de resultados de fútbol basado en datos"
+    "Payroll-adjusted performance analysis and prediction",
+    "Resultados y predicciones ajustadas al presupuesto"
   ],
   "loading": [
     "Loading app...",
@@ -1110,5 +1110,9 @@
   "data_wage_col": [
     "Wage bill",
     "Masa salarial"
+  ],
+  "menu": [
+    "Menu",
+    "Menú"
   ]
 }
