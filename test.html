@@ -794,8 +794,9 @@ h("span",{className:"text-2xl font-bold",style:{color:cum[0]>=0?G:R}},(cum[0]>=0
 h("span",{className:"text-sm text-gray-500"},"extra pts in "+cum[1]+" seasons")),
 h("div",{className:"text-sm mt-1"},"Managerial Score: ",h("b",{style:{color:ms>=0?G:R}},(ms>=0?"+":"")+ms))):h("div",{className:"text-gray-400 text-sm"},_t("no_historical")))));}
 
+function App(){
 var tabs=[{id:"home",l:_t("tab_home")},{id:"tracker",l:_t("tab_tracker")},{id:"predictions",l:_t("tab_predictions")},{id:"badrun",l:_t("tab_badrun")},{id:"h2h",l:_t("tab_h2h")},{id:"explorer",l:_t("tab_explorer")},{id:"calc",l:_t("tab_calc")},{id:"method",l:_t("tab_method")}];
-function App(){useTHState();
+useTHState();
 var _f=React.useState(0),forceKey=_f[0],forceUpdate=_f[1];
 React.useEffect(function(){function close(){if(_thSet)_thSet(null);}document.addEventListener("click",close);return function(){document.removeEventListener("click",close);};},[]);
 React.useEffect(function(){function onPop(){forceUpdate(function(c){return c+1;});}window.addEventListener("popstate",onPop);return function(){window.removeEventListener("popstate",onPop);};},[]);
