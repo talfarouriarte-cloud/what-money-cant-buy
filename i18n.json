@@ -1002,5 +1002,53 @@
   "selected": [
     "selected",
     "seleccionados"
+  ],
+  "meth_model_p2_s1": [
+    "When ",
+    "Cuando "
+  ],
+  "meth_model_p2_s2": [
+    " = 0, both teams earn the same wages and the model gives a baseline home advantage. When ",
+    " = 0, ambos equipos ganan lo mismo y el modelo da una ventaja local base. Cuando "
+  ],
+  "meth_model_p2_s3": [
+    " > 0, the away team earns more, shifting probabilities in their favour. The model estimates three parameters: ",
+    " > 0, el equipo visitante gana más, desplazando las probabilidades a su favor. El modelo estima tres parámetros: "
+  ],
+  "meth_model_p2_s4": [
+    " (sensitivity to budget ratio), and two cut-points ",
+    " (sensibilidad al ratio presupuestario), y dos puntos de corte "
+  ],
+  "meth_model_p2_s5": [
+    " that partition the latent scale into win/draw/loss zones:",
+    " que particionan la escala latente en zonas de victoria/empate/derrota:"
+  ],
+  "meth_model_p3_s1": [
+    "where σ(",
+    "donde σ("
+  ],
+  "meth_model_p3_s2": [
+    ") = 1/(1+e",
+    ") = 1/(1+e"
+  ],
+  "meth_model_p3_s3": [
+    ") is the logistic function. The log",
+    ") es la función logística. La transformación log"
+  ],
+  "meth_model_p3_s4": [
+    " transform means each doubling of the wage ratio produces a constant shift in the odds — matching the empirical observation that budget advantages compound proportionally, not additively.",
+    " implica que cada duplicación del ratio salarial produce un desplazamiento constante en las probabilidades, coincidiendo con la observación empírica de que las ventajas presupuestarias se componen proporcionalmente, no aditivamente."
+  ],
+  "and": [
+    " and ",
+    " y "
+  ],
+  "pct_champion": [
+    "champion",
+    "campeón"
+  ],
+  "pct_relegation": [
+    "relegation",
+    "descenso"
   ]
 }
