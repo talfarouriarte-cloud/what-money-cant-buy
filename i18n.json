@@ -958,5 +958,49 @@
   "calc_desc": [
     "Select teams from 25/26 or use the sliders to set custom wage bills. The model converts the wage ratio into match probabilities.",
     "Seleccione equipos de 25/26 o use los deslizadores para establecer masas salariales personalizadas. El modelo convierte el ratio salarial en probabilidades de partido."
+  ],
+  "w_short": [
+    "W",
+    "V"
+  ],
+  "d_short": [
+    "D",
+    "E"
+  ],
+  "l_short": [
+    "L",
+    "D"
+  ],
+  "h_short": [
+    "H",
+    "L"
+  ],
+  "a_short": [
+    "A",
+    "V"
+  ],
+  "col_venue": [
+    "V",
+    "L/V"
+  ],
+  "exp_short": [
+    "exp",
+    "esp"
+  ],
+  "match_record": [
+    "Match record",
+    "Historial de partidos"
+  ],
+  "pts_lc": [
+    "pts",
+    "pts"
+  ],
+  "total": [
+    "Total",
+    "Total"
+  ],
+  "selected": [
+    "selected",
+    "seleccionados"
   ]
 }
