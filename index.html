@@ -161,12 +161,12 @@ var cc=[e(RC.CartesianGrid,{key:"g",strokeDasharray:"3 3",stroke:"#f0f0f0"}),e(R
 if(!multi){
 if(pre){cc.push(e(RC.Area,{key:"prB",dataKey:"preBase",stackId:"pre",stroke:"none",fill:"transparent",isAnimationActive:false}));
 cc.push(e(RC.Area,{key:"prD",dataKey:"preBand",stackId:"pre",stroke:"none",fill:O,fillOpacity:0.1,isAnimationActive:false}));
-cc.push(e(RC.Area,{key:"pM",dataKey:"preMed",stroke:O,strokeDasharray:"6 4",strokeWidth:1.2,fill:"none",strokeOpacity:0.6,isAnimationActive:false}));}
+cc.push(e(RC.Area,{key:"pM",dataKey:"preMed",stroke:O,strokeDasharray:"6 4",strokeWidth:1.2,fill:"none",strokeOpacity:0.6,dot:false,isAnimationActive:false}));}
 if(bd||!iC){cc.push(e(RC.Area,{key:"cB",dataKey:"curBase",stackId:"cur",stroke:"none",fill:"transparent",isAnimationActive:false}));
 cc.push(e(RC.Area,{key:"cD",dataKey:"curBand",stackId:"cur",stroke:"none",fill:B,fillOpacity:0.15,isAnimationActive:false}));}
-if(bd){cc.push(e(RC.Area,{key:"cM",dataKey:"curMed",stroke:B,strokeDasharray:"4 3",strokeWidth:1.2,fill:"none",strokeOpacity:0.6,isAnimationActive:false}));}
-cc.push(e(RC.Area,{key:"ex",dataKey:"exp",stroke:"#999",strokeDasharray:"2 2",strokeWidth:1,fill:"none",isAnimationActive:false}));
-cc.push(e(RC.Area,{key:"ac",dataKey:"actual",stroke:B,strokeWidth:2.5,fill:"none",dot:function(p){if(!p||p.value===undefined)return null;if(p.payload.res===undefined)return e("circle",{cx:p.cx,cy:p.cy,r:3,fill:B,stroke:"none"});var dc=p.payload.res===3?G:p.payload.res===1?"#d4a017":R;return e("circle",{cx:p.cx,cy:p.cy,r:4,fill:dc,stroke:"white",strokeWidth:1.5});},isAnimationActive:false}));}
+if(bd){cc.push(e(RC.Area,{key:"cM",dataKey:"curMed",stroke:B,strokeDasharray:"4 3",strokeWidth:1.2,fill:"none",strokeOpacity:0.6,dot:false,isAnimationActive:false}));}
+cc.push(e(RC.Area,{key:"ex",dataKey:"exp",stroke:"#999",strokeDasharray:"2 2",strokeWidth:1,fill:"none",dot:false,isAnimationActive:false}));
+cc.push(e(RC.Area,{key:"ac",dataKey:"actual",stroke:B,strokeWidth:2.5,fill:"none",dot:function(p){if(!p||!p.payload||p.payload.actual===undefined)return null;var dc=p.payload.res===3?G:p.payload.res===1?"#d4a017":p.payload.res===0?R:B;return e("circle",{cx:p.cx,cy:p.cy,r:4,fill:dc,stroke:"white",strokeWidth:1.5});},isAnimationActive:false}));}
 else{
 for(var j=0;j<sel.length;j++){
 if(iC){cc.push(e(RC.Area,{key:"bB"+j,dataKey:"bB"+j,stackId:"sb"+j,stroke:"none",fill:"transparent",isAnimationActive:false}));
