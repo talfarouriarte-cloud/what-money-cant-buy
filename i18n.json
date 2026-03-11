@@ -636,12 +636,12 @@
     "Ocultar info"
   ],
   "run_verdict_short": [
-    "A {n}-game run with this level of {dir} or more appears in {pct} of seasons",
-    "Una racha de {n} partidos con este nivel de {dir} o más aparece en el {pct} de las temporadas"
+    "A {n}-game run with this level of {dir} {qual} appears in {pct} of seasons",
+    "Una racha de {n} partidos con este nivel de {dir} {qual} aparece en el {pct} de las temporadas"
   ],
   "run_verdict_long": [
-    "This level of {dir} over {n} games occurs in {pct} of seasons",
-    "Este nivel de {dir} en {n} partidos ocurre en el {pct} de las temporadas"
+    "This level of {dir} {qual} over {n} games occurs in {pct} of seasons",
+    "Este nivel de {dir} {qual} en {n} partidos ocurre en el {pct} de las temporadas"
   ],
   "overperformance": [
     "overperformance",
@@ -1050,5 +1050,13 @@
   "pct_relegation": [
     "relegation",
     "descenso"
+  ],
+  "or_more": [
+    "or more",
+    "o más"
+  ],
+  "or_worse": [
+    "or worse",
+    "o peor"
   ]
 }

@@ -321,8 +321,9 @@ if(bestX===1)return _tf("roughly_1_in_n",{n:bestY});
 return _tf("roughly_x_in_y",{x:bestX,y:bestY});})();
 var pctStr=seasonPct>=1?Math.round(seasonPct)+"%":seasonPct>=0.1?seasonPct.toFixed(1)+"%":"<0.1%";
 var dir=Number(df)>=0?_t("overperformance"):_t("underperformance");
-var probSentence=_tf("run_verdict_short",{n:nGames,dir:dir,pct:pctStr})+(freqStr?", "+freqStr:"")+".";
-if(nGames>=30)probSentence=_tf("run_verdict_long",{n:nGames,dir:dir,pct:pctStr})+".";
+var qual=Number(df)>=0?_t("or_more"):_t("or_worse");
+var probSentence=_tf("run_verdict_short",{n:nGames,dir:dir,qual:qual,pct:pctStr})+(freqStr?", "+freqStr:"")+".";
+if(nGames>=30)probSentence=_tf("run_verdict_long",{n:nGames,dir:dir,qual:qual,pct:pctStr})+".";
 // Build GW options
 var fromOpts=[];for(var gi=1;gi<nP;gi++)fromOpts.push(gi);
 var toOpts=[];for(var gi2=gf+1;gi2<=nP;gi2++)toOpts.push(gi2);
