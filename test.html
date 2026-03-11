@@ -484,14 +484,14 @@ var teamListEl=h("div",{className:"overflow-y-auto rounded bg-gray-50 p-1 text-x
 var cumLabel=win==="all"?(mode==="ms"?"Trailing Managerial Score":"Cumulative"):"Trailing "+winN+"yr"+(mode==="ms"?" Managerial Score":"");
 return h("div",null,
 e(Info,null,"Overperformance = actual points minus wage-model expected points. A team that consistently beats its budget expectation is extracting extra value from its payroll (coaching, recruitment, culture). Three metrics: Extra pts (raw gap), Normalized (percentage gap adjusted for budget level: (cum. overperf \u00f7 seasons) \u00f7 avg expected pts \u00d7 100), and Managerial Score (sign \u00d7 (100 \u2212 p), where p is the probability the result is due to chance alone). The time window controls the trailing period for the bottom chart: All shows full history, 5yr/3yr show a rolling window."),
-h("div",{className:"flex flex-wrap gap-3 items-end mb-3"},
+h("div",{className:"flex flex-wrap gap-3 items-end mb-3",style:{position:"sticky",top:0,zIndex:10,background:"#f9fafb",paddingTop:4,paddingBottom:4}},
 e(LP,{lg:lg,set:function(v){sLg(v);sSel(v==="ll"?["Villarreal","At Madrid","Valencia"]:["Liverpool","Man City","Man United"]);}}),
 h("div",{className:"flex gap-1"},modes.map(function(m){return h("button",{key:m.k,title:m.tip,onClick:function(){setMode(m.k);},className:"px-2 py-0.5 rounded text-xs font-medium "+(mode===m.k?"text-white":"text-gray-500 bg-gray-100"),style:mode===m.k?{background:N}:{}},m.l);})),
 h("div",{className:"flex gap-1"},wins.map(function(w){return h("button",{key:w.k,title:w.tip,onClick:function(){setWin(w.k);},className:"px-2 py-0.5 rounded text-xs font-medium "+(win===w.k?"text-white":"text-gray-500 bg-gray-100"),style:win===w.k?{background:"#555"}:{}},w.l);}))),
 h("div",{className:"flex gap-4 mt-1"},
 h("div",{className:"hidden sm:block w-48 shrink-0"},teamListEl),
 h("div",{className:"flex-1",style:{minWidth:0}},
-h("div",{className:"sm:hidden mb-2"},h("button",{onClick:function(){setShowList(!showList);},className:"text-xs px-3 py-1 rounded bg-gray-100 text-gray-600"},showList?"Hide teams":"Select teams ("+sel.length+" selected)"),showList?teamListEl:null),
+h("div",{className:"sm:hidden mb-2"},h("div",{className:"flex flex-wrap gap-1 mb-1"},sel.map(function(t,i){return h("span",{key:t,onClick:function(){tog(t);},className:"text-xs px-2 py-0.5 rounded-full cursor-pointer font-semibold",style:{background:cols[i]+"20",color:cols[i],border:"1px solid "+cols[i]+"40"}},t+" ×");})),h("button",{onClick:function(){setShowList(!showList);},className:"text-xs px-3 py-1 rounded bg-gray-100 text-gray-600"},showList?"Hide teams":"+Add"),showList?h("div",{style:{maxHeight:200}},teamListEl):null),
 h("div",{className:"text-sm font-semibold mb-1",style:{color:N}},"Season by season"),
 h("div",{style:{height:180}},e(RC.ResponsiveContainer,null,e(RC.BarChart,{data:cd},e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),e(RC.XAxis,{dataKey:"s",tick:{fontSize:8}}),e(RC.YAxis,{tick:{fontSize:9}}),e(RC.Tooltip,null),e(RC.ReferenceLine,{y:0,stroke:"#ccc"}),sel.map(function(t,i){return e(RC.Bar,{key:t,dataKey:t,fill:cols[i],opacity:0.7});})))),
 h("div",{className:"text-sm font-semibold mb-1 mt-3",style:{color:N}},cumLabel),
@@ -707,7 +707,7 @@ var sd25=D.seasons[lg]["25/26"]||{};
 var teamList=React.useMemo(function(){return Object.entries(sd25).filter(function(e){return e[1].w>0;}).map(function(e){return{n:e[0],w:e[1].w,pts:e[1].a[e[1].a.length-1]||0};}).sort(function(a,b){return b.pts-a.pts;});},[lg]);
 var _2=React.useState(hh.sel?hh.sel.split(",")[0]:(lg==="ll"?"Barcelona":"Liverpool")),team=_2[0],setTeam0=_2[1];
 function sLg(v){sLg0(v);setHash("lg",v);var defT=v==="ll"?"Barcelona":"Liverpool";setTeam(defT);}
-function setTeam(v){setTeam0(v);setHash("sel",v);setHash("br",v);setHash("h2a",v);}
+function setTeam(v){setTeam0(v);setHash("sel",v);setHash("br",v);setHash("h2a",v);setHash("ex",v);}
 var t=sd25[team];
 var cur=lg==="ll"?"\u20ac":"\u00a3";
 if(!t)return h("div",null,h("div",{className:"text-center py-8"},e(LP,{lg:lg,set:sLg}),h("p",{className:"text-gray-400 mt-4"},"Select a team")));
@@ -750,6 +750,7 @@ function Card(props){return h("div",{onClick:function(){props.go(props.tab);},cl
 h("div",{className:"flex items-start justify-between mb-2"},h("div",{className:"text-xs font-semibold uppercase tracking-wide",style:{color:props.color||N}},props.q),h("span",{style:{fontSize:10,color:"#aaa"}},props.tabName+" \u2192")),
 props.children);}
 return h("div",null,
+e(Info,null,"This tool measures football team performance against budget expectations. Using player payroll data and an ordered logistic regression model, it calculates match-level win/draw/loss probabilities based on the wage ratio between opponents. These probabilities answer five questions:",h("br"),h("br"),h("b",null,"How is my team doing?")," \u2014 Season performance vs budget expectations, accounting for the actual calendar played and upcoming fixtures. ",h("b",null,"What are the odds?")," \u2014 Probability of reaching different objectives (champion, Champions League, relegation) through 10,000 simulated seasons. ",h("b",null,"Is the recent run unusual?")," \u2014 Whether a streak of results is statistically normal or exceptional for a team with this budget. ",h("b",null,"What\u2019s next?")," \u2014 Win/draw/loss probabilities for the upcoming fixture based on both teams\u2019 wage bills. ",h("b",null,"Long-term management")," \u2014 How well or poorly a team has been managed across multiple seasons relative to its spending.",h("br"),h("br"),"Note: these results apply to league competition only. Knockout tournaments (Champions League, Copa del Rey, FA Cup) follow different dynamics not captured by this model."),
 h("div",{className:"flex flex-wrap gap-3 items-center mb-6"},
 e(LP,{lg:lg,set:sLg}),
 h("select",{value:team,onChange:function(ev){setTeam(ev.target.value);},className:"border rounded px-3 py-1.5 text-base font-semibold",style:{minWidth:180}},teamList.map(function(tt){return h("option",{key:tt.n,value:tt.n},tt.n+" ("+cur+tt.w+"M)");})),
