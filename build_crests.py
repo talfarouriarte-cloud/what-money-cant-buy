@@ -86,6 +86,27 @@ API_NAME_MAP = {
     "Middlesbrough FC": "Middlesbrough",
 }
 
+# Manual crest URLs for teams not found in current competitions
+# These are historical teams relegated beyond the leagues we query
+# IDs from football-data.org are stable
+MANUAL_CRESTS = {
+    "Almeria": "https://crests.football-data.org/267.svg",
+    "Cadiz": "https://crests.football-data.org/264.svg",
+    "Cardiff": "https://crests.football-data.org/715.svg",
+    "Cordoba": "https://crests.football-data.org/8304.svg",
+    "Eibar": "https://crests.football-data.org/278.svg",
+    "Granada": "https://crests.football-data.org/281.svg",
+    "Huddersfield": "https://crests.football-data.org/394.svg",
+    "Huesca": "https://crests.football-data.org/299.svg",
+    "La Coruna": "https://crests.football-data.org/560.svg",
+    "Las Palmas": "https://crests.football-data.org/275.svg",
+    "Leganes": "https://crests.football-data.org/745.svg",
+    "Luton": "https://crests.football-data.org/1044.svg",
+    "Malaga": "https://crests.football-data.org/84.svg",
+    "Sp Gijon": "https://crests.football-data.org/296.svg",
+    "Valladolid": "https://crests.football-data.org/250.svg",
+}
+
 COMPETITIONS = {
     'PD':  'La Liga',
     'SD':  'Segunda División',
@@ -163,6 +184,28 @@ def main():
                 crests[t['name']] = t.get('crest', '')
         
         time.sleep(6.5)  # respect 10 req/min rate limit
+
+    # Fill missing with manual crests
+    for name, url in MANUAL_CRESTS.items():
+        if name in needed and name not in crests:
+            crests[name] = url
+
+    # Try API search for any still missing (free tier allows /v4/teams?name=)
+    still_missing = needed - set(crests.keys())
+    if still_missing:
+        print(f"\nSearching API for {len(still_missing)} remaining teams...")
+        for name in sorted(still_missing):
+            try:
+                url = f'https://api.football-data.org/v4/teams?name={name}'
+                r = requests.get(url, headers={'X-Auth-Token': api_key}, timeout=10)
+                if r.status_code == 200:
+                    teams = r.json().get('teams', [])
+                    if teams:
+                        crests[name] = teams[0].get('crest', '')
+                        print(f"  Found: {name} -> {teams[0].get('name', '?')}")
+                time.sleep(6.5)
+            except Exception as ex:
+                print(f"  Error searching {name}: {ex}")
 
     # Report
     found = set(crests.keys())

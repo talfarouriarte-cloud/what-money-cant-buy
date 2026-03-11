@@ -26,7 +26,7 @@ function _t(k){var v=_T[k];if(!v)return k;return _lang==="es"?v[1]:v[0];}
 function _tf(k,vars){var s=_t(k);if(vars){for(var p in vars){s=s.split("{"+p+"}").join(vars[p]);}}return s;}
 function setLang(v){_lang=v;setHash("lang",v);window.location.reload();}
 function h(t,p){var a=[t,p];for(var i=2;i<arguments.length;i++)a.push(arguments[i]);return e.apply(null,a);}
-function Cr(name,sz){if(!CR[name])return null;return h("img",{src:CR[name],alt:"",style:{width:sz||16,height:sz||16,objectFit:"contain",display:"inline-block",verticalAlign:"middle"}});}
+function Cr(name,sz){if(!CR[name])return null;return h("img",{src:CR[name],alt:"",onError:function(e){e.target.style.display="none";},style:{width:sz||16,height:sz||16,objectFit:"contain",display:"inline-block",verticalAlign:"middle"}});}
 var Sg=function(z){return 1/(1+Math.exp(-z));};
 function expPos(p){if(!p)return 20;return 1*p["1st"]+3*(p.ucl-p["1st"])+5.5*p.uel+7*p.ucol+12.5*p.mid+19*p.rel;}
 function rankByPts(teamsObj){var arr=Object.entries(teamsObj).sort(function(a,b){return b[1]-a[1];});var r={};arr.forEach(function(x,i){r[x[0]]=i+1;});return r;}
