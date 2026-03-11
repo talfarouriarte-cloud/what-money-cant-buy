@@ -29,7 +29,7 @@
   ],
   "tab_tracker": [
     "Season Tracker",
-    "Seguimiento"
+    "Seguimiento de temporada"
   ],
   "tab_predictions": [
     "Predictions",
@@ -45,7 +45,7 @@
   ],
   "tab_explorer": [
     "Overperformance",
-    "Sobrerendimiento"
+    "Sobre-rendimiento"
   ],
   "tab_calc": [
     "Calculator",
@@ -205,7 +205,7 @@
   ],
   "managerial_score": [
     "Managerial Score: ",
-    "Puntuación de gestión: "
+    "Managerial Score: "
   ],
   "season_complete": [
     "Season complete",
@@ -293,19 +293,19 @@
   ],
   "overperf_50_75": [
     "Overperf 50–75%",
-    "Sobrerrend. 50–75%"
+    "Sobre-rend. 50–75%"
   ],
   "overperf_75_97": [
     "Overperf 75–97%",
-    "Sobrerrend. 75–97%"
+    "Sobre-rend. 75–97%"
   ],
   "underperf_25_50": [
     "Underperf 25–50%",
-    "Bajorrend. 25–50%"
+    "Infra-rend. 25–50%"
   ],
   "underperf_3_25": [
     "Underperf 3–25%",
-    "Bajorrend. 3–25%"
+    "Infra-rend. 3–25%"
   ],
   "actual_vs": [
     "Actual: ",
@@ -357,7 +357,7 @@
   ],
   "man_score": [
     "Man. Score",
-    "Punt. gest."
+    "Man. Score"
   ],
   "season_by_season": [
     "Season by season",
@@ -369,7 +369,7 @@
   ],
   "trailing_ms": [
     "Trailing Managerial Score",
-    "Puntuación de gestión móvil"
+    "Managerial Score móvil"
   ],
   "trailing_nyr": [
     "Trailing {n}yr",
@@ -393,7 +393,7 @@
   ],
   "ms_tip": [
     "Managerial Score: sign(overperf) × (100 − p), p = statistical significance",
-    "Punt. gestión: signo(sobrerrend.) × (100 − p), p = significancia estadística"
+    "Managerial Score: signo(sobrerrend.) × (100 − p), p = significancia estadística"
   ],
   "full_period": [
     "Full period (12 seasons)",
@@ -645,11 +645,11 @@
   ],
   "overperformance": [
     "overperformance",
-    "sobrerendimiento"
+    "sobre-rendimiento"
   ],
   "underperformance": [
     "underperformance",
-    "bajorrendimiento"
+    "infra-rendimiento"
   ],
   "most_seasons": [
     "most seasons",
@@ -717,7 +717,7 @@
   ],
   "meth_overperf_metrics": [
     "Overperformance metrics",
-    "Métricas de sobrerendimiento"
+    "Métricas de sobre-rendimiento"
   ],
   "meth_reference": [
     "Reference",
@@ -821,7 +821,7 @@
   ],
   "meth_norm_overperf": [
     "2. Normalized overperformance:",
-    "2. Sobrerendimiento normalizado:"
+    "2. Sobre-rendimiento normalizado:"
   ],
   "meth_norm_explain": [
     "This adjusts for budget level: +10 points on 45 expected is more impressive than +10 on 80 expected.",
@@ -917,7 +917,7 @@
   ],
   "info_tracker_multi": [
     " compare actual trajectories side by side, each with its own updated median and p10–p90 band. The faint dashed line shows the budget forecast median for reference.",
-    " compara trayectorias reales lado a lado, cada una con su propia mediana actualizada y banda p10–p90. La línea discontinua tenue muestra la mediana de previsión presupuestaria como referencia."
+    " compara trayectorias reales uno contra otro, cada una con su propia mediana actualizada y banda p10–p90. La línea discontinua tenue muestra la mediana de previsión presupuestaria como referencia."
   ],
   "info_predictions": [
     "Position probabilities come from 10,000 joint league simulations: all 20 teams play each fixture simultaneously in every iteration, producing a full league table. The fraction of iterations where a team finishes in each zone (1st, top 4, 5th–6th, 7th, 8th–17th, 18th–20th) gives the probability. Budget forecast simulates the full season using only wage data. Updated forecast locks in actual results and simulates remaining fixtures. Rank is derived from projected final points.",
@@ -945,11 +945,11 @@
   ],
   "info_h2h": [
     "Head-to-head record between two teams across all available seasons. Points and expected points are computed from the wage model for each individual match, and cumulative overperformance shows whether one team consistently beats its budget-based expectation against the other.",
-    "Historial cara a cara entre dos equipos en todas las temporadas disponibles. Los puntos y puntos esperados se calculan del modelo salarial para cada partido individual, y el sobrerendimiento acumulado muestra si un equipo supera consistentemente su expectativa presupuestaria contra el otro."
+    "Historial frente a frente entre dos equipos en todas las temporadas disponibles. Los puntos y puntos esperados se calculan del modelo salarial para cada partido individual, y el sobrerendimiento acumulado muestra si un equipo supera consistentemente su expectativa presupuestaria contra el otro."
   ],
   "info_explorer": [
-    "Overperformance = actual points minus wage-model expected points. A team that consistently beats its budget expectation is extracting extra value from its payroll (coaching, recruitment, culture). Three metrics: Extra pts (raw gap), Normalized (percentage gap adjusted for budget level: (cum. overperf ÷ seasons) ÷ avg expected pts × 100), and Managerial Score (sign × (100 − p), where p is the probability the result is due to chance alone). The time window controls the trailing period for the bottom chart: All shows full history, 5yr/3yr show a rolling window.",
-    "Sobrerendimiento = puntos reales menos puntos esperados del modelo salarial. Un equipo que supera consistentemente su expectativa presupuestaria está extrayendo valor extra de su masa salarial (entrenamiento, fichajes, cultura). Tres métricas: Pts extra (diferencia bruta), Normalizado (diferencia porcentual ajustada por nivel de presupuesto: (sobrerrend. acum. ÷ temporadas) ÷ pts esperados promedio × 100), y Puntuación de gestión (signo × (100 − p), donde p es la probabilidad de que el resultado se deba solo al azar). La ventana temporal controla el período móvil del gráfico inferior: Todos muestra el historial completo, 5yr/3yr muestran una ventana móvil."
+    "Overperformance = actual points minus wage-model expected points. A team that consistently beats its budget expectation is extracting extra value from its payroll (coaching, recruitment, culture). Three metrics: Extra pts (raw gap), Normalized (percentage gap adjusted for budget level: (cum. overperf ÷ seasons) ÷ avg expected pts × 100), and Managerial Score (sign × (100 − p), where p is the probability the result is due to chance alone). The Managerial Score measures the probability that rusults are a consequence of management and not of stochastic effects. The time window controls the trailing period for the bottom chart: All shows full history, 5yr/3yr show a rolling window.",
+    "Sobre-rendimiento = puntos reales menos puntos esperados del modelo salarial. Un equipo que supera consistentemente su expectativa presupuestaria está extrayendo valor extra de su masa salarial (entrenamiento, fichajes, cultura). Tres métricas: Pts extra (diferencia bruta), Normalizado (diferencia porcentual ajustada por nivel de presupuesto: (sobrerrend. acum. ÷ temporadas) ÷ pts esperados promedio × 100), y Managerial Score (signo × (100 − p), donde p es la probabilidad de que el resultado se deba solo al azar). El Managerial Score mide la probabilidad de que los resultados sean debidos a la gestión y no a efectos estocásticos. La ventana temporal controla el período móvil del gráfico inferior: Todos muestra el historial completo, 5yr/3yr muestran una ventana móvil."
   ],
   "info_calc": [
     "The ordered logit model converts a wage-bill ratio into match probabilities. Select two teams or set custom wage values to see how budget differences translate into home win, draw, and away win probabilities. The model captures a fundamental asymmetry: doubling your wage bill does not double your win probability, because football outcomes are bounded and draws absorb part of the budget advantage.",
@@ -980,7 +980,7 @@
     "V"
   ],
   "col_venue": [
-    "V",
+    "H/A",
     "L/V"
   ],
   "exp_short": [
@@ -1076,8 +1076,8 @@
     "Resultados de partidos actualizados diariamente vía API. Datos históricos desde 2013/14."
   ],
   "data_wages_source": [
-    "Annual gross wage bills per club. Primary source since 2015/16, cross-referenced for consistency.",
-    "Masa salarial bruta anual por club. Fuente principal desde 2015/16, contrastada para consistencia."
+    "Annual gross wage bills per club. Reliable coverage from 2013/14, cross-referenced for consistency.",
+    "Masa salarial bruta anual por club. Cobertura fiable desde 2013/14, contrastada para consistencia."
   ],
   "data_api_source": [
     "Live fixture calendar, matchday numbers, and team metadata. Free tier, 10 requests/minute.",
