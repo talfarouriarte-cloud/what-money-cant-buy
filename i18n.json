@@ -1058,5 +1058,57 @@
   "or_worse": [
     "or worse",
     "o peor"
+  ],
+  "tab_data": [
+    "Data & Sources",
+    "Datos y fuentes"
+  ],
+  "data_title": [
+    "Data & Sources",
+    "Datos y fuentes"
+  ],
+  "data_sources_title": [
+    "Sources",
+    "Fuentes"
+  ],
+  "data_results_source": [
+    "Match results updated daily via API. Historical data from 2013/14.",
+    "Resultados de partidos actualizados diariamente vía API. Datos históricos desde 2013/14."
+  ],
+  "data_wages_source": [
+    "Annual gross wage bills per club. Primary source since 2015/16, cross-referenced for consistency.",
+    "Masa salarial bruta anual por club. Fuente principal desde 2015/16, contrastada para consistencia."
+  ],
+  "data_api_source": [
+    "Live fixture calendar, matchday numbers, and team metadata. Free tier, 10 requests/minute.",
+    "Calendario de partidos en vivo, números de jornada y metadatos de equipos. Nivel gratuito, 10 peticiones/minuto."
+  ],
+  "data_wages_title": [
+    "Wage data",
+    "Datos salariales"
+  ],
+  "data_wages_subtitle": [
+    "Annual gross wage bills used in the model. All values in millions.",
+    "Masas salariales brutas anuales utilizadas en el modelo. Todos los valores en millones."
+  ],
+  "data_coverage_title": [
+    "Coverage",
+    "Cobertura"
+  ],
+  "data_coverage_text": [
+    "9,008 matches across 480+ team-seasons. Three team-seasons in La Liga lack wage data (Espanyol 13/14–14/15, Deportivo 14/15) and are excluded from model estimation.",
+    "9.008 partidos en 480+ equipos-temporada. Tres equipos-temporada de La Liga carecen de datos salariales (Espanyol 13/14–14/15, Deportivo 14/15) y se excluyen de la estimación del modelo."
+  ],
+  "data_season_col": [
+    "Season",
+    "Temporada"
+  ],
+  "data_team_col": [
+    "Team",
+    "Equipo"
+  ],
+  "data_wage_col": [
+    "Wage bill",
+    "Masa salarial"
   ]
 }

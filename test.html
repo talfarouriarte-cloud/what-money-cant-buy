@@ -18,7 +18,7 @@
 <body>
 <div id="root"><p style="padding:40px;text-align:center;color:#888">Loading app...</p></div>
 <script>
-var e=React.createElement,RC=Recharts,D=null;
+var e=React.createElement,RC=Recharts,D=null,CR={};
 var N="#1A3A6B",B="#2E75B6",O="#D4772C",G="#2E8B57",R="#C0392B",T=["#2E75B6","#D4772C","#2E8B57"];
 var _T={};
 var _lang="en";
@@ -26,6 +26,7 @@ function _t(k){var v=_T[k];if(!v)return k;return _lang==="es"?v[1]:v[0];}
 function _tf(k,vars){var s=_t(k);if(vars){for(var p in vars){s=s.split("{"+p+"}").join(vars[p]);}}return s;}
 function setLang(v){_lang=v;setHash("lang",v);window.location.reload();}
 function h(t,p){var a=[t,p];for(var i=2;i<arguments.length;i++)a.push(arguments[i]);return e.apply(null,a);}
+function Cr(name,sz){if(!CR[name])return null;return h("img",{src:CR[name],alt:"",style:{width:sz||16,height:sz||16,objectFit:"contain",display:"inline-block",verticalAlign:"middle"}});}
 var Sg=function(z){return 1/(1+Math.exp(-z));};
 function expPos(p){if(!p)return 20;return 1*p["1st"]+3*(p.ucl-p["1st"])+5.5*p.uel+7*p.ucol+12.5*p.mid+19*p.rel;}
 function rankByPts(teamsObj){var arr=Object.entries(teamsObj).sort(function(a,b){return b[1]-a[1];});var r={};arr.forEach(function(x,i){r[x[0]]=i+1;});return r;}
@@ -186,7 +187,7 @@ var trkCurPts=React.useMemo(function(){if(!iC)return{};var pts={};var teams=Obje
 if(D.bands&&D.bands[lg]&&D.bands[lg][t]){var b=D.bands[lg][t];pts[t]=b.p50[b.p50.length-1];}});return pts;},[sD,lg,iC]);
 var trkCurRks=React.useMemo(function(){return rankByPts(trkCurPts);},[trkCurPts]);
 var teamListEl=h("div",{className:"overflow-y-auto rounded bg-gray-50 p-1 text-xs",style:{maxHeight:400}},
-st.map(function(s,i){var idx=sel.indexOf(s.n);return h("div",{key:s.n,onClick:function(){tog(s.n);},className:"cursor-pointer px-1 py-0.5 rounded flex justify-between "+(idx>=0?"font-bold":"hover:bg-gray-100"),style:idx>=0?{background:T[idx]+"18",color:T[idx]}:{}},h("span",{className:"truncate"},i+1+". "+s.n),h("span",null,s.p));}));
+st.map(function(s,i){var idx=sel.indexOf(s.n);return h("div",{key:s.n,onClick:function(){tog(s.n);},className:"cursor-pointer px-1 py-0.5 rounded flex justify-between "+(idx>=0?"font-bold":"hover:bg-gray-100"),style:idx>=0?{background:T[idx]+"18",color:T[idx]}:{}},h("span",{className:"truncate"},Cr(s.n,14),h("span",{style:{marginLeft:CR[s.n]?3:0}},i+1+". "+s.n)),h("span",null,s.p));}));
 if(!pr)return h("div",null,h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},e(LP,{lg:lg,set:switchLg}),h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s);}))),h("div",{className:"flex gap-4"},h("div",{className:"hidden sm:block w-44 shrink-0"},teamListEl),h("div",{className:"flex-1 text-gray-400 text-center py-8"},_t("select_team_season"))));
 return h("div",null,
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},
@@ -197,7 +198,7 @@ h("div",{className:"flex gap-4"},
 h("div",{className:"hidden sm:block w-44 shrink-0"},teamListEl),
 h("div",{className:"flex-1",style:{minWidth:0}},
 h("div",{className:"sm:hidden mb-2"},h("button",{onClick:function(){setShowList(!showList);},className:"text-xs px-3 py-1 rounded bg-gray-100 text-gray-600"},showList?"Hide teams":_t("show_teams")+" ("+sel.length+" "+_t("select_team")+")"),showList?teamListEl:null),
-h("div",{className:"flex gap-3 mb-2 flex-wrap text-sm"},ops.map(function(o,i){return h("span",{key:o.name,className:"flex items-center gap-1"},h("span",{style:{width:8,height:8,borderRadius:4,background:T[i],display:"inline-block"}}),h("b",{style:{color:T[i]}},o.name)," ",h("span",{className:"text-gray-400"},o.p+"pts"),h("span",{style:{color:Number(o.op)>=0?G:R,fontWeight:700}},(Number(o.op)>=0?"+":"")+o.op));})),
+h("div",{className:"flex gap-3 mb-2 flex-wrap text-sm"},ops.map(function(o,i){return h("span",{key:o.name,className:"flex items-center gap-1"},h("span",{style:{width:8,height:8,borderRadius:4,background:T[i],display:"inline-block"}}),h("b",{style:{color:T[i]}},Cr(o.name,14),h("span",{style:{marginLeft:CR[o.name]?3:0}},o.name))," ",h("span",{className:"text-gray-400"},o.p+"pts"),h("span",{style:{color:Number(o.op)>=0?G:R,fontWeight:700}},(Number(o.op)>=0?"+":"")+o.op));})),
 h("div",{style:{height:300}},e(RC.ResponsiveContainer,null,e(RC.AreaChart,{data:cd,margin:{left:0,right:5,top:5,bottom:5}},cc))),
 !multi?h("div",{className:"flex flex-wrap gap-x-4 gap-y-1 mt-1 mb-2 text-xs text-gray-500 justify-center"},
 h("span",{className:"flex items-center gap-1"},h("span",{style:{width:16,height:2,background:B,display:"inline-block"}}),h("span",null,_t("actual_points"))),
@@ -407,12 +408,12 @@ var xBH=Math.log2(wA/wB),phBH=1-Sg(mod.theta2+mod.beta*xBH),pdBH=Sg(mod.theta2+m
 return h("div",{className:"rounded-lg p-3 mb-4",style:{background:"#f8f9fa",border:"1px solid #e9ecef"}},
 h("div",{className:"text-xs text-gray-500 mb-2 text-center"},_t("h2h_current_probs")),
 h("div",{className:"grid grid-cols-2 gap-3"},
-h("div",null,h("div",{className:"text-xs font-semibold text-center mb-1"},tA," ",h("span",{className:"text-gray-400"},_t("home_lc"))),
+h("div",null,h("div",{className:"text-xs font-semibold text-center mb-1"},Cr(tA,16)," ",tA," ",h("span",{className:"text-gray-400"},_t("home_lc"))),
 h("div",{className:"flex gap-1 text-center"},
 h("div",{className:"flex-1 rounded py-1",style:{background:G+"18"}},h("div",{className:"font-bold text-sm",style:{color:G}},Math.round(phAH*100)+"%"),h("div",{style:{fontSize:9,color:"#888"}},_t("w_short"))),
 h("div",{className:"flex-1 rounded py-1",style:{background:"#88888812"}},h("div",{className:"font-bold text-sm",style:{color:"#888"}},Math.round(pdAH*100)+"%"),h("div",{style:{fontSize:9,color:"#888"}},_t("d_short"))),
 h("div",{className:"flex-1 rounded py-1",style:{background:R+"18"}},h("div",{className:"font-bold text-sm",style:{color:R}},Math.round(paAH*100)+"%"),h("div",{style:{fontSize:9,color:"#888"}},_t("l_short"))))),
-h("div",null,h("div",{className:"text-xs font-semibold text-center mb-1"},tB," ",h("span",{className:"text-gray-400"},_t("home_lc"))),
+h("div",null,h("div",{className:"text-xs font-semibold text-center mb-1"},Cr(tB,16)," ",tB," ",h("span",{className:"text-gray-400"},_t("home_lc"))),
 h("div",{className:"flex gap-1 text-center"},
 h("div",{className:"flex-1 rounded py-1",style:{background:G+"18"}},h("div",{className:"font-bold text-sm",style:{color:G}},Math.round(phBH*100)+"%"),h("div",{style:{fontSize:9,color:"#888"}},_t("w_short"))),
 h("div",{className:"flex-1 rounded py-1",style:{background:"#88888812"}},h("div",{className:"font-bold text-sm",style:{color:"#888"}},Math.round(pdBH*100)+"%"),h("div",{style:{fontSize:9,color:"#888"}},_t("d_short"))),
@@ -420,9 +421,9 @@ h("div",{className:"flex-1 rounded py-1",style:{background:R+"18"}},h("div",{cla
 mt.length===0?h("div",{className:"text-gray-400 text-center py-8"},_t("no_matches")):
 h("div",null,
 h("div",{className:"grid grid-cols-3 gap-2 sm:gap-3 mb-5"},
-h("div",{className:"p-3 rounded-lg text-center",style:{background:B+"10",border:"2px solid "+B+"30"}},h("div",{className:"text-2xl font-bold",style:{color:B}},sm.wA),h("div",{className:"text-xs text-gray-500"},tA+" "+_t("wins_lc")),h("div",{className:"text-sm mt-1"},h("b",null,sm.tpA)," pts ",h("span",{className:"text-gray-400"},"("+_t("exp_short")+" "+sm.teA+")")),h("div",{className:"text-xs font-bold",style:{color:sm.tpA-sm.teA>=0?G:R}},(sm.tpA-sm.teA>=0?"+":"")+(sm.tpA-sm.teA).toFixed(1))),
+h("div",{className:"p-3 rounded-lg text-center",style:{background:B+"10",border:"2px solid "+B+"30"}},h("div",{className:"text-2xl font-bold",style:{color:B}},sm.wA),h("div",{className:"text-xs text-gray-500"},Cr(tA,14),h("span",{style:{marginLeft:CR[tA]?3:0}},tA+" "+_t("wins_lc"))),h("div",{className:"text-sm mt-1"},h("b",null,sm.tpA)," pts ",h("span",{className:"text-gray-400"},"("+_t("exp_short")+" "+sm.teA+")")),h("div",{className:"text-xs font-bold",style:{color:sm.tpA-sm.teA>=0?G:R}},(sm.tpA-sm.teA>=0?"+":"")+(sm.tpA-sm.teA).toFixed(1))),
 h("div",{className:"p-3 rounded-lg text-center bg-gray-50"},h("div",{className:"text-2xl font-bold text-gray-500"},sm.dr),h("div",{className:"text-xs text-gray-500"},_t("draws")),h("div",{className:"text-sm text-gray-400 mt-1"},sm.n+" "+_t("matches_lc"))),
-h("div",{className:"p-3 rounded-lg text-center",style:{background:O+"10",border:"2px solid "+O+"30"}},h("div",{className:"text-2xl font-bold",style:{color:O}},sm.wB),h("div",{className:"text-xs text-gray-500"},tB+" "+_t("wins_lc")),h("div",{className:"text-sm mt-1"},h("b",null,sm.tpB)," pts ",h("span",{className:"text-gray-400"},"("+_t("exp_short")+" "+sm.teB+")")),h("div",{className:"text-xs font-bold",style:{color:sm.tpB-sm.teB>=0?G:R}},(sm.tpB-sm.teB>=0?"+":"")+(sm.tpB-sm.teB).toFixed(1)))),
+h("div",{className:"p-3 rounded-lg text-center",style:{background:O+"10",border:"2px solid "+O+"30"}},h("div",{className:"text-2xl font-bold",style:{color:O}},sm.wB),h("div",{className:"text-xs text-gray-500"},Cr(tB,14),h("span",{style:{marginLeft:CR[tB]?3:0}},tB+" "+_t("wins_lc"))),h("div",{className:"text-sm mt-1"},h("b",null,sm.tpB)," pts ",h("span",{className:"text-gray-400"},"("+_t("exp_short")+" "+sm.teB+")")),h("div",{className:"text-xs font-bold",style:{color:sm.tpB-sm.teB>=0?G:R}},(sm.tpB-sm.teB>=0?"+":"")+(sm.tpB-sm.teB).toFixed(1)))),
 h("div",{className:"text-sm font-semibold mb-1",style:{color:N}},_t("cumulative_points")),
 h("div",{style:{height:220}},e(RC.ResponsiveContainer,null,e(RC.LineChart,{data:cumD,margin:{left:0,right:5,top:5,bottom:30}},
 e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),e(RC.XAxis,{dataKey:"lb",tick:{fontSize:7,angle:-45,textAnchor:"end"},height:50,interval:Math.max(0,Math.floor(cumD.length/12)-1)}),e(RC.YAxis,{tick:{fontSize:9}}),e(RC.Tooltip,null),
@@ -487,7 +488,7 @@ if(mode==="pts"){r[t]=Math.round(cumOP*10)/10;}
 else if(mode==="norm"){var avgExp=cumExp/n;r[t]=avgExp>0?Math.round((cumOP/n)/avgExp*1000)/10:0;}
 else{var p=pval(cumOP,n*38);r[t]=Math.round((cumOP>=0?1:-1)*(100-p*100)*10)/10;}});return r;});},[sel,teams,mode,win]);
 var sfx=mode==="pts"?"pts":mode==="norm"?"%":"";
-var teamListEl=h("div",{className:"overflow-y-auto rounded bg-gray-50 p-1 text-xs",style:{maxHeight:400}},tl.map(function(t){var idx=sel.indexOf(t.n);return h("div",{key:t.n,onClick:function(){tog(t.n);},className:"cursor-pointer px-1.5 py-0.5 rounded flex justify-between "+(idx>=0?"font-bold":"hover:bg-gray-100"),style:idx>=0?{background:cols[idx]+"20",color:cols[idx]}:{}},h("span",{className:"truncate"},t.n+" ("+t.ns+")"),h("span",{style:{color:t.c>=0?G:R}},(t.c>=0?"+":"")+t.c+(sfx||"")));}));
+var teamListEl=h("div",{className:"overflow-y-auto rounded bg-gray-50 p-1 text-xs",style:{maxHeight:400}},tl.map(function(t){var idx=sel.indexOf(t.n);return h("div",{key:t.n,onClick:function(){tog(t.n);},className:"cursor-pointer px-1.5 py-0.5 rounded flex justify-between "+(idx>=0?"font-bold":"hover:bg-gray-100"),style:idx>=0?{background:cols[idx]+"20",color:cols[idx]}:{}},h("span",{className:"truncate flex items-center gap-1"},Cr(t.n,14),t.n+" ("+t.ns+")"),h("span",{style:{color:t.c>=0?G:R}},(t.c>=0?"+":"")+t.c+(sfx||"")));}));
 var cumLabel=win==="all"?(mode==="ms"?_t("trailing_ms"):_t("cumulative")):_tf("trailing_nyr",{n:winN})+(mode==="ms"?" "+_t("man_score"):"");
 return h("div",null,
 e(Info,null,_t("info_explorer")),
@@ -615,7 +616,7 @@ iC&&posD.cur?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#95A5A6
 iC&&posD.cur?e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#E74C3C",fontSize:9}},label:_t("col_rel"),tip:_t("tip_cur_rel")}):null)),
 h("tbody",null,tableData.map(function(r,ri){
 return h("tr",{key:r.t,style:{background:ri%2===0?"white":"#fafbfc",borderBottom:"1px solid #f0f0f0"}},
-h("td",{className:"px-2 py-0.5",style:{fontWeight:600,fontSize:11,borderRight:"1px solid #f0f0f0"}},r.t),
+h("td",{className:"px-2 py-0.5",style:{fontWeight:600,fontSize:11,borderRight:"1px solid #f0f0f0"}},Cr(r.t,14)," ",r.t),
 h("td",{className:"px-1 py-0.5 text-right",style:{fontWeight:600,borderRight:"1px solid #f0f0f0"}},r.pts),
 h("td",{className:"px-1 py-0.5 text-right",style:{color:O,fontWeight:600,fontSize:10}},r.preRk),
 h("td",{className:"px-1 py-0.5 text-right",style:{color:O,fontSize:10}},r.prePts||"-"),
@@ -630,13 +631,7 @@ function Methodology(){
 var F=function(t){return h("span",{style:{fontFamily:"serif",fontStyle:"italic"}},t);};
 var Eq=function(props){return h("div",{className:"my-3 px-4 py-2 rounded text-center",style:{background:"#f8f9fa",border:"1px solid #e9ecef",fontFamily:"serif",fontSize:13}},props.children);};
 var Sec=function(props){return h("div",{className:"mb-6"},h("h3",{className:"font-bold text-sm mb-2",style:{color:N}},props.title),props.children);};
-// Wage data toggle
-var _w=React.useState(false),showW=_w[0],setShowW=_w[1];
-var _wl=React.useState("ll"),wLg=_wl[0],setWLg=_wl[1];
-var wSeasons=React.useMemo(function(){return Object.keys(D.seasons[wLg]).sort().reverse();},[wLg]);
-var wData=React.useMemo(function(){var rows=[];wSeasons.forEach(function(sn){var sd=D.seasons[wLg][sn];Object.keys(sd).forEach(function(t){var w=sd[t].w;if(w>0)rows.push({sn:sn,t:t,w:w});});});return rows;},[wLg,wSeasons]);
-var wBySeason=React.useMemo(function(){var m={};wData.forEach(function(r){if(!m[r.sn])m[r.sn]=[];m[r.sn].push(r);});Object.keys(m).forEach(function(sn){m[sn].sort(function(a,b){return b.w-a.w;});});return m;},[wData]);
-var cur=wLg==="ll"?"\u20ac":"\u00a3";
+
 return h("div",{style:{maxWidth:700,margin:"0 auto"},className:"text-sm text-gray-700 leading-relaxed"},
 h("h2",{className:"text-lg font-bold mb-4",style:{color:N,fontFamily:"Georgia,serif"}},_t("meth_title")),
 
@@ -662,22 +657,9 @@ h("tr",{style:{borderBottom:"1px solid #eee"}},h("td",{className:"py-1.5 pr-4"},
 h("tr",null,h("td",{className:"py-1.5 pr-4"},_t("premier_league")),h("td",{className:"text-right px-3"},"0.6760"),h("td",{className:"text-right px-3"},"\u22120.8358"),h("td",{className:"text-right px-3"},"0.2422"),h("td",{className:"text-right px-3"},"4,560"),h("td",{className:"text-right px-3"},"13")))))),
 
 e(Sec,{title:_t("meth_sources")},
-h("p",null,h("b",null,_t("match_results")),": ",h("a",{href:"https://www.football-data.co.uk",target:"_blank",style:{color:B,textDecoration:"underline"}},"football-data.co.uk"),_t("meth_results_desc")),
-h("p",{className:"mt-2"},h("b",null,_t("wage_data")),": ",h("a",{href:"https://www.capology.com",target:"_blank",style:{color:B,textDecoration:"underline"}},"Capology"),_t("and"),h("a",{href:"https://fbref.com",target:"_blank",style:{color:B,textDecoration:"underline"}},"FBref"),_t("meth_wages_desc")),
-h("p",{className:"mt-2"},h("b",null,_t("coverage")),_t("meth_coverage_desc"))),
+h("p",null,_t("match_results"),": ",h("a",{href:"https://www.football-data.co.uk",target:"_blank",style:{color:B,textDecoration:"underline"}},"football-data.co.uk"),". ",_t("wage_data"),": ",h("a",{href:"https://www.capology.com",target:"_blank",style:{color:B,textDecoration:"underline"}},"Capology"),_t("and"),h("a",{href:"https://fbref.com",target:"_blank",style:{color:B,textDecoration:"underline"}},"FBref"),". ",_t("data_coverage_text"))),
 
-e(Sec,{title:_t("meth_wages_by_team")},
-h("div",{className:"flex gap-2 mb-2"},
-h("button",{onClick:function(){setShowW(!showW);},className:"text-xs px-3 py-1 rounded "+(showW?"bg-gray-200":"bg-gray-100")+" text-gray-600"},showW?_t("meth_hide_wages"):_t("meth_show_wages")),
-showW?h("div",{className:"flex gap-1"},
-h("button",{onClick:function(){setWLg("ll");},className:"px-2 py-0.5 rounded text-xs "+(wLg==="ll"?"text-white":"text-gray-500 bg-gray-100"),style:wLg==="ll"?{background:N}:{}},_t("la_liga")),
-h("button",{onClick:function(){setWLg("pl");},className:"px-2 py-0.5 rounded text-xs "+(wLg==="pl"?"text-white":"text-gray-500 bg-gray-100"),style:wLg==="pl"?{background:N}:{}},_t("premier_league"))):null),
-showW?h("div",{className:"overflow-x-auto",style:{maxHeight:400,overflowY:"auto"}},
-wSeasons.map(function(sn){var teams=wBySeason[sn];if(!teams)return null;
-return h("div",{key:sn,className:"mb-3"},
-h("div",{className:"text-xs font-bold mb-1",style:{color:N}},sn),
-h("div",{className:"flex flex-wrap gap-x-3 gap-y-0 text-xs"},
-teams.map(function(t){return h("span",{key:t.t,className:"text-gray-600"},t.t," ",h("span",{className:"text-gray-400"},cur+t.w+"M"));})));})):null),
+
 
 e(Sec,{title:_t("meth_budget_forecast")},
 h("p",null,_t("meth_budget_p1"))),
@@ -705,6 +687,39 @@ e(Sec,{title:_t("meth_reference")},
 h("p",null,_t("meth_ref_intro")),
 h("p",{className:"mt-1"},h("a",{href:"https://talfarouriarte-cloud.github.io/what-money-cant-buy/What%20money%20cant%20buy.pdf",target:"_blank",style:{color:B,textDecoration:"underline",fontWeight:600}},_t("meth_ref_title"))," (PDF)"),
 h("p",{className:"mt-2 text-gray-400"},_t("contact")+"whatmoneycantbuyfootball@gmail.com")));}
+
+function DataSources(){
+var _wl=React.useState("ll"),wLg=_wl[0],setWLg=_wl[1];
+var _ws=React.useState(""),wSn=_ws[0],setWSn=_ws[1];
+var wSeasons=React.useMemo(function(){return Object.keys(D.seasons[wLg]).sort().reverse();},[wLg]);
+var activeSn=wSn||wSeasons[0]||"";
+var wTeams=React.useMemo(function(){var sd=D.seasons[wLg][activeSn]||{};var arr=[];Object.keys(sd).forEach(function(t){var w=sd[t].w;if(w>0)arr.push({t:t,w:w});});arr.sort(function(a,b){return b.w-a.w;});return arr;},[wLg,activeSn]);
+var cur=wLg==="ll"?"\u20ac":"\u00a3";
+var Src=function(props){return h("div",{className:"p-3 rounded-lg mb-3",style:{background:"#f8f9fa",border:"1px solid #e9ecef"}},h("div",{className:"flex items-center gap-2 mb-1"},h("span",{className:"text-sm font-bold",style:{color:N}},props.name),h("a",{href:props.url,target:"_blank",style:{color:B,fontSize:12,textDecoration:"underline"}},props.host)),h("p",{className:"text-xs text-gray-600"},props.desc));};
+return h("div",{style:{maxWidth:700,margin:"0 auto"},className:"text-sm text-gray-700 leading-relaxed"},
+h("h2",{className:"text-lg font-bold mb-4",style:{color:N,fontFamily:"Georgia,serif"}},_t("data_title")),
+h("div",{className:"mb-6"},h("h3",{className:"font-bold text-sm mb-2",style:{color:N}},_t("data_sources_title")),
+e(Src,{name:_t("match_results"),url:"https://www.football-data.co.uk",host:"football-data.co.uk",desc:_t("data_results_source")}),
+e(Src,{name:_t("wage_data"),url:"https://www.capology.com",host:"Capology / FBref",desc:_t("data_wages_source")}),
+e(Src,{name:"API",url:"https://www.football-data.org",host:"football-data.org",desc:_t("data_api_source")})),
+h("div",{className:"mb-6"},h("h3",{className:"font-bold text-sm mb-1",style:{color:N}},_t("data_coverage_title")),
+h("p",{className:"text-xs text-gray-600 mb-4"},_t("data_coverage_text"))),
+h("div",{className:"mb-6"},h("h3",{className:"font-bold text-sm mb-2",style:{color:N}},_t("data_wages_title")),
+h("p",{className:"text-xs text-gray-500 mb-3"},_t("data_wages_subtitle")),
+h("div",{className:"flex gap-2 mb-3 flex-wrap items-center"},
+h("div",{className:"flex gap-1"},
+h("button",{onClick:function(){setWLg("ll");setWSn("");},className:"px-3 py-1 rounded-full text-sm font-semibold "+(wLg==="ll"?"text-white":"text-gray-500 bg-gray-100"),style:wLg==="ll"?{background:N}:{}},_t("la_liga")),
+h("button",{onClick:function(){setWLg("pl");setWSn("");},className:"px-3 py-1 rounded-full text-sm font-semibold "+(wLg==="pl"?"text-white":"text-gray-500 bg-gray-100"),style:wLg==="pl"?{background:N}:{}},_t("premier_league"))),
+h("select",{value:activeSn,onChange:function(ev){setWSn(ev.target.value);},className:"text-xs border rounded px-2 py-1"},wSeasons.map(function(s){return h("option",{key:s,value:s},s);}))),
+h("div",{className:"overflow-x-auto"},h("table",{className:"w-full text-xs",style:{borderCollapse:"collapse"}},
+h("thead",null,h("tr",{style:{borderBottom:"2px solid #ddd",background:"#f9fafb"}},
+h("th",{className:"text-left py-1.5 px-2",style:{width:"40%"}},_t("data_team_col")),
+h("th",{className:"text-right py-1.5 px-2"},_t("data_wage_col")+" ("+cur+"M)"))),
+h("tbody",null,wTeams.map(function(t,i){return h("tr",{key:t.t,style:{borderBottom:"1px solid #eee",background:i%2===0?"white":"#fafbfc"}},
+h("td",{className:"py-1 px-2"},Cr(t.t,14),h("span",{style:{marginLeft:CR[t.t]?4:0}},t.t)),
+h("td",{className:"text-right py-1 px-2 font-semibold"},cur+t.w+"M"));}),
+wTeams.length===0?h("tr",null,h("td",{className:"py-3 text-center text-gray-400",colSpan:2},_t("no_data"))):null)))
+));}
 
 function Home(props){
 var hh=getHash();
@@ -762,12 +777,12 @@ h("div",{className:"flex flex-wrap gap-3 items-center mb-6"},
 e(LP,{lg:lg,set:sLg}),
 h("select",{value:team,onChange:function(ev){setTeam(ev.target.value);},className:"border rounded px-3 py-1.5 text-base font-semibold",style:{minWidth:180}},teamList.map(function(tt){return h("option",{key:tt.n,value:tt.n},tt.n+" ("+cur+tt.w+"M)");})),
 h("div",{className:"flex items-center gap-3 text-sm"},
-h("span",{style:{color:N,fontWeight:700}},ap+" "+_t("pts_lc")),
+Cr(team,18),h("span",{style:{color:N,fontWeight:700,marginLeft:CR[team]?4:0}},ap+" "+_t("pts_lc")),
 h("span",{className:"text-gray-400"},nP+" games"),
 h("span",{style:{color:df>=0?G:R,fontWeight:700}},(df>=0?"+":"")+df.toFixed(1)+" "+_t("vs_budget")))),
 h("div",{className:"grid gap-4",style:{gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))"}},
 e(Card,{q:_tf("card_howis",{team:team}),tab:"tracker",tabName:_t("tab_tracker"),go:props.go,color:B},
-h("div",{className:"flex items-baseline gap-2"},h("span",{className:"text-2xl font-bold",style:{color:N}},ap+" "+_t("pts_lc")),h("span",{className:"text-sm text-gray-500"},_tf("after_n_games",{n:nP}))),
+h("div",{className:"flex items-baseline gap-2"},h("span",{className:"text-2xl font-bold",style:{color:N}},Cr(team,22),h("span",{style:{marginLeft:CR[team]?6:0}},ap+" "+_t("pts_lc"))),h("span",{className:"text-sm text-gray-500"},_tf("after_n_games",{n:nP}))),
 h("div",{className:"text-sm mt-1"},_t("expected_colon"),h("span",{className:"text-gray-500"},Math.round(ep)),h("span",{style:{color:df>=0?G:R,fontWeight:600,marginLeft:8}},(df>=0?"+":"")+df.toFixed(1)+" "+_t("pts_lc"))),
 bd?h("div",{className:"text-xs text-gray-400 mt-1"},_t("projected_final"),h("b",{style:{color:N}},projFin+" "+_t("pts_lc")),projRk?" ("+_t("rank")+" "+projRk+")":""):null),
 e(Card,{q:_t("card_ahead"),tab:"predictions",tabName:_t("tab_predictions"),go:props.go,color:"#1A56DB"},
@@ -796,7 +811,7 @@ h("span",{className:"text-sm text-gray-500"},_t("extra_pts_in")+" "+cum[1]+" "+_
 h("div",{className:"text-sm mt-1"},_t("managerial_score"),h("b",{style:{color:ms>=0?G:R}},(ms>=0?"+":"")+ms))):h("div",{className:"text-gray-400 text-sm"},_t("no_historical")))));}
 
 function App(){
-var tabs=[{id:"home",l:_t("tab_home")},{id:"tracker",l:_t("tab_tracker")},{id:"predictions",l:_t("tab_predictions")},{id:"badrun",l:_t("tab_badrun")},{id:"h2h",l:_t("tab_h2h")},{id:"explorer",l:_t("tab_explorer")},{id:"calc",l:_t("tab_calc")},{id:"method",l:_t("tab_method")}];
+var tabs=[{id:"home",l:_t("tab_home")},{id:"tracker",l:_t("tab_tracker")},{id:"predictions",l:_t("tab_predictions")},{id:"badrun",l:_t("tab_badrun")},{id:"h2h",l:_t("tab_h2h")},{id:"explorer",l:_t("tab_explorer")},{id:"calc",l:_t("tab_calc")},{id:"method",l:_t("tab_method")},{id:"data",l:_t("tab_data")}];
 useTHState();
 var _f=React.useState(0),forceKey=_f[0],forceUpdate=_f[1];
 React.useEffect(function(){function close(){if(_thSet)_thSet(null);}document.addEventListener("click",close);return function(){document.removeEventListener("click",close);};},[]);
@@ -809,10 +824,10 @@ var activeTab=getHash().tab||tab;
 return h("div",{className:"min-h-screen bg-white"},
 h("div",{className:"py-4 px-5",style:{background:"linear-gradient(135deg,"+N+" 0%,#0f2847 100%)"}},h("div",{className:"flex justify-between items-center",style:{maxWidth:950,margin:"0 auto"}},h("div",null,h("h1",{className:"text-xl font-bold text-white",style:{fontFamily:"Georgia,serif"}},_t("app_title")),h("p",{className:"text-blue-200 text-xs",style:{letterSpacing:"0.5px"}},_t("app_subtitle"))),h("div",{className:"flex gap-1"},h("button",{onClick:function(){setLang("en");},className:"text-base px-1 py-0.5 rounded "+(_lang==="en"?"bg-white/20":"opacity-40"),title:"English"},"\uD83C\uDDEC\uD83C\uDDE7"),h("button",{onClick:function(){setLang("es");},className:"text-base px-1 py-0.5 rounded "+(_lang==="es"?"bg-white/20":"opacity-40"),title:"Espa\u00f1ol"},"\uD83C\uDDEA\uD83C\uDDF8")))),
 h("div",{className:"border-b bg-gray-50 sticky top-0 z-10 flex overflow-x-auto"},tabs.map(function(t){return h("button",{key:t.id,onClick:function(){sTab(t.id);},className:"px-3 py-2 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 "+(activeTab===t.id?"border-current":"border-transparent text-gray-500"),style:activeTab===t.id?{color:N}:{}},t.id==="home"?"\uD83C\uDFE0":null,t.id==="home"?" ":null,t.l);})),
-h("div",{style:{maxWidth:950,margin:"0 auto",padding:16}},activeTab==="home"?e(Home,{go:sTab}):null,activeTab==="tracker"?e(Tracker):null,activeTab==="predictions"?e(Predictions):null,activeTab==="badrun"?e(BadRun):null,activeTab==="h2h"?e(H2H):null,activeTab==="explorer"?e(Explorer):null,activeTab==="calc"?e(Calc):null,activeTab==="method"?e(Methodology):null),
+h("div",{style:{maxWidth:950,margin:"0 auto",padding:16}},activeTab==="home"?e(Home,{go:sTab}):null,activeTab==="tracker"?e(Tracker):null,activeTab==="predictions"?e(Predictions):null,activeTab==="badrun"?e(BadRun):null,activeTab==="h2h"?e(H2H):null,activeTab==="explorer"?e(Explorer):null,activeTab==="calc"?e(Calc):null,activeTab==="method"?e(Methodology):null,activeTab==="data"?e(DataSources):null),
 h("div",{className:"text-center text-xs text-gray-400 py-3 border-t"},h("a",{href:"https://talfarouriarte-cloud.github.io/what-money-cant-buy/What%20money%20cant%20buy.pdf",target:"_blank",style:{color:"#999",textDecoration:"underline"}},_t("read_full")),h("span",{className:"mx-2"},"|"),_t("footer_leagues")+" \u2022 2013\u20132026"));}
 
-Promise.all([fetch("data.json").then(function(r){return r.json();}),fetch("i18n.json").then(function(r){return r.json();})]).then(function(res){D=res[0];_T=res[1];ReactDOM.render(e(App),document.getElementById("root"));}).catch(function(err){document.getElementById("root").innerHTML="<p style='padding:40px;text-align:center;color:red'>Error: "+err.message+"</p>";});
+Promise.all([fetch("data.json").then(function(r){return r.json();}),fetch("i18n.json").then(function(r){return r.json();}),fetch("crests.json").then(function(r){return r.json();}).catch(function(){return {};})]).then(function(res){D=res[0];_T=res[1];CR=res[2]||{};ReactDOM.render(e(App),document.getElementById("root"));}).catch(function(err){document.getElementById("root").innerHTML="<p style='padding:40px;text-align:center;color:red'>Error: "+err.message+"</p>";});
 </script>
 </body>
 </html>
