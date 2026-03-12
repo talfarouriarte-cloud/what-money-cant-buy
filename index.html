@@ -446,7 +446,7 @@ res.push({sn:sn,hm:isH?tA:tB,pA:pA,pB:pB,eA:eA,eB:eB,pwA:pwA,pdM:pdM,pwB:pwB});}
 var sm=React.useMemo(function(){var wA=0,wB=0,dr=0,tpA=0,tpB=0,teA=0,teB=0;
 mt.forEach(function(m){tpA+=m.pA;tpB+=m.pB;teA+=m.eA;teB+=m.eB;if(m.pA===3)wA++;else if(m.pB===3)wB++;else dr++;});
 return{wA:wA,wB:wB,dr:dr,n:mt.length,tpA:tpA,tpB:tpB,teA:Math.round(teA*10)/10,teB:Math.round(teB*10)/10};},[mt]);
-var cumD=React.useMemo(function(){var cA=0,cB=0,ceA=0,ceB=0;return mt.map(function(m){cA+=m.pA;cB+=m.pB;ceA+=m.eA;ceB+=m.eB;
+var cumD=React.useMemo(function(){var cA=0,cB=0,ceA=0,ceB=0;var rev=mt.slice().reverse();return rev.map(function(m){cA+=m.pA;cB+=m.pB;ceA+=m.eA;ceB+=m.eB;
 return{lb:m.sn+(m.hm===tA?" ("+_t("home_lbl")+")":" ("+_t("away_lbl")+")"),cA:cA,cB:cB,eA:Math.round(ceA*10)/10,eB:Math.round(ceB*10)/10,pA:m.pA,pB:m.pB,pwA:m.pwA,pdM:m.pdM,pwB:m.pwB};});},[mt,tA]);
 return h("div",null,
 h("p",{className:"text-gray-500 text-sm mb-3"},_t("h2h_desc")),
