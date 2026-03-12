@@ -53,11 +53,12 @@
 <script>
 var e=React.createElement,RC=Recharts,D=null,CR={},CUR_SN="25/26";
 var N="#1A3A6B",B="#2E75B6",O="#D4772C",G="#2E8B57",R="#C0392B",T=["#2E75B6","#D4772C","#2E8B57"];
+function hap(ms){try{if(navigator.vibrate)navigator.vibrate(ms||10);}catch(e){}};
 var _T={};
 var _lang="en";
 function _t(k){var v=_T[k];if(!v)return k;return _lang==="es"?v[1]:v[0];}
 function _tf(k,vars){var s=_t(k);if(vars){for(var p in vars){s=s.split("{"+p+"}").join(vars[p]);}}return s;}
-function setLang(v){_lang=v;setHash("lang",v);window.location.reload();}
+function setLang(v){_lang=v;setHash("lang",v);hap(15);window.location.reload();}
 function h(t,p){var a=[t,p];for(var i=2;i<arguments.length;i++)a.push(arguments[i]);return e.apply(null,a);}
 function Cr(name,sz){if(!CR[name])return null;return h("img",{src:CR[name],alt:"",onError:function(e){e.target.style.display="none";},style:{width:sz||16,height:sz||16,objectFit:"contain",display:"inline-block",verticalAlign:"middle"}});}
 var Sg=function(z){return 1/(1+Math.exp(-z));};
@@ -798,7 +799,7 @@ var teamList=React.useMemo(function(){return Object.entries(sd25).filter(functio
 var initTeam=(function(){var ht=hh.sel?hh.sel.split(",")[0]:null;if(ht&&sd25[ht])return ht;return lg==="ll"?"Barcelona":"Liverpool";})();
 var _2=React.useState(initTeam),team=_2[0],setTeam0=_2[1];
 function sLg(v){sLg0(v);setHash("lg",v);var defT=v==="ll"?"Barcelona":"Liverpool";setTeam(defT);}
-function setTeam(v){setTeam0(v);setHash("sel",v);setHash("br",v);setHash("h2a",v);setHash("ex",v);var tt=sd25[v];if(tt&&tt.r&&tt.r[0])setHash("h2b",tt.r[0][0]);}
+function setTeam(v){setTeam0(v);setHash("sel",v);setHash("br",v);setHash("h2a",v);setHash("ex",v);hap(10);var tt=sd25[v];if(tt&&tt.r&&tt.r[0])setHash("h2b",tt.r[0][0]);}
 var t=sd25[team];
 var cur=lg==="ll"?"\u20ac":"\u00a3";
 if(!t)return h("div",null,h("div",{className:"text-center py-8"},e(LP,{lg:lg,set:sLg}),h("p",{className:"text-gray-400 mt-4"},_t("select_team"))));
@@ -985,10 +986,11 @@ var _wLg=React.useState("ll"),wLg=_wLg[0],setWLg=_wLg[1];
 var _wTm=React.useState(""),wTeam=_wTm[0],setWTeam=_wTm[1];
 React.useEffect(function(){function close(){if(_thSet)_thSet(null);}document.addEventListener("click",close);return function(){document.removeEventListener("click",close);};},[]);
 React.useEffect(function(){function onPop(){forceUpdate(function(c){return c+1;});}window.addEventListener("popstate",onPop);return function(){window.removeEventListener("popstate",onPop);};},[]);
+React.useEffect(function(){var last=0;function onChartTouch(ev){var el=ev.target;while(el){if(el.classList&&el.classList.contains("recharts-surface")){var now=Date.now();if(now-last>400){last=now;hap(8);}return;}el=el.parentElement;}}document.addEventListener("touchstart",onChartTouch,{passive:true});return function(){document.removeEventListener("touchstart",onChartTouch);};},[]);
 var hh=getHash();
 var _1=React.useState(hh.tab||"home"),tab=_1[0],sTab0=_1[1];
 var curTab=getHash().tab||tab;
-function sTab(v,dir){sTab0(v);setHash("tab",v);setSlideDir(dir||null);setSlideKey(function(k){return k+1;});}
+function sTab(v,dir){sTab0(v);setHash("tab",v);setSlideDir(dir||null);setSlideKey(function(k){return k+1;});hap(dir?15:10);}
 var _sl=React.useState(null),slideDir=_sl[0],setSlideDir=_sl[1];
 var _sk=React.useState(0),slideKey=_sk[0],setSlideKey=_sk[1];
 var touchRef=React.useRef(null);
@@ -1009,12 +1011,12 @@ h("button",{onClick:function(){_lang="en";setWLang("en");setHash("lang","en");},
 h("button",{onClick:function(){_lang="es";setWLang("es");setHash("lang","es");},className:"px-5 py-2.5 rounded-lg text-sm font-semibold transition-all "+(wLang==="es"?"bg-white text-gray-800 shadow-lg":"bg-white/20 text-white hover:bg-white/30")},"🇪🇸 Español"))),
 h("div",{className:"mb-6"},h("p",{className:"text-blue-300 text-xs mb-3"},_t("league")),
 h("div",{className:"flex gap-3 justify-center"},
-h("button",{onClick:function(){setWLg("ll");setWTeam("");setHash("lg","ll");},className:"px-5 py-2.5 rounded-lg text-sm font-semibold transition-all "+(wLg==="ll"?"bg-white text-gray-800 shadow-lg":"bg-white/20 text-white hover:bg-white/30")},_t("la_liga")),
-h("button",{onClick:function(){setWLg("pl");setWTeam("");setHash("lg","pl");},className:"px-5 py-2.5 rounded-lg text-sm font-semibold transition-all "+(wLg==="pl"?"bg-white text-gray-800 shadow-lg":"bg-white/20 text-white hover:bg-white/30")},_t("premier_league")))),
+h("button",{onClick:function(){setWLg("ll");setWTeam("");setHash("lg","ll");hap(10);},className:"px-5 py-2.5 rounded-lg text-sm font-semibold transition-all "+(wLg==="ll"?"bg-white text-gray-800 shadow-lg":"bg-white/20 text-white hover:bg-white/30")},_t("la_liga")),
+h("button",{onClick:function(){setWLg("pl");setWTeam("");setHash("lg","pl");hap(10);},className:"px-5 py-2.5 rounded-lg text-sm font-semibold transition-all "+(wLg==="pl"?"bg-white text-gray-800 shadow-lg":"bg-white/20 text-white hover:bg-white/30")},_t("premier_league")))),
 h("div",{className:"mb-6"},h("p",{className:"text-blue-300 text-xs mb-3"},_t("team")),
-h("select",{value:curT,onChange:function(ev){setWTeam(ev.target.value);setHash("sel",ev.target.value);setHash("br",ev.target.value);setHash("h2a",ev.target.value);},className:"bg-white/20 text-white border border-white/30 rounded px-3 py-2.5 text-sm w-full",style:{maxWidth:220,margin:"0 auto",display:"block"}},
+h("select",{value:curT,onChange:function(ev){setWTeam(ev.target.value);setHash("sel",ev.target.value);setHash("br",ev.target.value);setHash("h2a",ev.target.value);hap(10);},className:"bg-white/20 text-white border border-white/30 rounded px-3 py-2.5 text-sm w-full",style:{maxWidth:220,margin:"0 auto",display:"block"}},
 tl0.map(function(t){return h("option",{key:t.n,value:t.n,style:{color:"#333"}},t.n);}))),
-h("button",{onClick:function(){setShowWelcome(false);setHash("tab","home");},className:"mt-6 px-8 py-3 rounded-lg text-base font-bold bg-white shadow-lg hover:shadow-xl transition-all",style:{color:N}},_t("start"))));}():
+h("button",{onClick:function(){setShowWelcome(false);setHash("tab","home");hap(20);},className:"mt-6 px-8 py-3 rounded-lg text-base font-bold bg-white shadow-lg hover:shadow-xl transition-all",style:{color:N}},_t("start"))));}():
 h("div",{className:"min-h-screen bg-white"},
 h("div",{className:"py-4 px-5",style:{backgroundImage:"linear-gradient(135deg,rgba(26,58,107,0.15) 0%,rgba(15,40,71,0.2) 100%),url(header-bg.jpeg)",backgroundSize:"cover",backgroundPosition:"center"}},h("div",{className:"flex justify-between items-center",style:{maxWidth:950,margin:"0 auto"}},h("div",null,h("h1",{className:"text-xl font-bold text-white",style:{fontFamily:"Georgia,serif"}},_t("app_title")),h("p",{className:"text-blue-200 text-xs",style:{letterSpacing:"0.5px"}},_t("app_subtitle"))),h("select",{value:_lang,onChange:function(ev){setLang(ev.target.value);},className:"text-sm bg-transparent text-white border border-white/30 rounded px-2 py-1",style:{appearance:"auto"}},h("option",{value:"en",style:{color:"#333"}},"🇬🇧 EN"),h("option",{value:"es",style:{color:"#333"}},"🇪🇸 ES")))),
 h("div",{className:"border-b bg-gray-50 sticky top-0 z-10"},
