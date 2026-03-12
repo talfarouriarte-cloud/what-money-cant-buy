@@ -18,7 +18,7 @@
 <body>
 <div id="root"><p style="padding:40px;text-align:center;color:#888">Loading app...</p></div>
 <script>
-var e=React.createElement,RC=Recharts,D=null,CR={};
+var e=React.createElement,RC=Recharts,D=null,CR={},CUR_SN="25/26";
 var N="#1A3A6B",B="#2E75B6",O="#D4772C",G="#2E8B57",R="#C0392B",T=["#2E75B6","#D4772C","#2E8B57"];
 var _T={};
 var _lang="en";
@@ -194,7 +194,7 @@ if(!pr)return h("div",null,h("div",{className:"flex flex-wrap gap-3 items-end mb
 return h("div",null,
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},
 e(LP,{lg:lg,set:switchLg}),
-h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s+(s==="25/26"?" ("+_t("current")+")":""));}))),
+h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s+(s===CUR_SN?" ("+_t("current")+")":""));}))),
 e(Info,null,_t("info_tracker"),h("br"),h("br"),h("b",null,_t("info_tracker_single_title")),_t("info_tracker_single"),h("br"),h("br"),h("b",null,_t("info_tracker_multi_title")),_t("info_tracker_multi")),
 h("div",{className:"flex gap-4"},
 h("div",{className:"hidden sm:block w-44 shrink-0"},teamListEl),
@@ -390,6 +390,7 @@ var hh=getHash();
 var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
 var _2=React.useState(hh.h2a||"Real Madrid"),tA=_2[0],sTA0=_2[1];
 var _3=React.useState(hh.h2b||"At Madrid"),tB=_3[0],sTB0=_3[1];
+var _h2w=React.useState("all"),h2win=_h2w[0],setH2Win=_h2w[1];
 function sLg(v){sLg0(v);setHash("lg",v);}
 function sTA(v){sTA0(v);setHash("h2a",v);}
 function sTB(v){sTB0(v);setHash("h2b",v);}
@@ -402,7 +403,7 @@ var mK=lg==="ll"?"laliga":"pl",mod2=D.model[mK],wAv=sd[tA]?sd[tA].w:0,wBv=sd[tB]
 if(mod2&&wAv>0&&wBv>0){var wH2=isH?wAv:wBv,wA2=isH?wBv:wAv,x2=Math.log2(wA2/wH2);
 var phh=1-Sg(mod2.theta2+mod2.beta*x2),pdd=Sg(mod2.theta2+mod2.beta*x2)-Sg(mod2.theta1+mod2.beta*x2);
 pwA=Math.round((isH?phh:1-phh-pdd)*100);pdM=Math.round(pdd*100);pwB=Math.round((isH?1-phh-pdd:phh)*100);}
-res.push({sn:sn,hm:isH?tA:tB,pA:pA,pB:pB,eA:eA,eB:eB,pwA:pwA,pdM:pdM,pwB:pwB});}});});return res;},[lg,sL,tA,tB]);
+res.push({sn:sn,hm:isH?tA:tB,pA:pA,pB:pB,eA:eA,eB:eB,pwA:pwA,pdM:pdM,pwB:pwB});}});});var wN=h2win==="10y"?10:h2win==="5y"?5:h2win==="3y"?3:99;if(wN<99){var snCut=Object.keys(D.seasons[lg]).sort().reverse().slice(0,wN);res=res.filter(function(m){return snCut.indexOf(m.sn)>=0;});}return res;},[lg,sL,tA,tB,h2win]);
 var sm=React.useMemo(function(){var wA=0,wB=0,dr=0,tpA=0,tpB=0,teA=0,teB=0;
 mt.forEach(function(m){tpA+=m.pA;tpB+=m.pB;teA+=m.eA;teB+=m.eB;if(m.pA===3)wA++;else if(m.pB===3)wB++;else dr++;});
 return{wA:wA,wB:wB,dr:dr,n:mt.length,tpA:tpA,tpB:tpB,teA:Math.round(teA*10)/10,teB:Math.round(teB*10)/10};},[mt]);
@@ -410,6 +411,7 @@ var cumD=React.useMemo(function(){var cA=0,cB=0,ceA=0,ceB=0;return mt.map(functi
 return{lb:m.sn+(m.hm===tA?" ("+_t("home_lbl")+")":" ("+_t("away_lbl")+")"),cA:cA,cB:cB,eA:Math.round(ceA*10)/10,eB:Math.round(ceB*10)/10,pA:m.pA,pB:m.pB,pwA:m.pwA,pdM:m.pdM,pwB:m.pwB};});},[mt,tA]);
 return h("div",null,
 h("p",{className:"text-gray-500 text-sm mb-3"},_t("h2h_desc")),
+h("div",{className:"flex gap-1 mb-3"},["all","10y","5y","3y"].map(function(w){var lb=w==="all"?_t("all"):w;return h("button",{key:w,onClick:function(){setH2Win(w);},className:"px-2.5 py-1 rounded text-xs font-medium "+(h2win===w?"text-white":"text-gray-500 bg-gray-100"),style:h2win===w?{background:N}:{}},lb);})),
 e(Info,null,_t("info_h2h")),
 e(LP,{lg:lg,set:function(v){sLg(v);if(v==="ll"){sTA("Real Madrid");sTB("At Madrid");}else{sTA("Liverpool");sTB("Man United");}}}),
 h("div",{className:"flex gap-3 mb-5 flex-wrap mt-3"},
@@ -417,7 +419,7 @@ h("div",null,h("label",{className:"text-xs text-gray-500 block mb-1"},_t("team_a
 h("div",{className:"flex items-end pb-1 text-gray-400 font-bold"},_t("vs")),
 h("div",null,h("label",{className:"text-xs text-gray-500 block mb-1"},_t("team_b")),h("select",{value:tB,onChange:function(ev){sTB(ev.target.value);},className:"border rounded px-2 py-1.5 text-sm",style:{minWidth:150,color:O,fontWeight:600}},allT.map(function(t){return h("option",{key:t,value:t},t);})))),
 // Current season match probabilities
-(function(){var sdC=D.seasons[lg]["25/26"]||{};var wA=sdC[tA]&&sdC[tA].w?sdC[tA].w:0;var wB=sdC[tB]&&sdC[tB].w?sdC[tB].w:0;
+(function(){var sdC=D.seasons[lg][CUR_SN]||{};var wA=sdC[tA]&&sdC[tA].w?sdC[tA].w:0;var wB=sdC[tB]&&sdC[tB].w?sdC[tB].w:0;
 if(wA<=0||wB<=0)return null;
 var modK=lg==="ll"?"laliga":"pl";var mod=D.model[modK];if(!mod)return null;
 var xAH=Math.log2(wB/wA),phAH=1-Sg(mod.theta2+mod.beta*xAH),pdAH=Sg(mod.theta2+mod.beta*xAH)-Sg(mod.theta1+mod.beta*xAH),paAH=1-phAH-pdAH;
@@ -494,9 +496,9 @@ function getSummary(td){
 var sds=getSeasons(td);if(sds.length===0)return 0;
 var cumOP=0,cumExp=0,nS=sds.length;
 sds.forEach(function(sd){cumOP+=sd[3]-sd[2];cumExp+=sd[2];});
-if(mode==="pts")return Math.round(cumOP*10)/10;
+if(mode==="pts")return Math.round(cumOP);
 if(mode==="norm"){var avgExp=cumExp/nS;return avgExp>0?Math.round((cumOP/nS)/avgExp*1000)/10:0;}
-var p=pval(cumOP,nS*38);return Math.round((cumOP>=0?1:-1)*(100-p*100)*10)/10;}
+var p=pval(cumOP,nS*38);return Math.round((cumOP>=0?1:-1)*(100-p*100));}
 var tl=React.useMemo(function(){return Object.entries(teams).map(function(en){
 var nW=getSeasons(en[1]);return{n:en[0],c:getSummary(en[1]),ns:nW.length};}).sort(function(a,b){return b.c-a.c;});},[teams,mode,win]);
 var cols=[B,O,G,R,"#8B5CF6"];
@@ -504,24 +506,24 @@ function tog(n){sSel(function(p){if(p.indexOf(n)>=0)return p.filter(function(x){
 var cd=React.useMemo(function(){return ss.map(function(s){var r={s:s};sel.forEach(function(t){var td=teams[t];if(!td)return;
 var sd=td[3].find(function(x){return x[0]===s;});if(!sd)return;
 var d=sd[3]-sd[2];
-if(mode==="pts"){r[t]=Math.round(d*10)/10;}
+if(mode==="pts"){r[t]=Math.round(d);}
 else if(mode==="norm"){r[t]=sd[2]>0?Math.round(d/sd[2]*1000)/10:0;}
-else{var p=pval(d,38);r[t]=Math.round((d>=0?1:-1)*(100-p*100)*10)/10;}});return r;});},[sel,teams,mode]);
+else{var p=pval(d,38);r[t]=Math.round((d>=0?1:-1)*(100-p*100));}});return r;});},[sel,teams,mode]);
 var cum=React.useMemo(function(){return ss.map(function(s,si){var r={s:s};sel.forEach(function(t){var td=teams[t];if(!td)return;
 var startI=winN<99?Math.max(0,si-winN+1):0;
 var cumOP=0,cumExp=0,n=0;
 for(var i=startI;i<=si;i++){var sd=td[3].find(function(x){return x[0]===ss[i];});
 if(sd){cumOP+=sd[3]-sd[2];cumExp+=sd[2];n++;}}
 if(n===0)return;
-if(mode==="pts"){r[t]=Math.round(cumOP*10)/10;}
+if(mode==="pts"){r[t]=Math.round(cumOP);}
 else if(mode==="norm"){var avgExp=cumExp/n;r[t]=avgExp>0?Math.round((cumOP/n)/avgExp*1000)/10:0;}
-else{var p=pval(cumOP,n*38);r[t]=Math.round((cumOP>=0?1:-1)*(100-p*100)*10)/10;}});return r;});},[sel,teams,mode,win]);
+else{var p=pval(cumOP,n*38);r[t]=Math.round((cumOP>=0?1:-1)*(100-p*100));}});return r;});},[sel,teams,mode,win]);
 var sfx=mode==="pts"?_t("pts_lc"):mode==="norm"?"%":"";
 var teamListEl=h("div",{className:"overflow-y-auto rounded bg-gray-50 p-1 text-xs",style:{maxHeight:400}},tl.map(function(t){var idx=sel.indexOf(t.n);return h("div",{key:t.n,onClick:function(){tog(t.n);},className:"cursor-pointer px-1.5 py-0.5 rounded flex justify-between "+(idx>=0?"font-bold":"hover:bg-gray-100"),style:idx>=0?{background:cols[idx]+"20",color:cols[idx]}:{}},h("span",{className:"truncate flex items-center gap-1"},Cr(t.n,14),t.n+" ("+t.ns+")"),h("span",{style:{color:t.c>=0?G:R}},(t.c>=0?"+":"")+t.c+(sfx||"")));}));
 var cumLabel=win==="all"?(mode==="ms"?_t("trailing_ms"):_t("cumulative")):_tf("trailing_nyr",{n:winN})+(mode==="ms"?" "+_t("man_score"):"");
 return h("div",null,
 e(Info,null,_t("info_explorer")),
-h("div",{className:"flex flex-wrap gap-3 items-end mb-3",style:{position:"sticky",top:0,zIndex:10,background:"#f9fafb",paddingTop:4,paddingBottom:4}},
+h("div",{className:"flex flex-wrap gap-3 items-end mb-3",style:{position:"sticky",top:40,zIndex:20,background:"#f9fafb",paddingTop:4,paddingBottom:4}},
 e(LP,{lg:lg,set:function(v){sLg(v);sSel(v==="ll"?["Villarreal","At Madrid","Valencia"]:["Liverpool","Man City","Man United"]);}}),
 h("div",{className:"flex gap-1"},modes.map(function(m){return h("button",{key:m.k,title:m.tip,onClick:function(){setMode(m.k);},className:"px-2 py-0.5 rounded text-xs font-medium "+(mode===m.k?"text-white":"text-gray-500 bg-gray-100"),style:mode===m.k?{background:N}:{}},m.l);})),
 h("div",{className:"flex gap-1"},wins.map(function(w){return h("button",{key:w.k,title:w.tip,onClick:function(){setWin(w.k);},className:"px-2 py-0.5 rounded text-xs font-medium "+(win===w.k?"text-white":"text-gray-500 bg-gray-100"),style:win===w.k?{background:"#555"}:{}},w.l);}))),
@@ -541,7 +543,7 @@ var _2=React.useState(100),hW=_2[0],sH=_2[1];var _3=React.useState(50),aW=_3[0],
 var _4=React.useState(""),hTeam=_4[0],sHT=_4[1];var _5=React.useState(""),aTeam=_5[0],sAT=_5[1];
 // Get teams with wages for current season (25/26)
 var lgKey=lg==="laliga"?"ll":"pl";
-var teamWages=React.useMemo(function(){var sd=D.seasons[lgKey]["25/26"]||{};var tw=[];Object.keys(sd).forEach(function(t){var w=sd[t].w;if(w>0)tw.push({n:t,w:w});});tw.sort(function(a,b){return b.w-a.w;});return tw;},[lgKey]);
+var teamWages=React.useMemo(function(){var sd=D.seasons[lgKey][CUR_SN]||{};var tw=[];Object.keys(sd).forEach(function(t){var w=sd[t].w;if(w>0)tw.push({n:t,w:w});});tw.sort(function(a,b){return b.w-a.w;});return tw;},[lgKey]);
 function pickTeam(side,name){var tw=teamWages.find(function(t){return t.n===name;});if(!tw)return;if(side==="h"){sHT(name);sH(tw.w);}else{sAT(name);sA(tw.w);}}
 var m=D.model[lg],cur=lg==="laliga"?"\u20ac":"\u00a3";
 var x=Math.log2(aW/hW),pa=Sg(m.theta1+m.beta*x),ph=1-Sg(m.theta2+m.beta*x),pd=1-ph-pa;
@@ -616,7 +618,7 @@ return h("div",null,
 e(Info,null,_t("info_predictions")),
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},
 e(LP,{lg:lg,set:function(v){sLg(v);var sk=Object.keys(D.pos&&D.pos[v]||{}).sort().reverse();if(sk.length>0)sSn(sk[0]);}}),
-h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s+(s==="25/26"?" ("+_t("current")+")":""));}))),
+h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s+(s===CUR_SN?" ("+_t("current")+")":""));}))),
 !posD?h("div",{className:"text-gray-400 text-center py-8"},_t("no_data_season")):
 h("div",{className:"overflow-x-auto rounded-lg",style:{border:"1px solid #e5e7eb"}},h("table",{className:"w-full",style:{minWidth:680,fontSize:11,borderCollapse:"collapse"}},
 h("thead",null,
@@ -754,19 +756,19 @@ function Home(props){
 var hh=getHash();
 var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
 var lgK=lg==="ll"?"laliga":"pl";
-var sd25=D.seasons[lg]["25/26"]||{};
+var sd25=D.seasons[lg][CUR_SN]||{};
 var teamList=React.useMemo(function(){return Object.entries(sd25).filter(function(e){return e[1].w>0;}).map(function(e){return{n:e[0],w:e[1].w,pts:e[1].a[e[1].a.length-1]||0};}).sort(function(a,b){return b.pts-a.pts;});},[lg]);
 var initTeam=(function(){var ht=hh.sel?hh.sel.split(",")[0]:null;if(ht&&sd25[ht])return ht;return lg==="ll"?"Barcelona":"Liverpool";})();
 var _2=React.useState(initTeam),team=_2[0],setTeam0=_2[1];
 function sLg(v){sLg0(v);setHash("lg",v);var defT=v==="ll"?"Barcelona":"Liverpool";setTeam(defT);}
-function setTeam(v){setTeam0(v);setHash("sel",v);setHash("br",v);setHash("h2a",v);setHash("ex",v);}
+function setTeam(v){setTeam0(v);setHash("sel",v);setHash("br",v);setHash("h2a",v);setHash("ex",v);var tt=sd25[v];if(tt&&tt.r&&tt.r[0])setHash("h2b",tt.r[0][0]);}
 var t=sd25[team];
 var cur=lg==="ll"?"\u20ac":"\u00a3";
 if(!t)return h("div",null,h("div",{className:"text-center py-8"},e(LP,{lg:lg,set:sLg}),h("p",{className:"text-gray-400 mt-4"},_t("select_team"))));
 var nP=t.a.length,ap=t.a[nP-1]||0,ep=t.e[nP-1]||0,df=ap-ep;
 // Card data
 var bd=D.bands[lg]&&D.bands[lg][team]?D.bands[lg][team]:null;
-var posD=D.pos&&D.pos[lg]&&D.pos[lg]["25/26"]?D.pos[lg]["25/26"]:null;
+var posD=D.pos&&D.pos[lg]&&D.pos[lg][CUR_SN]?D.pos[lg][CUR_SN]:null;
 var curPos=posD&&posD.cur&&posD.cur[team]?posD.cur[team]:null;
 var prePos=posD&&posD.pre&&posD.pre[team]?posD.pre[team]:null;
 var cum=D.cumulative[lg]&&D.cumulative[lg][team]?D.cumulative[lg][team]:null;
@@ -794,8 +796,8 @@ var ms=cum?(function(){var co=cum[0],nm=cum[1]*38;if(nm<=0||co===0)return 0;var 
 // Projected final
 var projFin=bd?bd.p50[bd.p50.length-1]:Math.round(ep/nP*38);
 var projRk=null;
-if(D.pos&&D.pos[lg]&&D.pos[lg]["25/26"]&&D.pos[lg]["25/26"].cur){
-var pts2={};var sd2=D.seasons[lg]["25/26"];Object.keys(sd2).forEach(function(tt){if(D.bands[lg]&&D.bands[lg][tt]){var b2=D.bands[lg][tt];pts2[tt]=b2.p50[b2.p50.length-1];}});
+if(D.pos&&D.pos[lg]&&D.pos[lg][CUR_SN]&&D.pos[lg][CUR_SN].cur){
+var pts2={};var sd2=D.seasons[lg][CUR_SN];Object.keys(sd2).forEach(function(tt){if(D.bands[lg]&&D.bands[lg][tt]){var b2=D.bands[lg][tt];pts2[tt]=b2.p50[b2.p50.length-1];}});
 var sorted=Object.entries(pts2).sort(function(a,b){return b[1]-a[1];});
 for(var i=0;i<sorted.length;i++){if(sorted[i][0]===team){projRk=i+1;break;}}}
 function Card(props){return h("div",{onClick:function(){props.go(props.tab);},className:"rounded-xl p-4 cursor-pointer hover:shadow-md transition-shadow",style:{background:"white",border:"1px solid #e5e7eb",borderLeft:"4px solid "+(props.color||N)}},
@@ -845,6 +847,7 @@ var tabs=[{id:"home",l:_t("tab_home")},{id:"tracker",l:_t("tab_tracker")},{id:"p
 useTHState();
 var _f=React.useState(0),forceKey=_f[0],forceUpdate=_f[1];
 var _mm=React.useState(false),mobileMenu=_mm[0],setMobileMenu=_mm[1];
+var _wl=React.useState(!window.location.hash||window.location.hash==="#"),showWelcome=_wl[0],setShowWelcome=_wl[1];
 React.useEffect(function(){function close(){if(_thSet)_thSet(null);}document.addEventListener("click",close);return function(){document.removeEventListener("click",close);};},[]);
 React.useEffect(function(){function onPop(){forceUpdate(function(c){return c+1;});}window.addEventListener("popstate",onPop);return function(){window.removeEventListener("popstate",onPop);};},[]);
 var hh=getHash();
@@ -852,18 +855,19 @@ var _1=React.useState(hh.tab||"home"),tab=_1[0],sTab0=_1[1];
 var curTab=getHash().tab||tab;
 function sTab(v){sTab0(v);setHash("tab",v);}
 var activeTab=getHash().tab||tab;
-return h("div",{className:"min-h-screen bg-white"},
-h("div",{className:"py-4 px-5",style:{background:"linear-gradient(135deg,"+N+" 0%,#0f2847 100%)"}},h("div",{className:"flex justify-between items-center",style:{maxWidth:950,margin:"0 auto"}},h("div",null,h("h1",{className:"text-xl font-bold text-white",style:{fontFamily:"Georgia,serif"}},_t("app_title")),h("p",{className:"text-blue-200 text-xs",style:{letterSpacing:"0.5px"}},_t("app_subtitle"))),h("div",{className:"flex gap-1"},h("button",{onClick:function(){setLang("en");},className:"text-base px-1 py-0.5 rounded "+(_lang==="en"?"bg-white/20":"opacity-40"),title:"English"},"\uD83C\uDDEC\uD83C\uDDE7"),h("button",{onClick:function(){setLang("es");},className:"text-base px-1 py-0.5 rounded "+(_lang==="es"?"bg-white/20":"opacity-40"),title:"Espa\u00f1ol"},"\uD83C\uDDEA\uD83C\uDDF8")))),
+return showWelcome?h("div",{className:"min-h-screen flex items-center justify-center",style:{background:"linear-gradient(135deg,"+N+" 0%,#0f2847 100%)"}},h("div",{className:"text-center p-8",style:{maxWidth:420}},h("h1",{className:"text-3xl font-bold text-white mb-2",style:{fontFamily:"Georgia,serif"}},_t("app_title")),h("p",{className:"text-blue-200 text-sm mb-8"},_t("app_subtitle")),h("div",{className:"mb-6"},h("p",{className:"text-blue-300 text-xs mb-2"},_t("select_language")),h("div",{className:"flex gap-3 justify-center"},h("button",{onClick:function(){_lang="en";setHash("lang","en");},className:"px-4 py-2 rounded-lg text-sm font-semibold "+(_lang==="en"?"bg-white text-gray-800":"bg-white/20 text-white")},"🇬🇧 English"),h("button",{onClick:function(){_lang="es";setHash("lang","es");},className:"px-4 py-2 rounded-lg text-sm font-semibold "+(_lang==="es"?"bg-white text-gray-800":"bg-white/20 text-white")},"🇪🇸 Español"))),h("div",{className:"mb-6"},h("p",{className:"text-blue-300 text-xs mb-2"},_t("league")),h("div",{className:"flex gap-3 justify-center"},h("button",{onClick:function(){setHash("lg","ll");},className:"px-4 py-2 rounded-lg text-sm font-semibold "+((!getHash().lg||getHash().lg==="ll")?"bg-white text-gray-800":"bg-white/20 text-white")},_t("la_liga")),h("button",{onClick:function(){setHash("lg","pl");},className:"px-4 py-2 rounded-lg text-sm font-semibold "+((getHash().lg==="pl")?"bg-white text-gray-800":"bg-white/20 text-white")},_t("premier_league")))),h("button",{onClick:function(){setShowWelcome(false);setHash("tab","home");},className:"mt-4 px-8 py-3 rounded-lg text-base font-bold bg-white",style:{color:N}},_t("start")))):
+h("div",{className:"min-h-screen bg-white"},
+h("div",{className:"py-4 px-5",style:{background:"linear-gradient(135deg,"+N+" 0%,#0f2847 100%)"}},h("div",{className:"flex justify-between items-center",style:{maxWidth:950,margin:"0 auto"}},h("div",null,h("h1",{className:"text-xl font-bold text-white",style:{fontFamily:"Georgia,serif"}},_t("app_title")),h("p",{className:"text-blue-200 text-xs",style:{letterSpacing:"0.5px"}},_t("app_subtitle"))),h("select",{value:_lang,onChange:function(ev){setLang(ev.target.value);},className:"text-sm bg-transparent text-white border border-white/30 rounded px-2 py-1",style:{appearance:"auto"}},h("option",{value:"en",style:{color:"#333"}},"🇬🇧 EN"),h("option",{value:"es",style:{color:"#333"}},"🇪🇸 ES")))),
 h("div",{className:"border-b bg-gray-50 sticky top-0 z-10"},
 h("div",{className:"hidden sm:flex overflow-x-auto"},tabs.map(function(t){return h("button",{key:t.id,onClick:function(){sTab(t.id);},className:"px-3 py-2 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 "+(activeTab===t.id?"border-current":"border-transparent text-gray-500"),style:activeTab===t.id?{color:N}:{}},t.id==="home"?"\uD83C\uDFE0":null,t.id==="home"?" ":null,t.l);})),
 h("div",{className:"sm:hidden flex items-center justify-between px-3 py-2"},
 h("button",{onClick:function(){setMobileMenu(!mobileMenu);},className:"flex items-center gap-2 text-sm font-medium",style:{color:N}},h("span",{style:{fontSize:18}},"\u2630"),tabs.find(function(t){return t.id===activeTab;})?tabs.find(function(t){return t.id===activeTab;}).l:""),
-h("div",{className:"flex gap-1"},tabs.filter(function(t){return t.id!==activeTab;}).slice(0,3).map(function(t){return h("button",{key:t.id,onClick:function(){sTab(t.id);setMobileMenu(false);},className:"text-xs px-2 py-1 rounded text-gray-400"},t.l.split(" ")[0]);}))),
+activeTab!=="home"?h("button",{onClick:function(){sTab("home");setMobileMenu(false);},className:"text-xs px-2 py-1 rounded",style:{color:N}},"🏠"):null),
 mobileMenu?h("div",{className:"sm:hidden border-t bg-white shadow-lg"},tabs.map(function(t){return h("button",{key:t.id,onClick:function(){sTab(t.id);setMobileMenu(false);},className:"block w-full text-left px-4 py-2.5 text-sm "+(activeTab===t.id?"font-bold":"text-gray-600"),style:activeTab===t.id?{color:N,background:"#f0f4ff"}:{}},t.id==="home"?"\uD83C\uDFE0 ":"",t.l);})):null),
 h("div",{style:{maxWidth:950,margin:"0 auto",padding:16}},activeTab==="home"?e(Home,{go:sTab}):null,activeTab==="tracker"?e(Tracker):null,activeTab==="predictions"?e(Predictions):null,activeTab==="badrun"?e(BadRun):null,activeTab==="h2h"?e(H2H):null,activeTab==="explorer"?e(Explorer):null,activeTab==="calc"?e(Calc):null,activeTab==="method"?e(Methodology):null,activeTab==="data"?e(DataSources):null),
 h("div",{className:"text-center text-xs text-gray-400 py-3 border-t"},h("a",{href:"https://talfarouriarte-cloud.github.io/what-money-cant-buy/What%20money%20cant%20buy.pdf",target:"_blank",style:{color:"#999",textDecoration:"underline"}},_t("read_full")),h("span",{className:"mx-2"},"|"),_t("footer_leagues")+" \u2022 2013\u20132026"));}
 
-Promise.all([fetch("data.json").then(function(r){return r.json();}),fetch("i18n.json").then(function(r){return r.json();}),fetch("crests.json").then(function(r){return r.json();}).catch(function(){return {};})]).then(function(res){D=res[0];_T=res[1];CR=res[2]||{};ReactDOM.render(e(App),document.getElementById("root"));}).catch(function(err){document.getElementById("root").innerHTML="<p style='padding:40px;text-align:center;color:red'>Error: "+err.message+"</p>";});
+Promise.all([fetch("data.json").then(function(r){return r.json();}),fetch("i18n.json").then(function(r){return r.json();}),fetch("crests.json").then(function(r){return r.json();}).catch(function(){return {};})]).then(function(res){D=res[0];_T=res[1];CR=res[2]||{};CUR_SN=Object.keys(D.seasons.ll).sort().reverse()[0];ReactDOM.render(e(App),document.getElementById("root"));}).catch(function(err){document.getElementById("root").innerHTML="<p style='padding:40px;text-align:center;color:red'>Error: "+err.message+"</p>";});
 </script>
 </body>
 </html>

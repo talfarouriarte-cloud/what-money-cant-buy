@@ -336,8 +336,8 @@
     "Historial cara a cara con puntos reales vs esperados."
   ],
   "h2h_current_probs": [
-    "Current season match probabilities (25/26)",
-    "Probabilidades de partido en la temporada actual (25/26)"
+    "Current season match probabilities",
+    "Probabilidades de partido en la temporada actual"
   ],
   "home_win": [
     "Home win",
@@ -956,8 +956,8 @@
     "El modelo logit ordenado convierte un ratio de masa salarial en probabilidades de partido. Seleccione dos equipos o establezca valores salariales personalizados para ver cómo las diferencias presupuestarias se traducen en probabilidades de victoria local, empate y victoria visitante. El modelo captura una asimetría fundamental: duplicar tu masa salarial no duplica tu probabilidad de ganar, porque los resultados del fútbol están acotados y los empates absorben parte de la ventaja presupuestaria."
   ],
   "calc_desc": [
-    "Select teams from 25/26 or use the sliders to set custom wage bills. The model converts the wage ratio into match probabilities.",
-    "Seleccione equipos de 25/26 o use los deslizadores para establecer masas salariales personalizadas. El modelo convierte el ratio salarial en probabilidades de partido."
+    "Select teams from the current season or use the sliders to set custom wage bills. The model converts the wage ratio into match probabilities.",
+    "Seleccione equipos de la temporada actual o use los deslizadores para establecer masas salariales personalizadas. El modelo convierte el ratio salarial en probabilidades de partido."
   ],
   "w_short": [
     "W",
@@ -1114,5 +1114,13 @@
   "menu": [
     "Menu",
     "Menú"
+  ],
+  "select_language": [
+    "Language",
+    "Idioma"
+  ],
+  "start": [
+    "Start →",
+    "Empezar →"
   ]
 }
