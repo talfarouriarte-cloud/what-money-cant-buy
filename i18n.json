@@ -1166,5 +1166,13 @@
   "ios_install_alert": [
     "To install: tap the share button (⬆️) in Safari, then \"Add to Home Screen\"",
     "Para instalar: pulsa compartir (⬆️) en Safari, luego \"Añadir a pantalla de inicio\""
+  ],
+  "pull_refresh": [
+    "Pull to refresh",
+    "Desliza para actualizar"
+  ],
+  "release_refresh": [
+    "Release to refresh",
+    "Suelta para actualizar"
   ]
 }
