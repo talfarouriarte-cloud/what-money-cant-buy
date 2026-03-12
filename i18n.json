@@ -120,8 +120,8 @@
     "victorias"
   ],
   "matches_lc": [
-    "matches",
-    "partidos"
+    " matches",
+    " partidos"
   ],
   "league": [
     "League",
@@ -1122,5 +1122,37 @@
   "start": [
     "Start →",
     "Empezar →"
+  ],
+  "tab_history": [
+    "History",
+    "Histórico"
+  ],
+  "info_history": [
+    "Historical distribution of match results across all seasons. Compare how often individual teams win, draw, or lose relative to the league average. Filter by venue and time period.",
+    "Distribución histórica de resultados en todas las temporadas. Compare con qué frecuencia cada equipo gana, empata o pierde en relación con la media de la liga. Filtre por localía y periodo."
+  ],
+  "result_distribution": [
+    "Result distribution",
+    "Distribución de resultados"
+  ],
+  "league_avg": [
+    "League avg",
+    "Media liga"
+  ],
+  "wins": [
+    "Wins",
+    "Victorias"
+  ],
+  "losses": [
+    "Losses",
+    "Derrotas"
+  ],
+  "matches": [
+    "Matches",
+    "Partidos"
+  ],
+  "select_teams": [
+    "Select teams",
+    "Seleccionar equipos"
   ]
 }
