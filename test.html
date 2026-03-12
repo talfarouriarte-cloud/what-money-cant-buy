@@ -32,6 +32,18 @@
 <meta name="twitter:description" content="Payroll-adjusted performance analysis and prediction. La Liga & Premier League · 13 seasons · Updated daily.">
 <meta name="twitter:image" content="https://footballbeyondmoney.uk/og-image.jpeg">
 <meta name="description" content="Payroll-adjusted performance analysis and prediction for La Liga and the Premier League. Ordered logit model + Monte Carlo simulation across 13 seasons.">
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1A3A6B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FBM">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
+<link rel="apple-touch-icon" sizes="120x120" href="icon-120.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="96x96" href="icon-96.png">
+<link rel="icon" type="image/png" sizes="48x48" href="icon-48.png">
 </head>
 <body>
 <div id="root"><p style="padding:40px;text-align:center;color:#888">Loading app...</p></div>
@@ -997,10 +1009,22 @@ h("div",{className:"sm:hidden flex items-center justify-between px-3 py-2"},
 h("button",{onClick:function(){setMobileMenu(!mobileMenu);},className:"flex items-center gap-2 text-sm font-medium",style:{color:N}},h("span",{style:{fontSize:18}},"\u2630"),tabs.find(function(t){return t.id===activeTab;})?tabs.find(function(t){return t.id===activeTab;}).l:""),
 activeTab!=="home"?h("button",{onClick:function(){sTab("home");setMobileMenu(false);},className:"text-xs px-2 py-1 rounded",style:{color:N}},"🏠"):null),
 mobileMenu?h("div",{className:"sm:hidden border-t bg-white shadow-lg"},tabs.map(function(t){return h("button",{key:t.id,onClick:function(){sTab(t.id);setMobileMenu(false);},className:"block w-full text-left px-4 py-2.5 text-sm "+(activeTab===t.id?"font-bold":"text-gray-600"),style:activeTab===t.id?{color:N,background:"#f0f4ff"}:{}},t.id==="home"?"\uD83C\uDFE0 ":"",t.l);})):null),
-h("div",{style:{maxWidth:950,margin:"0 auto",padding:16}},activeTab==="home"?e(Home,{go:sTab}):null,activeTab==="tracker"?e(Tracker):null,activeTab==="predictions"?e(Predictions):null,activeTab==="badrun"?e(BadRun):null,activeTab==="h2h"?e(H2H):null,activeTab==="explorer"?e(Explorer):null,activeTab==="calc"?e(Calc):null,activeTab==="method"?e(Methodology):null,activeTab==="data"?e(DataSources):null,activeTab==="history"?e(History):null),
+h("div",{style:{maxWidth:950,margin:"0 auto",padding:"8px 16px 0 16px"}},h("div",{className:"flex items-center justify-end gap-1",style:{fontSize:13}},h("button",{onClick:function(){var ids=tabs.map(function(t){return t.id;});var i=ids.indexOf(activeTab);sTab(ids[(i-1+ids.length)%ids.length]);},className:"px-2 py-0.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 font-bold",title:"Previous tab"},"‹"),h("span",{className:"text-xs text-gray-400 px-1"},tabs.find(function(t){return t.id===activeTab;})?tabs.find(function(t){return t.id===activeTab;}).l:""),h("button",{onClick:function(){var ids=tabs.map(function(t){return t.id;});var i=ids.indexOf(activeTab);sTab(ids[(i+1)%ids.length]);},className:"px-2 py-0.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 font-bold",title:"Next tab"},"›"))),h("div",{style:{maxWidth:950,margin:"0 auto",padding:16}},activeTab==="home"?e(Home,{go:sTab}):null,activeTab==="tracker"?e(Tracker):null,activeTab==="predictions"?e(Predictions):null,activeTab==="badrun"?e(BadRun):null,activeTab==="h2h"?e(H2H):null,activeTab==="explorer"?e(Explorer):null,activeTab==="calc"?e(Calc):null,activeTab==="method"?e(Methodology):null,activeTab==="data"?e(DataSources):null,activeTab==="history"?e(History):null),
 h("div",{className:"text-center text-xs py-4",style:{backgroundImage:"linear-gradient(135deg,rgba(26,58,107,0.75) 0%,rgba(15,40,71,0.8) 100%),url(header-bg.jpeg)",backgroundSize:"cover",backgroundPosition:"center bottom",color:"#cbd5e1"}},h("a",{href:"https://footballbeyondmoney.uk/What%20money%20cant%20buy.pdf",target:"_blank",style:{color:"#93c5fd",textDecoration:"underline"}},_t("read_full")),h("span",{className:"mx-2"},"|"),_t("footer_leagues")+" \u2022 2013\u20132026"));}
 
 Promise.all([fetch("data.json").then(function(r){return r.json();}),fetch("i18n.json").then(function(r){return r.json();}),fetch("crests.json").then(function(r){return r.json();}).catch(function(){return {};})]).then(function(res){D=res[0];_T=res[1];CR=res[2]||{};CUR_SN=Object.keys(D.seasons.ll).sort().reverse()[0];ReactDOM.render(e(App),document.getElementById("root"));}).catch(function(err){document.getElementById("root").innerHTML="<p style='padding:40px;text-align:center;color:red'>Error: "+err.message+"</p>";});
+</script>
+
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('sw.js').then(function(r){
+      console.log('SW registered:', r.scope);
+    }).catch(function(e){
+      console.log('SW failed:', e);
+    });
+  });
+}
 </script>
 </body>
 </html>
