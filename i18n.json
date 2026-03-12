@@ -1154,5 +1154,17 @@
   "select_teams": [
     "Select teams",
     "Seleccionar equipos"
+  ],
+  "install_app": [
+    "Install app",
+    "Instalar app"
+  ],
+  "ios_install_steps": [
+    "Tap the share button (⬆️) at the bottom of Safari, then select \"Add to Home Screen\"",
+    "Pulsa el botón compartir (⬆️) en Safari, luego selecciona \"Añadir a pantalla de inicio\""
+  ],
+  "ios_install_alert": [
+    "To install: tap the share button (⬆️) in Safari, then \"Add to Home Screen\"",
+    "Para instalar: pulsa compartir (⬆️) en Safari, luego \"Añadir a pantalla de inicio\""
   ]
 }
