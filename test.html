@@ -274,7 +274,7 @@ function BadRun(){
 var hh=getHash();
 var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
 var _2=React.useState(hh.sn||"25/26"),sn=_2[0],sSn0=_2[1];
-var _3=React.useState(hh.br||"Barcelona"),sel=_3[0],sSel0=_3[1];
+var _3=React.useState(hh.br||hh.sel||"Barcelona"),sel=_3[0],sSel0=_3[1];
 var _4=React.useState(hh.rf?Number(hh.rf):0),gwFrom=_4[0],setFrom0=_4[1];
 var _5=React.useState(hh.rt?Number(hh.rt):0),gwTo=_5[0],setTo0=_5[1];
 var _6=React.useState(hh.rq||"5"),qSel=_6[0],setQSel0=_6[1];
@@ -392,8 +392,9 @@ h("tbody",null,lW.map(function(m,i){var d=m[2]-m[3];return h("tr",{key:i,classNa
 function H2H(){
 var hh=getHash();
 var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
-var _2=React.useState(hh.h2a||"Real Madrid"),tA=_2[0],sTA0=_2[1];
-var _3=React.useState(hh.h2b||"At Madrid"),tB=_3[0],sTB0=_3[1];
+var _2=React.useState(hh.h2a||hh.sel||"Real Madrid"),tA=_2[0],sTA0=_2[1];
+var _h2bDef=hh.h2b||(function(){var st=hh.h2a||hh.sel;if(st){var sdd=D.seasons[lg][CUR_SN];if(sdd&&sdd[st]&&sdd[st].r&&sdd[st].r[0])return sdd[st].r[0][0];}return lg==="ll"?"At Madrid":"Man United";}());
+var _3=React.useState(_h2bDef),tB=_3[0],sTB0=_3[1];
 var _h2w=React.useState("all"),h2win=_h2w[0],setH2Win=_h2w[1];
 function sLg(v){sLg0(v);setHash("lg",v);}
 function sTA(v){sTA0(v);setHash("h2a",v);}
@@ -476,7 +477,8 @@ h("tfoot",null,h("tr",{className:"border-t-2 font-bold"},h("td",{className:"py-1
 function Explorer(){
 var hh=getHash();
 var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
-var _2=React.useState(hh.ex?hh.ex.split(","):["Villarreal","At Madrid","Valencia"]),sel=_2[0],sSel=_2[1];
+var _exDef=hh.ex?hh.ex.split(","):hh.sel?[hh.sel.split(",")[0]]:(lg==="ll"?["Villarreal","At Madrid","Valencia"]:["Liverpool","Man City","Man United"]);
+var _2=React.useState(_exDef),sel=_2[0],sSel=_2[1];
 var _5=React.useState(false),showList=_5[0],setShowList=_5[1];
 var _6=React.useState(hh.om||"pts"),mode=_6[0],setMode0=_6[1];
 var _7=React.useState(hh.ow||"all"),win=_7[0],setWin0=_7[1];
@@ -978,7 +980,7 @@ h("div",{className:"sm:hidden flex items-center justify-between px-3 py-2"},
 h("button",{onClick:function(){setMobileMenu(!mobileMenu);},className:"flex items-center gap-2 text-sm font-medium",style:{color:N}},h("span",{style:{fontSize:18}},"\u2630"),tabs.find(function(t){return t.id===activeTab;})?tabs.find(function(t){return t.id===activeTab;}).l:""),
 activeTab!=="home"?h("button",{onClick:function(){sTab("home");setMobileMenu(false);},className:"text-xs px-2 py-1 rounded",style:{color:N}},"🏠"):null),
 mobileMenu?h("div",{className:"sm:hidden border-t bg-white shadow-lg"},tabs.map(function(t){return h("button",{key:t.id,onClick:function(){sTab(t.id);setMobileMenu(false);},className:"block w-full text-left px-4 py-2.5 text-sm "+(activeTab===t.id?"font-bold":"text-gray-600"),style:activeTab===t.id?{color:N,background:"#f0f4ff"}:{}},t.id==="home"?"\uD83C\uDFE0 ":"",t.l);})):null),
-h("div",{style:{maxWidth:950,margin:"0 auto",padding:16}},activeTab==="home"?e(Home,{go:sTab}):null,activeTab==="tracker"?e(Tracker):null,activeTab==="predictions"?e(Predictions):null,activeTab==="badrun"?e(BadRun):null,activeTab==="h2h"?e(H2H):null,activeTab==="explorer"?e(Explorer):null,activeTab==="calc"?e(Calc):null,activeTab==="method"?e(Methodology):null,activeTab==="data"?e(DataSources):null),
+h("div",{style:{maxWidth:950,margin:"0 auto",padding:16}},activeTab==="home"?e(Home,{go:sTab}):null,activeTab==="tracker"?e(Tracker):null,activeTab==="predictions"?e(Predictions):null,activeTab==="badrun"?e(BadRun):null,activeTab==="h2h"?e(H2H):null,activeTab==="explorer"?e(Explorer):null,activeTab==="calc"?e(Calc):null,activeTab==="method"?e(Methodology):null,activeTab==="data"?e(DataSources):null,activeTab==="history"?e(History):null),
 h("div",{className:"text-center text-xs text-gray-400 py-3 border-t"},h("a",{href:"https://talfarouriarte-cloud.github.io/what-money-cant-buy/What%20money%20cant%20buy.pdf",target:"_blank",style:{color:"#999",textDecoration:"underline"}},_t("read_full")),h("span",{className:"mx-2"},"|"),_t("footer_leagues")+" \u2022 2013\u20132026"));}
 
 Promise.all([fetch("data.json").then(function(r){return r.json();}),fetch("i18n.json").then(function(r){return r.json();}),fetch("crests.json").then(function(r){return r.json();}).catch(function(){return {};})]).then(function(res){D=res[0];_T=res[1];CR=res[2]||{};CUR_SN=Object.keys(D.seasons.ll).sort().reverse()[0];ReactDOM.render(e(App),document.getElementById("root"));}).catch(function(err){document.getElementById("root").innerHTML="<p style='padding:40px;text-align:center;color:red'>Error: "+err.message+"</p>";});
