@@ -1214,5 +1214,9 @@
   "home_win_pct": [
     "% home win",
     "% victoria local"
+  ],
+  "next_matchday": [
+    "Next matchday",
+    "Próxima jornada"
   ]
 }
