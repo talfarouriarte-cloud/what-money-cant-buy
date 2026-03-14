@@ -1210,5 +1210,9 @@
   "legend_unplayed": [
     "Unplayed",
     "Por jugar"
+  ],
+  "home_win_pct": [
+    "% home win",
+    "% victoria local"
   ]
 }

@@ -1160,11 +1160,11 @@ var dateStr=md&&md.date?fmtMatchDate(md.date):"";
 tipContent={home:homeT,away:awayT,md:md,probs:probs,date:dateStr};
 }
 return h("td",{key:colT,
-onMouseEnter:function(ev){if(tipContent){setTip(tipContent);setTipPos({x:ev.clientX,y:ev.clientY});}},
-onMouseMove:function(ev){if(tipContent){setTip(tipContent);setTipPos({x:ev.clientX,y:ev.clientY});}},
-onTouchStart:function(ev){if(tipContent&&ev.touches[0]){setTip(tipContent);setTipPos({x:ev.touches[0].clientX,y:ev.touches[0].clientY});}},
-
-onMouseLeave:function(){setTip(null);},
+onClick:function(ev){if(pinned&&pinned.ri===ri&&pinned.ci===ci){setPinned(null);setTip(null);setHRow(-1);setHCol(-1);}else if(tipContent){var rect=ev.currentTarget.getBoundingClientRect();setPinned({ri:ri,ci:ci});setPinPos({cx:rect.left+rect.width/2,cy:rect.top+rect.height/2,x:ev.clientX,y:ev.clientY});setTip(tipContent);setHRow(ri);setHCol(ci);}},
+onMouseEnter:function(ev){if(!pinned){setHRow(ri);setHCol(ci);if(tipContent){setTip(tipContent);setTipPos({x:ev.clientX,y:ev.clientY});}}},
+onMouseMove:function(ev){if(!pinned){setTipPos({x:ev.clientX,y:ev.clientY});}},
+onTouchStart:function(ev){if(tipContent&&ev.touches[0]){var rect2=ev.currentTarget.getBoundingClientRect();if(pinned&&pinned.ri===ri&&pinned.ci===ci){setPinned(null);setTip(null);setHRow(-1);setHCol(-1);}else{setPinned({ri:ri,ci:ci});setPinPos({cx:rect2.left+rect2.width/2,cy:rect2.top+rect2.height/2,x:ev.touches[0].clientX,y:ev.touches[0].clientY});setTip(tipContent);setHRow(ri);setHCol(ci);}}},
+onMouseLeave:function(){if(!pinned){setHRow(-1);setHCol(-1);setTip(null);}},
 className:"grid-cell",style:{width:cellSz,height:cellSz,minWidth:cellSz,background:bg,border:"0.5px solid #f0f0f0",overflow:"visible",textAlign:"center",verticalAlign:"middle",padding:0,cursor:tipContent?"pointer":"default",position:"relative",opacity:(hRow>=0||hCol>=0)&&ri!==hRow&&ci!==hCol?0.25:1,boxShadow:ri===hRow||ci===hCol?"inset 0 0 0 1px rgba(26,58,107,0.15)":"none",transition:"opacity 0.1s"}},
 dotColor?h("div",{style:{width:SCR.ch(8,10,12,14),height:SCR.ch(8,10,12,14),borderRadius:"50%",background:dotColor,margin:"auto",boxShadow:pinned&&pinned.ri===ri&&pinned.ci===ci?"0 0 0 3px white, 0 0 0 5px "+dotColor:"none",position:"relative",zIndex:pinned&&pinned.ri===ri&&pinned.ci===ci?5:1}}):
 label?h("span",{style:{color:"#999",fontSize:Math.max(6,fSz-1),fontWeight:pinned&&pinned.ri===ri&&pinned.ci===ci?"bold":"normal"}},label):null
