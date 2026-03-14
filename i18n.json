@@ -1218,5 +1218,17 @@
   "next_matchday": [
     "Next matchday",
     "Próxima jornada"
+  ],
+  "card_matches": [
+    "Next matchday",
+    "Próxima jornada"
+  ],
+  "closest_matches": [
+    "Closest matches",
+    "Partidos más igualados"
+  ],
+  "most_uneven": [
+    "Biggest favourite",
+    "Mayor favorito"
   ]
 }
