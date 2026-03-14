@@ -1175,9 +1175,9 @@ tipContent={home:homeT,away:awayT,md:md,probs:probs,date:dateStr};
 }
 return h("td",{key:colT,
 onClick:function(ev){if(isTouchDev.current)return;if(!tipContent)return;if(pinned&&pinned.ri===ri&&pinned.ci===ci){setPinned(null);setTip(null);setHRow(-1);setHCol(-1);}else{var rect=ev.currentTarget.getBoundingClientRect();setPinned({ri:ri,ci:ci});setPinPos({cx:rect.left+rect.width/2,cy:rect.top+rect.height/2,x:ev.clientX,y:ev.clientY});setTip(tipContent);setHRow(ri);setHCol(ci);}},
-onMouseEnter:function(ev){if(!pinned&&tipContent){setTip(tipContent);setTipPos({x:ev.clientX,y:ev.clientY});}},
-onMouseMove:function(ev){if(!pinned&&tipContent){setTip(tipContent);setTipPos({x:ev.clientX,y:ev.clientY});}},
-onMouseLeave:function(){if(!pinned){setTip(null);}},
+onMouseEnter:function(ev){if(isTouchDev.current)return;if(!pinned&&tipContent){setTip(tipContent);setTipPos({x:ev.clientX,y:ev.clientY});}},
+onMouseMove:function(ev){if(isTouchDev.current)return;if(!pinned&&tipContent){setTip(tipContent);setTipPos({x:ev.clientX,y:ev.clientY});}},
+onMouseLeave:function(){if(isTouchDev.current)return;if(!pinned){setTip(null);}},
 className:"grid-cell",style:{width:cellSz,height:cellSz,minWidth:cellSz,background:bg,border:"0.5px solid #f0f0f0",overflow:"visible",textAlign:"center",verticalAlign:"middle",padding:0,cursor:tipContent?"pointer":"default",position:"relative",opacity:(hRow>=0||hCol>=0)&&ri!==hRow&&ci!==hCol?0.25:1,boxShadow:ri===hRow||ci===hCol?"inset 0 0 0 1px rgba(26,58,107,0.15)":"none",transition:"opacity 0.1s"}},
 dotColor?h("div",{style:{width:SCR.ch(8,10,12,14),height:SCR.ch(8,10,12,14),borderRadius:"50%",background:dotColor,margin:"auto",boxShadow:pinned&&pinned.ri===ri&&pinned.ci===ci?"0 0 0 3px white, 0 0 0 5px "+dotColor:"none",position:"relative",zIndex:pinned&&pinned.ri===ri&&pinned.ci===ci?5:1}}):
 label?h("span",{style:{color:"#999",fontSize:Math.max(6,fSz-1),fontWeight:pinned&&pinned.ri===ri&&pinned.ci===ci?"bold":"normal"}},label):null
