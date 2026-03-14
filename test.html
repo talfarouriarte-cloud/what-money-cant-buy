@@ -1075,6 +1075,7 @@ var _pn=React.useState(null),pinned=_pn[0],setPinned=_pn[1];
 var _pp=React.useState({x:0,y:0,cx:0,cy:0}),pinPos=_pp[0],setPinPos=_pp[1];
 
 var gridRef=React.useRef(null);
+React.useEffect(function(){var el=gridRef.current;if(!el)return;function noScroll(ev){var t=ev.target;if(t&&t.classList&&t.classList.contains("grid-cell")){ev.preventDefault();}}el.addEventListener("touchmove",noScroll,{passive:false});return function(){el.removeEventListener("touchmove",noScroll);};},[]);
 
 
 
@@ -1125,8 +1126,8 @@ h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},
 e(LP,{lg:lg,set:sLg}),
 h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s+(s===CUR_SN?" ("+_t("current")+")":""));}))),
 h("div",{ref:gridRef,style:{position:"relative",width:"100%"},
-
-onTouchEnd:function(){}},
+onTouchMove:function(ev){if(pinned||!gridRef.current||!ev.touches[0])return;var tx=ev.touches[0].clientX,ty=ev.touches[0].clientY;var tbl=gridRef.current.querySelector("table");if(!tbl)return;var rows=tbl.querySelectorAll("tr");for(var r=1;r<rows.length;r++){var cells=rows[r].querySelectorAll("td");for(var cc2=1;cc2<cells.length;cc2++){var rect=cells[cc2].getBoundingClientRect();if(tx>=rect.left&&tx<=rect.right&&ty>=rect.top&&ty<=rect.bottom){var ri2=r-1,ci2=cc2-1;var td2=tipLookup[ri2]&&tipLookup[ri2][ci2]?tipLookup[ri2][ci2]:null;if(td2){setTip(td2);setTipPos({x:tx,y:ty});}return;}}}},
+onTouchEnd:function(){if(!pinned){setTip(null);}},},
 h("table",{style:{borderCollapse:"collapse",fontSize:fSz}},
 h("thead",null,h("tr",null,
 h("th",{style:{width:cellSz,minWidth:cellSz,textAlign:"center",verticalAlign:"bottom",padding:2}},h("div",{style:{fontSize:SCR.fs(7,8,10,11),color:"#999"}},(_t("away_lbl")||"Away")+" \u2192"),h("div",{style:{fontSize:SCR.fs(6,7,9,10),color:"#bbb"}},(_t("home_lbl")||"Home")+" \u2193")),
