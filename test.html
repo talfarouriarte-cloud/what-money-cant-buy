@@ -1054,7 +1054,26 @@ return{w:pH,d:pD,l:pL};
 // Tooltip state
 var _tt=React.useState(null),tip=_tt[0],setTip=_tt[1];
 var _tp=React.useState({x:0,y:0}),tipPos=_tp[0],setTipPos=_tp[1];
+var _hr=React.useState(-1),hRow=_hr[0],setHRow=_hr[1];
+var _hc=React.useState(-1),hCol=_hc[0],setHCol=_hc[1];
+var gridRef=React.useRef(null);
 
+
+var tipLookup=React.useMemo(function(){
+var lk={};
+teams.forEach(function(rowT,ri){
+lk[ri]={};
+teams.forEach(function(colT,ci){
+if(ri===ci){lk[ri][ci]=null;return;}
+var homeT=ri<ci?rowT:colT;var awayT=ri<ci?colT:rowT;
+var md2=matchData[homeT]&&matchData[homeT][awayT]?matchData[homeT][awayT]:null;
+var probs2=getProbs(homeT,awayT);
+if(md2||probs2){
+var dateStr2=md2&&md2.date?fmtMatchDate(md2.date):"";
+lk[ri][ci]={home:homeT,away:awayT,md:md2,probs:probs2,date:dateStr2};}
+else{lk[ri][ci]=null;}
+});});return lk;
+},[teams,matchData]);
 var gridStats=React.useMemo(function(){
 var played=0,total=0,surprises=[];
 teams.forEach(function(h){teams.forEach(function(a){
@@ -1083,7 +1102,10 @@ e(Info,null,_t("info_matches")||"Season match grid. Teams sorted by payroll. Upp
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},
 e(LP,{lg:lg,set:sLg}),
 h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s+(s===CUR_SN?" ("+_t("current")+")":""));}))),
-h("div",{ref:function(el){if(el)el._gridRef=el;},style:{position:"relative",width:"100%"},onTouchEnd:function(){setTip(null);}},
+h("div",{ref:gridRef,style:{position:"relative",width:"100%"},
+onTouchStart:function(ev){ev.stopPropagation();},
+onTouchMove:function(ev){if(!gridRef.current||!ev.touches[0])return;var tx=ev.touches[0].clientX,ty=ev.touches[0].clientY;var tbl=gridRef.current.querySelector("table");if(!tbl)return;var rows=tbl.querySelectorAll("tr");for(var r=1;r<rows.length;r++){var cells=rows[r].querySelectorAll("td");for(var cc2=1;cc2<cells.length;cc2++){var rect=cells[cc2].getBoundingClientRect();if(tx>=rect.left&&tx<=rect.right&&ty>=rect.top&&ty<=rect.bottom){var ri2=r-1,ci2=cc2-1;setHRow(ri2);setHCol(ci2);var td2=tipLookup[ri2]&&tipLookup[ri2][ci2]?tipLookup[ri2][ci2]:null;if(td2){setTip(td2);setTipPos({x:tx,y:ty});}return;}}}},
+onTouchEnd:function(){setHRow(-1);setHCol(-1);setTip(null);}},
 h("table",{style:{borderCollapse:"collapse",fontSize:fSz}},
 h("thead",null,h("tr",null,
 h("th",{style:{width:cellSz,minWidth:cellSz}}),
@@ -1094,11 +1116,11 @@ h("span",{style:{color:"#aaa",fontSize:Math.max(6,fSz-1)}},cur+sD[t].w)));}))),
 h("tbody",null,teams.map(function(rowT,ri){
 return h("tr",{key:rowT},
 h("td",{style:{padding:"1px 3px",textAlign:"right",verticalAlign:"middle",whiteSpace:"nowrap"},title:rowT},
-h("div",{style:{display:"flex",alignItems:"center",gap:2,justifyContent:"flex-end",opacity:tip&&tip.home!==rowT&&tip.away!==rowT?0.3:1,background:tip&&(tip.home===rowT||tip.away===rowT)?"#e0ecff":"transparent",borderRadius:4,padding:"1px 3px",transition:"opacity 0.1s"}},
+h("div",{style:{display:"flex",alignItems:"center",gap:2,justifyContent:"flex-end",opacity:hRow>=0&&ri!==hRow?0.3:1,background:ri===hRow?"#e0ecff":"transparent",borderRadius:4,padding:"1px 3px",transition:"opacity 0.1s"}},
 h("span",{style:{color:"#aaa",fontSize:Math.max(6,fSz-1)}},cur+sD[rowT].w),
 Cr(rowT,crestSz)||h("span",{style:{fontSize:fSz}},rowT.substring(0,3)))),
 teams.map(function(colT,ci){
-if(ri===ci)return h("td",{key:colT,style:{background:"#f3f4f6",width:cellSz,height:cellSz,opacity:tip&&tip.home!==rowT&&tip.away!==rowT?0.15:1,transition:"opacity 0.1s"}});
+if(ri===ci)return h("td",{key:colT,style:{background:"#f3f4f6",width:cellSz,height:cellSz,opacity:hRow>=0&&ri!==hRow&&ci!==hCol?0.15:1,transition:"opacity 0.1s"}});
 // Upper-right (ri<ci): rowT is home vs colT
 // Lower-left (ri>ci): colT is home vs rowT
 var homeT=ri<ci?rowT:colT;
@@ -1130,7 +1152,7 @@ onMouseMove:function(ev){if(tipContent){setTip(tipContent);setTipPos({x:ev.clien
 onTouchStart:function(ev){if(tipContent&&ev.touches[0]){setTip(tipContent);setTipPos({x:ev.touches[0].clientX,y:ev.touches[0].clientY});}},
 
 onMouseLeave:function(){setTip(null);},
-style:{width:cellSz,height:cellSz,minWidth:cellSz,background:bg,border:tip&&(rowT===tip.home||rowT===tip.away||colT===tip.home||colT===tip.away)?"1px solid #1A3A6B":"1px solid #e5e7eb",textAlign:"center",verticalAlign:"middle",padding:0,cursor:tipContent?"pointer":"default",position:"relative",opacity:tip&&rowT!==tip.home&&rowT!==tip.away&&colT!==tip.home&&colT!==tip.away?0.3:1,transition:"opacity 0.1s"}},
+style:{width:cellSz,height:cellSz,minWidth:cellSz,background:bg,border:ri===hRow||ci===hCol?"1.5px solid #1A3A6B":"1px solid #e5e7eb",textAlign:"center",verticalAlign:"middle",padding:0,cursor:tipContent?"pointer":"default",position:"relative",opacity:hRow>=0&&ri!==hRow&&ci!==hCol?0.25:1,transition:"opacity 0.1s"}},
 dotColor?h("div",{style:{width:SCR.ch(8,10,12,14),height:SCR.ch(8,10,12,14),borderRadius:"50%",background:dotColor,margin:"auto"}}):
 label?h("span",{style:{color:"#999",fontSize:Math.max(6,fSz-1)}},label):null
 );
