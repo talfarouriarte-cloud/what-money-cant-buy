@@ -53,6 +53,7 @@ html,body{overscroll-behavior:none;}
   .min-h-screen{min-height:100dvh!important;}
 }
 table{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+.grid-cell{touch-action:none;}
 </style>
 
 <meta property="og:title" content="Football beyond money">
@@ -1157,7 +1158,7 @@ onMouseMove:function(ev){if(tipContent){setTip(tipContent);setTipPos({x:ev.clien
 onTouchStart:function(ev){if(tipContent&&ev.touches[0]){setTip(tipContent);setTipPos({x:ev.touches[0].clientX,y:ev.touches[0].clientY});}},
 
 onMouseLeave:function(){setTip(null);},
-style:{width:cellSz,height:cellSz,minWidth:cellSz,background:bg,border:"0.5px solid #f0f0f0",textAlign:"center",verticalAlign:"middle",padding:0,cursor:tipContent?"pointer":"default",position:"relative",opacity:(hRow>=0||hCol>=0)&&ri!==hRow&&ci!==hCol?0.25:1,boxShadow:ri===hRow||ci===hCol?"inset 0 0 0 1px rgba(26,58,107,0.15)":"none",transition:"opacity 0.1s"}},
+className:"grid-cell",style:{width:cellSz,height:cellSz,minWidth:cellSz,background:bg,border:"0.5px solid #f0f0f0",textAlign:"center",verticalAlign:"middle",padding:0,cursor:tipContent?"pointer":"default",position:"relative",opacity:(hRow>=0||hCol>=0)&&ri!==hRow&&ci!==hCol?0.25:1,boxShadow:ri===hRow||ci===hCol?"inset 0 0 0 1px rgba(26,58,107,0.15)":"none",transition:"opacity 0.1s"}},
 dotColor?h("div",{style:{width:SCR.ch(8,10,12,14),height:SCR.ch(8,10,12,14),borderRadius:"50%",background:dotColor,margin:"auto",boxShadow:pinned&&pinned.ri===ri&&pinned.ci===ci?"0 0 0 3px white, 0 0 0 5px "+dotColor:"none"}}):
 label?h("span",{style:{color:"#999",fontSize:Math.max(6,fSz-1),fontWeight:pinned&&pinned.ri===ri&&pinned.ci===ci?"bold":"normal"}},label):null
 );
