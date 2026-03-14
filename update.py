@@ -210,13 +210,17 @@ def process_season(filepath, wages, beta, t1, t2, fixtures_calendar=None, lg=Non
     
     # Build matchday lookup from fixture calendar: (home, away) -> official GW
     gw_lookup = {}
+    date_lookup = {}
     if fixtures_calendar and lg:
         cal = fixtures_calendar.get(lg, {}).get('25/26', {}).get('calendar', [])
         for gw_data in cal:
             gw = gw_data.get('gw', 0)
-            for pair in gw_data['matches']:
+            dates = gw_data.get('dates', [])
+            for mi, pair in enumerate(gw_data['matches']):
                 h_fix, a_fix = fix_name(pair[0]), fix_name(pair[1])
                 gw_lookup[(h_fix, a_fix)] = gw
+                if mi < len(dates) and dates[mi]:
+                    date_lookup[(h_fix, a_fix)] = dates[mi][:10]
     
     td = {}
     for t in sorted(set(df['HomeTeam']) | set(df['AwayTeam'])):
@@ -233,12 +237,66 @@ def process_season(filepath, wages, beta, t1, t2, fixtures_calendar=None, lg=Non
         else: hp, ap = 1, 1
         eh, ea = ph * 3 + pd_, pa * 3 + pd_
         official_gw = gw_lookup.get((fix_name(h), fix_name(a)), 0)
+        mdate = date_lookup.get((fix_name(h), fix_name(a)), '')
         for team, pts, exp, opp, ih in [(h,hp,eh,a,1),(a,ap,ea,h,0)]:
             td[team]['cp'] += pts; td[team]['ce'] += exp
             td[team]['pts'].append(td[team]['cp'])
             td[team]['exp'].append(round(td[team]['ce'], 1))
-            td[team]['m'].append([opp, ih, pts, round(exp, 2), official_gw])
+            td[team]['m'].append([opp, ih, pts, round(exp, 2), official_gw, mdate])
     return {t: {'a':d['pts'],'e':d['exp'],'m':d['m'],'w':wages.get(t, wages.get(fix_name(t), 0))} for t,d in td.items()}
+
+
+def recalculate_budget_bands(fixtures_cal, wages, beta, t1, t2, lg, n_sims=10000):
+    """Recalculate budget-only bands using the current fixture calendar order.
+    Uses only wages (no actual results) but respects the real match order."""
+    cal = fixtures_cal.get(lg, {}).get('25/26', {}).get('calendar', [])
+    if not cal:
+        return {}
+    
+    # Build full ordered fixture list per team from calendar
+    team_fix = {}
+    for gw_data in cal:
+        for pair in gw_data['matches']:
+            h, a = fix_name(pair[0]), fix_name(pair[1])
+            if h not in team_fix: team_fix[h] = []
+            if a not in team_fix: team_fix[a] = []
+            team_fix[h].append((a, 1))
+            team_fix[a].append((h, 0))
+    
+    bands = {}
+    for team in team_fix:
+        fixes = team_fix[team]
+        n = len(fixes)
+        if n == 0:
+            continue
+        
+        probs = []
+        for opp, ih in fixes:
+            wh = wages.get(team, 20) if ih else wages.get(opp, wages.get(fix_name(opp), 20))
+            wa = wages.get(opp, wages.get(fix_name(opp), 20)) if ih else wages.get(team, 20)
+            x = np.log2(wa / wh)
+            ph = 1 - expit(t2 + beta * x)
+            pd_ = expit(t2 + beta * x) - expit(t1 + beta * x)
+            if ih:
+                probs.append((ph, pd_))
+            else:
+                probs.append((1 - ph - pd_, pd_))
+        
+        rng = np.random.random((n_sims, n))
+        sim = np.zeros((n_sims, n), dtype=int)
+        for m in range(n):
+            pw, pd = probs[m]
+            for s in range(n_sims):
+                if rng[s,m] < pw: sim[s,m] = 3
+                elif rng[s,m] < pw + pd: sim[s,m] = 1
+        
+        cum = np.cumsum(sim, axis=1)
+        bands[team] = {
+            'p10': [int(np.percentile(cum[:,i], 10)) for i in range(n)],
+            'p50': [int(np.percentile(cum[:,i], 50)) for i in range(n)],
+            'p90': [int(np.percentile(cum[:,i], 90)) for i in range(n)]
+        }
+    return bands
 
 def get_remaining_fixtures(season_data, fixtures_calendar, lg, season='25/26'):
     """Get ordered remaining fixtures per team from fixtures.json calendar.
@@ -514,6 +572,7 @@ def update():
     
     with open(DATA_FILE, 'r') as f:
         data = json.load(f)
+    if 'pre' not in data: data['pre'] = {}
     
     # Load fixture calendar
     fixtures_cal = None
@@ -598,6 +657,16 @@ def update():
             result[team]['r'] = r_list
         data['seasons'][lg]['25/26'] = result
         print(f"  Added remaining fixtures: {len(result[sample].get('r',[]))} per team")
+    
+        # Recalculate budget bands with current calendar order
+        if fixtures_cal:
+            print(f"  Recalculating budget bands with current calendar...")
+            pre_bands = recalculate_budget_bands(fixtures_cal, wages, p['beta'], p['theta1'], p['theta2'], lg)
+            if pre_bands:
+                data['pre'][lg] = pre_bands
+                ps = pre_bands.get(sample, {})
+                if ps:
+                    print(f"  Budget: {sample} p10/p50/p90 = {ps['p10'][-1]}/{ps['p50'][-1]}/{ps['p90'][-1]}")
     
     # Compute position probabilities for all seasons
     print("  Computing position probabilities...")
