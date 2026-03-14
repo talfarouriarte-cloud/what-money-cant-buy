@@ -1172,8 +1172,8 @@
     "Partidos"
   ],
   "info_matches": [
-    "Season match grid. Teams sorted by payroll (highest top-left). Upper-right triangle: row team is home. Lower-left: column team is home. Coloured dots show results (green = home win, yellow = draw, red = away win). Background colour shows model-predicted home win probability as a heatmap (green = likely home win, red = likely away win). Tap a team crest to highlight all their matches.",
-    "Cuadro de partidos de la temporada. Equipos ordenados por presupuesto (mayor arriba-izquierda). Triángulo superior-derecho: equipo fila es local. Triángulo inferior-izquierdo: equipo columna es local. Puntos de color: victoria local (verde), empate (amarillo), derrota local (rojo). El color de fondo muestra la probabilidad predicha de victoria local como mapa de calor. Pulsa un escudo para resaltar todos sus partidos."
+    "Season match grid. Teams sorted by payroll (highest top-left). Each row shows the team's home matches; each column shows their away matches. Coloured dots show results (green = home win, yellow = draw, red = away win). Background heatmap shows predicted home win probability. Slide your finger across to explore.",
+    "Cuadro de partidos de la temporada. Equipos ordenados por presupuesto (mayor arriba-izquierda). Cada fila muestra los partidos como local del equipo; cada columna los de visitante. Puntos de color: victoria local (verde), empate (amarillo), derrota local (rojo). El color de fondo muestra la probabilidad predicha de victoria local. Desliza el dedo para explorar."
   ],
   "played_of": [
     "played of",

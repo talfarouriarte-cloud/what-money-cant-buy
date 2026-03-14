@@ -52,6 +52,7 @@ html,body{overscroll-behavior:none;}
 @supports(height:100dvh){
   .min-h-screen{min-height:100dvh!important;}
 }
+table{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
 </style>
 
 <meta property="og:title" content="Football beyond money">
@@ -1057,6 +1058,7 @@ var _tp=React.useState({x:0,y:0}),tipPos=_tp[0],setTipPos=_tp[1];
 var _hr=React.useState(-1),hRow=_hr[0],setHRow=_hr[1];
 var _hc=React.useState(-1),hCol=_hc[0],setHCol=_hc[1];
 var gridRef=React.useRef(null);
+React.useEffect(function(){var el=gridRef.current;if(!el)return;function h(ev){ev.preventDefault();}el.addEventListener("touchmove",h,{passive:false});return function(){el.removeEventListener("touchmove",h);};},[]);
 
 
 var tipLookup=React.useMemo(function(){
@@ -1065,7 +1067,7 @@ teams.forEach(function(rowT,ri){
 lk[ri]={};
 teams.forEach(function(colT,ci){
 if(ri===ci){lk[ri][ci]=null;return;}
-var homeT=ri<ci?rowT:colT;var awayT=ri<ci?colT:rowT;
+var homeT=rowT;var awayT=colT;
 var md2=matchData[homeT]&&matchData[homeT][awayT]?matchData[homeT][awayT]:null;
 var probs2=getProbs(homeT,awayT);
 if(md2||probs2){
@@ -1116,15 +1118,15 @@ h("span",{style:{color:"#aaa",fontSize:Math.max(6,fSz-1)}},cur+sD[t].w)));}))),
 h("tbody",null,teams.map(function(rowT,ri){
 return h("tr",{key:rowT},
 h("td",{style:{padding:"1px 3px",textAlign:"right",verticalAlign:"middle",whiteSpace:"nowrap"},title:rowT},
-h("div",{style:{display:"flex",alignItems:"center",gap:2,justifyContent:"flex-end",opacity:hRow>=0&&ri!==hRow?0.3:1,background:ri===hRow?"#e0ecff":"transparent",borderRadius:4,padding:"1px 3px",transition:"opacity 0.1s"}},
+h("div",{style:{display:"flex",alignItems:"center",gap:2,justifyContent:"flex-end",opacity:(hRow>=0||hCol>=0)&&ri!==hRow&&ri!==hCol?0.3:1,background:ri===hRow||ri===hCol?"#e0ecff":"transparent",borderRadius:4,padding:"1px 3px",transition:"opacity 0.1s"}},
 h("span",{style:{color:"#aaa",fontSize:Math.max(6,fSz-1)}},cur+sD[rowT].w),
 Cr(rowT,crestSz)||h("span",{style:{fontSize:fSz}},rowT.substring(0,3)))),
 teams.map(function(colT,ci){
 if(ri===ci)return h("td",{key:colT,style:{background:"#f3f4f6",width:cellSz,height:cellSz,opacity:hRow>=0&&ri!==hRow&&ci!==hCol?0.15:1,transition:"opacity 0.1s"}});
 // Upper-right (ri<ci): rowT is home vs colT
 // Lower-left (ri>ci): colT is home vs rowT
-var homeT=ri<ci?rowT:colT;
-var awayT=ri<ci?colT:rowT;
+var homeT=rowT;
+var awayT=colT;
 var md=matchData[homeT]&&matchData[homeT][awayT]?matchData[homeT][awayT]:null;
 var probs=getProbs(homeT,awayT);
 var bg="white";var dotColor=null;var label="";
@@ -1159,7 +1161,7 @@ label?h("span",{style:{color:"#999",fontSize:Math.max(6,fSz-1)}},label):null
 }));
 }))),
 // Floating tooltip
-tip?h("div",{style:{position:"fixed",top:Math.min(tipPos.y-10,window.innerHeight-200),left:Math.min(Math.max(10,tipPos.x-90),window.innerWidth-200),background:"white",border:"2px solid "+(tip.md&&tip.md.played?(tip.md.pts===3?"#2E8B57":tip.md.pts===1?"#d4a017":"#C0392B"):"#ccc"),borderRadius:8,padding:"10px 14px",fontSize:SCR.fs(11,12,14,15),boxShadow:"0 4px 20px rgba(0,0,0,0.15)",zIndex:50,minWidth:180,pointerEvents:"none"}},
+tip?h("div",{style:{position:"fixed",top:Math.min(Math.max(10,tipPos.y-130),window.innerHeight-200),left:Math.min(Math.max(10,tipPos.x-100),window.innerWidth-220),background:"white",border:"2px solid "+(tip.md&&tip.md.played?(tip.md.pts===3?"#2E8B57":tip.md.pts===1?"#d4a017":"#C0392B"):"#ccc"),borderRadius:8,padding:"10px 14px",fontSize:SCR.fs(11,12,14,15),boxShadow:"0 4px 20px rgba(0,0,0,0.15)",zIndex:50,minWidth:180,pointerEvents:"none"}},
 h("div",{className:"font-bold mb-1",style:{display:"flex",alignItems:"center",gap:4}},Cr(tip.home,16)," ",tip.home," vs ",tip.away," ",Cr(tip.away,16)),
 tip.date?h("div",{style:{color:"#888",fontSize:SCR.fs(9,10,11,12),marginBottom:3}},tip.date):null,
 tip.probs?h("div",{style:{display:"flex",gap:8,fontSize:SCR.fs(9,10,11,12)}},
