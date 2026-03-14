@@ -1167,12 +1167,48 @@
     "To install: tap the share button (⬆️) in Safari, then \"Add to Home Screen\"",
     "Para instalar: pulsa compartir (⬆️) en Safari, luego \"Añadir a pantalla de inicio\""
   ],
-  "pull_refresh": [
-    "Pull to refresh",
-    "Desliza para actualizar"
+  "tab_matches": [
+    "Matches",
+    "Partidos"
   ],
-  "release_refresh": [
-    "Release to refresh",
-    "Suelta para actualizar"
+  "info_matches": [
+    "Season match grid. Teams sorted by payroll (highest top-left). Upper-right triangle: row team is home. Lower-left: column team is home. Coloured dots show results (green = home win, yellow = draw, red = away win). Background colour shows model-predicted home win probability as a heatmap (green = likely home win, red = likely away win). Tap a team crest to highlight all their matches.",
+    "Cuadro de partidos de la temporada. Equipos ordenados por presupuesto (mayor arriba-izquierda). Triángulo superior-derecho: equipo fila es local. Triángulo inferior-izquierdo: equipo columna es local. Puntos de color: victoria local (verde), empate (amarillo), derrota local (rojo). El color de fondo muestra la probabilidad predicha de victoria local como mapa de calor. Pulsa un escudo para resaltar todos sus partidos."
+  ],
+  "played_of": [
+    "played of",
+    "jugados de"
+  ],
+  "surprises": [
+    "Biggest surprises",
+    "Mayores sorpresas"
+  ],
+  "legend_home_win": [
+    "Home win",
+    "Victoria local"
+  ],
+  "legend_draw": [
+    "Draw",
+    "Empate"
+  ],
+  "legend_away_win": [
+    "Away win",
+    "Victoria visitante"
+  ],
+  "legend_likely_home": [
+    "Likely home",
+    "Prob. local"
+  ],
+  "legend_likely_away": [
+    "Likely away",
+    "Prob. visitante"
+  ],
+  "legend_played": [
+    "Played",
+    "Jugado"
+  ],
+  "legend_unplayed": [
+    "Unplayed",
+    "Por jugar"
   ]
 }
