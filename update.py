@@ -297,9 +297,16 @@ def recalculate_budget_bands(fixtures_cal, wages, beta, t1, t2, lg, season_data,
                 elif rng[s,m] < pw + pd: sim[s,m] = 1
         
         cum = np.cumsum(sim, axis=1)
+        # Deterministic cumulative expected
+        det_cum = []
+        det_total = 0.0
+        for pw, pd in probs:
+            det_total += pw * 3 + pd
+            det_cum.append(round(det_total, 1))
+        
         bands[team] = {
             'p10': [int(np.percentile(cum[:,i], 10)) for i in range(n)],
-            'p50': [int(np.percentile(cum[:,i], 50)) for i in range(n)],
+            'p50': det_cum,
             'p90': [int(np.percentile(cum[:,i], 90)) for i in range(n)]
         }
     return bands
