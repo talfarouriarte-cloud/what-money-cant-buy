@@ -246,30 +246,35 @@ def process_season(filepath, wages, beta, t1, t2, fixtures_calendar=None, lg=Non
     return {t: {'a':d['pts'],'e':d['exp'],'m':d['m'],'w':wages.get(t, wages.get(fix_name(t), 0))} for t,d in td.items()}
 
 
-def recalculate_budget_bands(fixtures_cal, wages, beta, t1, t2, lg, n_sims=10000):
-    """Recalculate budget-only bands using the current fixture calendar order.
-    Uses only wages (no actual results) but respects the real match order."""
-    cal = fixtures_cal.get(lg, {}).get('25/26', {}).get('calendar', [])
-    if not cal:
+def recalculate_budget_bands(fixtures_cal, wages, beta, t1, t2, lg, season_data, remaining_fixtures, n_sims=10000):
+    """Recalculate budget-only bands using the SAME match order as actual season.
+    For played matches: uses opponent order from season_data.m array.
+    For remaining matches: uses order from remaining_fixtures.
+    This ensures budget line match N is against the same opponent as actual line match N."""
+    if not season_data:
         return {}
     
-    # Build full ordered fixture list per team from calendar
-    team_fix = {}
-    for gw_data in cal:
-        for pair in gw_data['matches']:
-            h, a = fix_name(pair[0]), fix_name(pair[1])
-            if h not in team_fix: team_fix[h] = []
-            if a not in team_fix: team_fix[a] = []
-            team_fix[h].append((a, 1))
-            team_fix[a].append((h, 0))
-    
     bands = {}
-    for team in team_fix:
-        fixes = team_fix[team]
+    for team in season_data:
+        td = season_data[team]
+        if not td.get('m'):
+            continue
+        
+        # Build fixture list: played matches (same order as actual) + remaining
+        fixes = []
+        for m in td['m']:
+            opp = m[0]
+            ih = m[1]
+            fixes.append((opp, ih))
+        
+        for opp, is_home, *_ in remaining_fixtures.get(team, []):
+            fixes.append((opp, is_home))
+        
         n = len(fixes)
         if n == 0:
             continue
         
+        # Compute probabilities for each match
         probs = []
         for opp, ih in fixes:
             wh = wages.get(team, 20) if ih else wages.get(opp, wages.get(fix_name(opp), 20))
@@ -282,6 +287,7 @@ def recalculate_budget_bands(fixtures_cal, wages, beta, t1, t2, lg, n_sims=10000
             else:
                 probs.append((1 - ph - pd_, pd_))
         
+        # Simulate
         rng = np.random.random((n_sims, n))
         sim = np.zeros((n_sims, n), dtype=int)
         for m in range(n):
@@ -661,7 +667,7 @@ def update():
         # Recalculate budget bands with current calendar order
         if fixtures_cal:
             print(f"  Recalculating budget bands with current calendar...")
-            pre_bands = recalculate_budget_bands(fixtures_cal, wages, p['beta'], p['theta1'], p['theta2'], lg)
+            pre_bands = recalculate_budget_bands(fixtures_cal, wages, p['beta'], p['theta1'], p['theta2'], lg, result, remaining)
             if pre_bands:
                 data['pre'][lg] = pre_bands
                 ps = pre_bands.get(sample, {})
