@@ -1,4 +1,4 @@
-var CACHE_NAME = 'fbm-v8';
+var CACHE_NAME = 'fbm-v2';
 var ASSETS = [
   '/',
   '/index.html',
@@ -6,16 +6,8 @@ var ASSETS = [
   '/crests.json',
   '/header-bg.jpeg',
   '/manifest.json',
-  '/icon-48.png',
-  '/icon-72.png',
-  '/icon-96.png',
-  '/icon-120.png',
-  '/icon-144.png',
-  '/icon-152.png',
-  '/icon-180.png',
   '/icon-192.png',
-  '/icon-512.png',
-  '/icon-512-maskable.png'
+  '/icon-512.png'
 ];
 
 self.addEventListener('install', function(e) {
