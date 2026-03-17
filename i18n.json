@@ -676,8 +676,8 @@
     "Leer el análisis completo"
   ],
   "footer_leagues": [
-    "La Liga & Premier League",
-    "La Liga y Premier League"
+    "La Liga, Premier League, Serie A, Bundesliga, Ligue 1 & Eredivisie",
+    "La Liga, Premier League, Serie A, Bundesliga, Ligue 1 y Eredivisie"
   ],
   "meth_title": [
     "Methodology",
@@ -752,8 +752,8 @@
     "Cobertura"
   ],
   "meth_why_wages_p1": [
-    "A football club’s wage bill is the single best publicly available predictor of league performance. Unlike transfer fees (one-off, volatile, and affected by sell-on clauses), wages reflect the sustained commitment to squad quality: they capture not just star signings but also squad depth, youth development, and retention. Across 9,008 matches in La Liga and the Premier League, the log-ratio of wage bills between two teams explains match outcomes better than any other single variable.",
-    "La masa salarial de un club de fútbol es el mejor predictor públicamente disponible del rendimiento en liga. A diferencia de los fichajes (puntuales, volátiles y afectados por cláusulas de reventa), los salarios reflejan el compromiso sostenido con la calidad de la plantilla: capturan no solo los fichajes estrella sino también la profundidad de la plantilla, el desarrollo de canteranos y la retención. En 9.008 partidos de La Liga y la Premier League, el logaritmo del ratio salarial entre dos equipos explica los resultados mejor que cualquier otra variable."
+    "A football club's wage bill is the single best publicly available predictor of league performance. Unlike transfer fees (one-off, volatile, and affected by sell-on clauses), wages reflect the sustained commitment to squad quality: they capture not just star signings but also squad depth, youth development, and retention. Across 26,810 matches in six European leagues, the log-ratio of wage bills between two teams explains match outcomes better than any other single variable.",
+    "La masa salarial de un club de fútbol es el mejor predictor públicamente disponible del rendimiento en liga. A diferencia de los fichajes (puntuales, volátiles y afectados por cláusulas de reventa), los salarios reflejan el compromiso sostenido con la calidad de la plantilla: capturan no solo los fichajes estrella sino también la profundidad de la plantilla, el desarrollo de canteranos y la retención. En 26.810 partidos de seis ligas europeas, el logaritmo del ratio salarial entre dos equipos explica los resultados mejor que cualquier otra variable."
   ],
   "meth_why_wages_p2": [
     "The key insight is that spending does not translate linearly into results. Doubling a wage bill does not double the probability of winning. Returns diminish sharply at the top: the difference between €50M and €100M matters far more than the difference between €250M and €300M. The ordered logit model captures this non-linearity naturally through the logistic function.",
@@ -780,24 +780,24 @@
     "donde σ({z}) = 1/(1+e{−z}) es la función logística. La transformación log{2} implica que cada duplicación del ratio salarial produce un desplazamiento constante en las probabilidades, coincidiendo con la observación empírica de que las ventajas presupuestarias se componen proporcionalmente, no aditivamente."
   ],
   "meth_params_p1": [
-    "Separate models are estimated for each league, reflecting structural differences in competitiveness. The Premier League’s higher {beta} means wage differences translate more strongly into results there than in La Liga:",
-    "Se estiman modelos separados para cada liga, reflejando diferencias estructurales en competitividad. El {beta} más alto de la Premier League significa que las diferencias salariales se traducen más fuertemente en resultados allí que en La Liga:"
+    "Separate models are estimated for each league, reflecting structural differences in competitiveness. For example, the Premier League's higher β means wage differences translate more strongly into results there than in La Liga or Ligue 1:",
+    "Se estiman modelos separados para cada liga, reflejando diferencias estructurales en competitividad. Por ejemplo, el β más alto de la Premier League significa que las diferencias salariales se traducen más fuertemente en resultados allí que en La Liga o Ligue 1:"
   ],
   "meth_results_desc": [
-    ". Complete match-by-match results for La Liga and the Premier League from 2013/14 to present, downloaded and processed daily.",
-    ". Resultados completos partido a partido de La Liga y la Premier League desde 2013/14 hasta el presente, descargados y procesados diariamente."
+    ". Complete match-by-match results for all six leagues from 2013/14 to present, downloaded and processed daily.",
+    ". Resultados completos partido a partido de las seis ligas desde 2013/14 hasta el presente, descargados y procesados diariamente."
   ],
   "meth_wages_desc": [
-    ". Annual gross wage bills per club (in €M for La Liga, £M for the Premier League). Reliable coverage starts in 2013/14. Some promoted teams in 25/26 use estimates where Capology data is not yet available.",
-    ". Masa salarial bruta anual por club (en M€ para La Liga, M£ para la Premier League). La cobertura fiable comienza en 2013/14. Algunos equipos recién ascendidos en 25/26 usan estimaciones donde los datos de Capology aún no están disponibles."
+    ". Annual gross wage bills per club (in €M for continental leagues, £M for the Premier League). Reliable coverage starts in 2013/14. Some promoted teams in 25/26 use estimates where Capology data is not yet available.",
+    ". Masa salarial bruta anual por club (en M€ para las ligas continentales, M£ para la Premier League). La cobertura fiable comienza en 2013/14. Algunos equipos recién ascendidos en 25/26 usan estimaciones donde los datos de Capology aún no están disponibles."
   ],
   "meth_coverage_desc": [
-    ": 9,008 matches, 480+ team-seasons, 13 seasons (2013/14–2025/26). Three team-seasons in La Liga lack wage data (Espanyol 13/14–14/15, Deportivo 14/15) and are excluded from the model estimation.",
-    ": 9.008 partidos, 480+ equipos-temporada, 13 temporadas (2013/14–2025/26). Tres equipos-temporada de La Liga carecen de datos salariales (Espanyol 13/14–14/15, Deportivo 14/15) y se excluyen de la estimación del modelo."
+    ": 26,810 matches, 900+ team-seasons across six leagues, 13 seasons each (2013/14–2025/26). Three team-seasons in La Liga lack wage data (Espanyol 13/14–14/15, Deportivo 14/15) and are excluded from that league's model estimation.",
+    ": 26.810 partidos, 900+ equipos-temporada en seis ligas, 13 temporadas cada una (2013/14–2025/26). Tres equipos-temporada de La Liga carecen de datos salariales (Espanyol 13/14–14/15, Deportivo 14/15) y se excluyen de la estimación del modelo de esa liga."
   ],
   "meth_budget_p1": [
-    "Before the season starts, each of the 380 league matches is assigned win/draw/loss probabilities from the ordered logit model using that season’s wage data. The full season is then simulated 10,000 times. In each simulation, every match is drawn independently from its probability distribution, producing a complete league table. Expected points = the mean across all 10,000 simulations.",
-    "Antes de que empiece la temporada, a cada uno de los 380 partidos de liga se le asignan probabilidades de victoria/empate/derrota del modelo logit ordenado usando los datos salariales de esa temporada. La temporada completa se simula entonces 10.000 veces. En cada simulación, cada partido se sortea independientemente de su distribución de probabilidad, produciendo una tabla de clasificación completa. Puntos esperados = la media de las 10.000 simulaciones."
+    "Before the season starts, each league match is assigned win/draw/loss probabilities from the ordered logit model using that season's wage data. The full season is then simulated 10,000 times. In each simulation, every match is drawn independently from its probability distribution, producing a complete league table. Expected points = the mean across all 10,000 simulations.",
+    "Antes de que empiece la temporada, a cada partido de liga se le asignan probabilidades de victoria/empate/derrota del modelo logit ordenado usando los datos salariales de esa temporada. La temporada completa se simula 10.000 veces. En cada simulación, cada partido se sortea independientemente de su distribución de probabilidad, produciendo una tabla clasificatoria completa. Puntos esperados = la media de las 10.000 simulaciones."
   ],
   "meth_updated_p1": [
     "As the season progresses, played matches are locked at their actual result. Only remaining fixtures are simulated (10,000 times), using the same wage-based probabilities. This produces updated projections (median, p10, p90) that narrow as the season advances. By matchday 38, the projection converges to the actual result.",
@@ -1096,8 +1096,8 @@
     "Cobertura"
   ],
   "data_coverage_text": [
-    "9,008 matches across 480+ team-seasons. Three team-seasons in La Liga lack wage data (Espanyol 13/14–14/15, Deportivo 14/15) and are excluded from model estimation.",
-    "9.008 partidos en 480+ equipos-temporada. Tres equipos-temporada de La Liga carecen de datos salariales (Espanyol 13/14–14/15, Deportivo 14/15) y se excluyen de la estimación del modelo."
+    "26,810 matches across 900+ team-seasons in six European leagues. Three team-seasons in La Liga lack wage data (Espanyol 13/14–14/15, Deportivo 14/15).",
+    "26.810 partidos en 900+ equipos-temporada de seis ligas europeas. Tres equipos-temporada de La Liga carecen de datos salariales (Espanyol 13/14–14/15, Deportivo 14/15)."
   ],
   "data_season_col": [
     "Season",
