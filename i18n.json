@@ -1230,5 +1230,21 @@
   "most_uneven": [
     "Most unbalanced match",
     "Partido más desequilibrado"
+  ],
+  "serie_a": [
+    "Serie A",
+    "Serie A"
+  ],
+  "bundesliga": [
+    "Bundesliga",
+    "Bundesliga"
+  ],
+  "ligue_1": [
+    "Ligue 1",
+    "Ligue 1"
+  ],
+  "eredivisie": [
+    "Eredivisie",
+    "Eredivisie"
   ]
 }

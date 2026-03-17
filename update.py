@@ -19,13 +19,44 @@ from datetime import datetime
 
 PARAMS = {
     'll': {'beta': 0.4719, 'theta1': -1.0404, 'theta2': 0.2081},
-    'pl': {'beta': 0.676,  'theta1': -0.8358, 'theta2': 0.2422}
+    'pl': {'beta': 0.676,  'theta1': -0.8358, 'theta2': 0.2422},
+    'sa': {'beta': 0.5974, 'theta1': -0.8601, 'theta2': 0.3391},
+    'bl': {'beta': 0.4269, 'theta1': -0.8439, 'theta2': 0.2673},
+    'l1': {'beta': 0.4237, 'theta1': -0.8941, 'theta2': 0.2411},
+    'ed': {'beta': 0.61,   'theta1': -0.9014, 'theta2': 0.2038},
 }
 URLS = {
     'll': 'https://www.football-data.co.uk/mmz4281/2526/SP1.csv',
-    'pl': 'https://www.football-data.co.uk/mmz4281/2526/E0.csv'
+    'pl': 'https://www.football-data.co.uk/mmz4281/2526/E0.csv',
+    'sa': 'https://www.football-data.co.uk/mmz4281/2526/I1.csv',
+    'bl': 'https://www.football-data.co.uk/mmz4281/2526/D1.csv',
+    'l1': 'https://www.football-data.co.uk/mmz4281/2526/F1.csv',
+    'ed': 'https://www.football-data.co.uk/mmz4281/2526/N1.csv',
 }
-NAME_MAP = {"Nott'm Forest": "Nottm Forest", "Ath Madrid": "At Madrid"}
+NAME_MAP = {
+    "Nott'm Forest": "Nottm Forest", "Ath Madrid": "At Madrid",
+    # Serie A
+    "Inter": "Inter Milan", "Milan": "AC Milan", "Verona": "Hellas Verona",
+    "Chievo": "Chievo Verona", "Spal": "SPAL",
+    # Bundesliga
+    "Dortmund": "Borussia Dortmund", "Ein Frankfurt": "Eintracht Frankfurt",
+    "FC Koln": "Koln", "M'gladbach": "Monchengladbach",
+    "Leverkusen": "Bayer Leverkusen", "RB Leipzig": "Leipzig",
+    "Fortuna Dusseldorf": "Dusseldorf", "Greuther Furth": "Furth",
+    "Hertha": "Hertha Berlin", "Bielefeld": "Arminia Bielefeld",
+    "Braunschweig": "Braunschweiger",
+    # Ligue 1
+    "Paris SG": "PSG", "St Etienne": "St-Etienne",
+    "Evian Thonon Gaillard": "Evian", "Ajaccio GFCO": "Gazelec Ajaccio",
+    # Eredivisie
+    "PSV Eindhoven": "PSV", "Nijmegen": "NEC Nijmegen",
+    "For Sittard": "Fortuna Sittard", "Waalwijk": "RKC Waalwijk",
+    "Zwolle": "PEC Zwolle", "Almere City": "Almere",
+    "Den Haag": "ADO Den Haag", "Ado Den Haag": "ADO Den Haag",
+    "Venlo": "VVV-Venlo", "VVV Venlo": "VVV-Venlo",
+    "Cambuur": "Cambuur Leeuwarden", "Roda": "Roda JC",
+    "Graafschap": "De Graafschap", "FC Emmen": "Emmen",
+}
 DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(DATA_DIR, 'data.json')
 FIXTURES_FILE = os.path.join(DATA_DIR, 'fixtures.json')
@@ -65,8 +96,76 @@ API_NAME_MAP = {
     "Everton FC": "Everton", "Fulham FC": "Fulham",
     "Liverpool FC": "Liverpool",
     "Tottenham Hotspur": "Tottenham", "Tottenham Hotspur FC": "Tottenham",
+    # Serie A (football-data.org API names)
+    "FC Internazionale Milano": "Inter Milan", "Inter Milano": "Inter Milan",
+    "AC Milan": "AC Milan", "AS Roma": "Roma", "SSC Napoli": "Napoli",
+    "SS Lazio": "Lazio", "Juventus FC": "Juventus",
+    "ACF Fiorentina": "Fiorentina", "Atalanta BC": "Atalanta",
+    "Torino FC": "Torino", "US Sassuolo Calcio": "Sassuolo",
+    "Genoa CFC": "Genoa", "US Salernitana 1919": "Salernitana",
+    "US Lecce": "Lecce", "Empoli FC": "Empoli",
+    "Udinese Calcio": "Udinese", "Bologna FC 1909": "Bologna",
+    "Cagliari Calcio": "Cagliari", "Hellas Verona FC": "Hellas Verona",
+    "Parma Calcio 1913": "Parma", "Venezia FC": "Venezia",
+    "Como 1907": "Como", "Spezia Calcio": "Spezia",
+    "Benevento Calcio": "Benevento", "AC Monza": "Monza",
+    "US Cremonese": "Cremonese", "US Sampdoria": "Sampdoria",
+    "Frosinone Calcio": "Frosinone", "FC Crotone": "Crotone",
+    "Brescia Calcio": "Brescia", "Pisa SC": "Pisa",
+    # Bundesliga
+    "FC Bayern München": "Bayern Munich",
+    "BV Borussia 09 Dortmund": "Borussia Dortmund",
+    "RB Leipzig": "Leipzig", "Bayer 04 Leverkusen": "Bayer Leverkusen",
+    "VfL Wolfsburg": "Wolfsburg", "VfB Stuttgart": "Stuttgart",
+    "Borussia Mönchengladbach": "Monchengladbach",
+    "SC Freiburg": "Freiburg", "TSG 1899 Hoffenheim": "Hoffenheim",
+    "1. FC Union Berlin": "Union Berlin",
+    "SV Werder Bremen": "Werder Bremen",
+    "1. FSV Mainz 05": "Mainz", "FC Augsburg": "Augsburg",
+    "1. FC Köln": "Koln", "1. FC Heidenheim 1846": "Heidenheim",
+    "FC St. Pauli 1910": "St Pauli", "Holstein Kiel": "Holstein Kiel",
+    "VfL Bochum 1848": "Bochum", "Hertha BSC": "Hertha Berlin",
+    "FC Schalke 04": "Schalke 04", "Hannover 96": "Hannover",
+    "Hamburger SV": "Hamburg", "SV Darmstadt 98": "Darmstadt",
+    "Fortuna Düsseldorf": "Dusseldorf", "SC Paderborn 07": "Paderborn",
+    "SpVgg Greuther Fürth": "Furth",
+    "DSC Arminia Bielefeld": "Arminia Bielefeld",
+    "1. FC Nürnberg": "Nurnberg", "FC Ingolstadt 04": "Ingolstadt",
+    "Eintracht Braunschweig": "Braunschweiger",
+    # Ligue 1
+    "Paris Saint-Germain FC": "PSG",
+    "Olympique de Marseille": "Marseille",
+    "Olympique Lyonnais": "Lyon", "AS Monaco FC": "Monaco",
+    "OGC Nice": "Nice", "Stade Rennais FC 1901": "Rennes",
+    "LOSC Lille": "Lille", "Racing Club de Lens": "Lens",
+    "FC Nantes": "Nantes", "Stade Brestois 29": "Brest",
+    "RC Strasbourg Alsace": "Strasbourg",
+    "Montpellier Hérault SC": "Montpellier",
+    "Toulouse FC": "Toulouse", "Angers SCO": "Angers",
+    "Stade de Reims": "Reims", "Le Havre AC": "Le Havre",
+    "FC Lorient": "Lorient", "Clermont Foot 63": "Clermont",
+    "AJ Auxerre": "Auxerre", "FC Metz": "Metz",
+    "AS Saint-Étienne": "St-Etienne",
+    "FC Girondins de Bordeaux": "Bordeaux",
+    "Paris FC": "Paris FC",
+    # Eredivisie
+    "AFC Ajax": "Ajax", "PSV": "PSV",
+    "Feyenoord Rotterdam": "Feyenoord",
+    "AZ": "AZ Alkmaar", "FC Utrecht": "Utrecht",
+    "FC Twente": "Twente", "SC Heerenveen": "Heerenveen",
+    "FC Groningen": "Groningen", "N.E.C.": "NEC Nijmegen",
+    "Sparta Rotterdam": "Sparta Rotterdam",
+    "Fortuna Sittard": "Fortuna Sittard",
+    "Go Ahead Eagles": "Go Ahead Eagles",
+    "Heracles Almelo": "Heracles", "RKC Waalwijk": "RKC Waalwijk",
+    "PEC Zwolle": "PEC Zwolle", "FC Volendam": "Volendam",
+    "Willem II": "Willem II", "NAC Breda": "NAC Breda",
+    "ADO Den Haag": "ADO Den Haag", "FC Emmen": "Emmen",
+    "Excelsior": "Excelsior", "Vitesse": "Vitesse",
+    "SC Cambuur": "Cambuur Leeuwarden",
+    "VVV-Venlo": "VVV-Venlo", "Almere City FC": "Almere",
 }
-COMPETITION_CODES = {'ll': 'PD', 'pl': 'PL'}
+COMPETITION_CODES = {'ll': 'PD', 'pl': 'PL', 'sa': 'SA', 'bl': 'BL1', 'l1': 'FL1', 'ed': 'DED'}
 
 def api_name_to_internal(name):
     """Convert football-data.org team name to our internal name."""
@@ -521,7 +620,7 @@ def compute_all_position_probs(data, fixtures_cal):
     """Compute position probabilities for all seasons."""
     pos = data.get('pos', {})
     
-    for lg in ['ll', 'pl']:
+    for lg in PARAMS:
         if lg not in pos:
             pos[lg] = {}
         p = PARAMS[lg]
@@ -612,7 +711,7 @@ def update():
     
     files = download_current_season()
     
-    for lg in ['ll', 'pl']:
+    for lg in PARAMS:
         if not files[lg]:
             print(f"  Skipping {lg}: download failed")
             continue
@@ -687,7 +786,7 @@ def update():
     
     # Update cumulative with 25/26 partial season
     print("  Updating cumulative with 25/26...")
-    for lg in ['ll', 'pl']:
+    for lg in PARAMS:
         sd = data['seasons'][lg].get('25/26', {})
         for team in sd:
             t = sd[team]
