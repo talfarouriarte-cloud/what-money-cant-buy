@@ -200,6 +200,7 @@ API_NAME_MAP = {
 # These are historical teams relegated beyond the leagues we query
 # IDs from football-data.org are stable
 MANUAL_CRESTS = {
+    # La Liga / Segunda
     "Almeria": "https://crests.football-data.org/267.svg",
     "Cadiz": "https://crests.football-data.org/264.svg",
     "Cardiff": "https://crests.football-data.org/715.svg",
@@ -215,6 +216,71 @@ MANUAL_CRESTS = {
     "Malaga": "https://crests.football-data.org/84.svg",
     "Sp Gijon": "https://crests.football-data.org/296.svg",
     "Valladolid": "https://crests.football-data.org/250.svg",
+    # Serie A historical
+    "Benevento": "https://crests.football-data.org/8554.svg",
+    "Brescia": "https://crests.football-data.org/104.svg",
+    "Carpi": "https://crests.football-data.org/8529.svg",
+    "Catania": "https://crests.football-data.org/110.svg",
+    "Cesena": "https://crests.football-data.org/8543.svg",
+    "Chievo Verona": "https://crests.football-data.org/8530.svg",
+    "Crotone": "https://crests.football-data.org/8535.svg",
+    "Empoli": "https://crests.football-data.org/8534.svg",
+    "Frosinone": "https://crests.football-data.org/8536.svg",
+    "Livorno": "https://crests.football-data.org/8540.svg",
+    "Monza": "https://crests.football-data.org/5911.svg",
+    "Palermo": "https://crests.football-data.org/116.svg",
+    "Pescara": "https://crests.football-data.org/8545.svg",
+    "SPAL": "https://crests.football-data.org/8548.svg",
+    "Salernitana": "https://crests.football-data.org/8549.svg",
+    "Sampdoria": "https://crests.football-data.org/8547.svg",
+    "Spezia": "https://crests.football-data.org/8550.svg",
+    "Venezia": "https://crests.football-data.org/8551.svg",
+    # Bundesliga historical
+    "Arminia Bielefeld": "https://crests.football-data.org/38.svg",
+    "Bochum": "https://crests.football-data.org/36.svg",
+    "Braunschweiger": "https://crests.football-data.org/2.svg",
+    "Darmstadt": "https://crests.football-data.org/55.svg",
+    "Dusseldorf": "https://crests.football-data.org/56.svg",
+    "Furth": "https://crests.football-data.org/58.svg",
+    "Hamburg": "https://crests.football-data.org/7.svg",
+    "Hannover": "https://crests.football-data.org/8.svg",
+    "Hertha Berlin": "https://crests.football-data.org/9.svg",
+    "Holstein Kiel": "https://crests.football-data.org/720.svg",
+    "Ingolstadt": "https://crests.football-data.org/65.svg",
+    "Nurnberg": "https://crests.football-data.org/14.svg",
+    "Paderborn": "https://crests.football-data.org/16.svg",
+    "Schalke 04": "https://crests.football-data.org/6.svg",
+    # Ligue 1 historical
+    "Ajaccio": "https://crests.football-data.org/536.svg",
+    "Amiens": "https://crests.football-data.org/546.svg",
+    "Bastia": "https://crests.football-data.org/547.svg",
+    "Bordeaux": "https://crests.football-data.org/526.svg",
+    "Caen": "https://crests.football-data.org/514.svg",
+    "Clermont": "https://crests.football-data.org/541.svg",
+    "Dijon": "https://crests.football-data.org/548.svg",
+    "Evian": "https://crests.football-data.org/545.svg",
+    "Gazelec Ajaccio": "https://crests.football-data.org/551.svg",
+    "Guingamp": "https://crests.football-data.org/549.svg",
+    "Montpellier": "https://crests.football-data.org/518.svg",
+    "Nancy": "https://crests.football-data.org/544.svg",
+    "Nimes": "https://crests.football-data.org/553.svg",
+    "Reims": "https://crests.football-data.org/547.svg",
+    "Sochaux": "https://crests.football-data.org/554.svg",
+    "St-Etienne": "https://crests.football-data.org/527.svg",
+    "Troyes": "https://crests.football-data.org/555.svg",
+    "Valenciennes": "https://crests.football-data.org/556.svg",
+    # Eredivisie historical
+    "ADO Den Haag": "https://crests.football-data.org/682.svg",
+    "Almere": "https://crests.football-data.org/8264.svg",
+    "Cambuur Leeuwarden": "https://crests.football-data.org/690.svg",
+    "De Graafschap": "https://crests.football-data.org/678.svg",
+    "Dordrecht": "https://crests.football-data.org/683.svg",
+    "Emmen": "https://crests.football-data.org/684.svg",
+    "RKC Waalwijk": "https://crests.football-data.org/685.svg",
+    "Roda JC": "https://crests.football-data.org/671.svg",
+    "VVV-Venlo": "https://crests.football-data.org/679.svg",
+    "Vitesse": "https://crests.football-data.org/676.svg",
+    "Willem II": "https://crests.football-data.org/677.svg",
 }
 
 COMPETITIONS = {
@@ -311,19 +377,10 @@ def main():
     # Try API search for any still missing (free tier allows /v4/teams?name=)
     still_missing = needed - set(crests.keys())
     if still_missing:
-        print(f"\nSearching API for {len(still_missing)} remaining teams...")
+        print(f"\n{len(still_missing)} teams not found in competitions (historical/relegated):")
         for name in sorted(still_missing):
-            try:
-                url = f'https://api.football-data.org/v4/teams?name={name}'
-                r = requests.get(url, headers={'X-Auth-Token': api_key}, timeout=10)
-                if r.status_code == 200:
-                    teams = r.json().get('teams', [])
-                    if teams:
-                        crests[name] = teams[0].get('crest', '')
-                        print(f"  Found: {name} -> {teams[0].get('name', '?')}")
-                time.sleep(6.5)
-            except Exception as ex:
-                print(f"  Error searching {name}: {ex}")
+            print(f"  - {name}")
+        print("Add these to MANUAL_CRESTS if crest URLs are known.")
 
     # Report
     found = set(crests.keys())
