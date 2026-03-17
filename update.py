@@ -786,7 +786,11 @@ def update():
     
     # Update cumulative with 25/26 partial season
     print("  Updating cumulative with 25/26...")
+    if 'cumulative' not in data:
+        data['cumulative'] = {}
     for lg in PARAMS:
+        if lg not in data['cumulative']:
+            data['cumulative'][lg] = {}
         sd = data['seasons'][lg].get('25/26', {})
         for team in sd:
             t = sd[team]

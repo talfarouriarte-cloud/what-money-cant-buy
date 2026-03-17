@@ -186,6 +186,13 @@ API_NAME_MAP = {
     "De Graafschap": "De Graafschap",
     "FC Dordrecht": "Dordrecht",
     "Almere City FC": "Almere",
+    "AC Pisa 1909": "Pisa",
+    "Lille OSC": "Lille",
+    "FC Twente '65": "Twente", "FC Twente": "Twente",
+    "NEC": "NEC Nijmegen",
+    "SBV Excelsior": "Excelsior",
+    "Telstar 1963": "Telstar",
+
     "SBV Telstar": "Telstar",
 }
 
