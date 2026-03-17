@@ -1,9 +1,8 @@
-var CACHE_NAME = 'fbm-v11';
+var CACHE_NAME = 'fbm-v13';
 var ASSETS = [
   '/',
   '/index.html',
   '/i18n.json',
-  '/crests.json',
   '/header-bg.jpeg',
   '/manifest.json',
   '/icon-192.png',
@@ -34,8 +33,8 @@ self.addEventListener('activate', function(e) {
 self.addEventListener('fetch', function(e) {
   var url = new URL(e.request.url);
 
-  // data.json and fixtures.json: network-first (always want fresh data)
-  if (url.pathname.endsWith('data.json') || url.pathname.endsWith('fixtures.json')) {
+  // data.json, fixtures.json, crests.json, i18n.json: network-first (always want fresh data)
+  if (url.pathname.endsWith('data.json') || url.pathname.endsWith('fixtures.json') || url.pathname.endsWith('crests.json') || url.pathname.endsWith('i18n.json')) {
     e.respondWith(
       fetch(e.request).then(function(resp) {
         var clone = resp.clone();
