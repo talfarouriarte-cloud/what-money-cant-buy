@@ -313,6 +313,9 @@ def download_current_season():
 def process_season(filepath, wages, beta, t1, t2, fixtures_calendar=None, lg=None):
     df = pd.read_csv(filepath, encoding='utf-8', on_bad_lines='skip', low_memory=False)
     df = df[['HomeTeam','AwayTeam','FTR']].dropna()
+    # Map CSV names to internal names
+    df['HomeTeam'] = df['HomeTeam'].apply(fix_name)
+    df['AwayTeam'] = df['AwayTeam'].apply(fix_name)
     
     # Build matchday lookup from fixture calendar: (home, away) -> official GW
     gw_lookup = {}
