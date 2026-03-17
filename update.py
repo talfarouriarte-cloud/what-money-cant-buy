@@ -815,7 +815,9 @@ def update():
     
     # Save
     out = json.dumps(data, separators=(',',':'), ensure_ascii=False)
-    for old, new in NAME_MAP.items():
+    # Only apply safe global replacements (no substring conflicts)
+    SAFE_REPLACE = {"Nott'm Forest": "Nottm Forest", "Ath Madrid": "At Madrid"}
+    for old, new in SAFE_REPLACE.items():
         out = out.replace(old, new)
     
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
