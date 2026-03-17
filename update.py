@@ -164,6 +164,13 @@ API_NAME_MAP = {
     "Excelsior": "Excelsior", "Vitesse": "Vitesse",
     "SC Cambuur": "Cambuur Leeuwarden",
     "VVV-Venlo": "VVV-Venlo", "Almere City FC": "Almere",
+    # API fixture names that differ from CSV/internal names
+    "AC Pisa 1909": "Pisa",
+    "Lille OSC": "Lille", "LOSC": "Lille",
+    "FC Twente '65": "Twente",
+    "NEC": "NEC Nijmegen",
+    "SBV Excelsior": "Excelsior",
+    "Telstar 1963": "Telstar",
 }
 COMPETITION_CODES = {'ll': 'PD', 'pl': 'PL', 'sa': 'SA', 'bl': 'BL1', 'l1': 'FL1', 'ed': 'DED'}
 
