@@ -376,7 +376,7 @@ var _2=React.useState(hh.sn||"25/26"),sn=_2[0],sSn0=_2[1];
 var _3=React.useState(hh.br||hh.sel||"Barcelona"),sel=_3[0],sSel0=_3[1];
 var _4=React.useState(hh.rf?Number(hh.rf):0),gwFrom=_4[0],setFrom0=_4[1];
 var _5=React.useState(hh.rt?Number(hh.rt):0),gwTo=_5[0],setTo0=_5[1];
-var _6=React.useState(hh.rq||"5"),qSel=_6[0],setQSel0=_6[1];
+var _6=React.useState(hh.rq||"10"),qSel=_6[0],setQSel0=_6[1];
 function sLg(v){sLg0(v);setHash("lg",v);}
 function sSn(v){sSn0(v);setHash("sn",v);}
 function sSel(v){sSel0(v);setHash("br",v);}
@@ -390,7 +390,7 @@ var sL=React.useMemo(function(){return Object.keys(D.seasons[lg]).sort().reverse
 var sD=D.seasons[lg][sn]||{},tl=React.useMemo(function(){return Object.keys(sD).sort();},[sD]);
 var t=sD[sel];
 React.useEffect(function(){var ts=Object.keys(sD);if(ts.length>0&&!sD[sel])sSel(ts.sort()[0]);},[lg,sn]);
-React.useEffect(function(){if(t&&!hh.rf){var nP=t.a.length;quickSet("5",nP);}},[sel,sn,lg]);
+React.useEffect(function(){if(t){var nP=t.a.length;quickSet("10",nP);}},[sel,sn,lg]);
 if(!t)return h("div",{className:"p-8 text-center text-gray-400"},_t("no_data"));
 var SIG=1.58;
 var modBR=lg;var mod=D.model[modBR];
