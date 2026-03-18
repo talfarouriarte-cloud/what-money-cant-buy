@@ -89,12 +89,12 @@ table{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
 <script>
 var e=React.createElement,RC=Recharts,D=null,CR={},FIX={},CUR_SN="25/26";
 var LEAGUES={
-  ll:{name:"La Liga",cur:"€",flag:"🇪🇸",def:"Barcelona",n:20},
-  pl:{name:"Premier League",cur:"£",flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",def:"Liverpool",n:20},
-  sa:{name:"Serie A",cur:"€",flag:"🇮🇹",def:"Inter Milan",n:20},
-  bl:{name:"Bundesliga",cur:"€",flag:"🇩🇪",def:"Bayern Munich",n:18},
-  l1:{name:"Ligue 1",cur:"€",flag:"🇫🇷",def:"PSG",n:18},
-  ed:{name:"Eredivisie",cur:"€",flag:"🇳🇱",def:"Ajax",n:18}
+  ll:{name:"La Liga",cur:"€",flag:"🇪🇸",def:"Barcelona",n:20,ucl:4,uel:2,ucol:1,rel:3},
+  pl:{name:"Premier League",cur:"£",flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",def:"Liverpool",n:20,ucl:4,uel:2,ucol:1,rel:3},
+  sa:{name:"Serie A",cur:"€",flag:"🇮🇹",def:"Inter Milan",n:20,ucl:4,uel:2,ucol:1,rel:3},
+  bl:{name:"Bundesliga",cur:"€",flag:"🇩🇪",def:"Bayern Munich",n:18,ucl:4,uel:2,ucol:1,rel:3},
+  l1:{name:"Ligue 1",cur:"€",flag:"🇫🇷",def:"PSG",n:18,ucl:4,uel:1,ucol:1,rel:3},
+  ed:{name:"Eredivisie",cur:"€",flag:"🇳🇱",def:"Ajax",n:18,ucl:2,uel:1,ucol:1,rel:3}
 };
 var LG_ORDER=["ll","pl","sa","bl","l1","ed"];
 function _cur(lg){return LEAGUES[lg]?LEAGUES[lg].cur:"€";}
@@ -111,7 +111,7 @@ function setLang(v){_lang=v;setHash("lang",v);hap(15);window.location.reload();}
 function h(t,p){var a=[t,p];for(var i=2;i<arguments.length;i++)a.push(arguments[i]);return e.apply(null,a);}
 function Cr(name,sz){if(!CR[name])return null;return h("img",{src:CR[name],alt:"",onError:function(e){e.target.style.display="none";},style:{width:sz||16,height:sz||16,objectFit:"contain",display:"inline-block",verticalAlign:"middle"}});}
 var Sg=function(z){return 1/(1+Math.exp(-z));};
-function expPos(p){if(!p)return 20;return 1*p["1st"]+3*(p.ucl-p["1st"])+5.5*p.uel+7*p.ucol+12.5*p.mid+19*p.rel;}
+function expPos(p,lg){if(!p)return 20;var L=LEAGUES[lg]||LEAGUES.ll;var nu=L.ucl,ne=L.uel,nc=L.ucol,nr=L.rel,n=L.n;var mU=(1+nu)/2,mE=nu+(1+ne)/2,mC=nu+ne+(1+nc)/2,mM=(nu+ne+nc+1+n-nr)/2,mR=(n-nr+1+n)/2;return mU*p.ucl+mE*p.uel+mC*p.ucol+mM*p.mid+mR*p.rel;}
 function rankByPts(teamsObj){var arr=Object.entries(teamsObj).sort(function(a,b){return b[1]-a[1];});var r={};arr.forEach(function(x,i){r[x[0]]=i+1;});return r;}
 var _thOpen=null,_thSet=null;
 function useTHState(){var s=React.useState(null);_thOpen=s[0];_thSet=s[1];}

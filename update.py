@@ -519,10 +519,28 @@ def run_mc_simulation(season_data, wages, beta, t1, t2, remaining_fixtures, n_si
     return bands
 
 
-def simulate_position_probs(teams, current_pts, match_list, n_sims=10000):
+def simulate_position_probs(teams, current_pts, match_list, n_sims=10000, lg=None):
     """Core joint simulation. Returns {team: {cat: probability}} for position categories."""
     n_teams = len(teams)
     n_matches = len(match_list)
+    
+    # European/relegation spots per league (0-indexed positions)
+    # UCL = Champions League, UEL = Europa League, UCOL = Conference League
+    LEAGUE_SPOTS = {
+        'll': {'ucl': 4, 'uel': 2, 'ucol': 1, 'rel': 3},  # La Liga
+        'pl': {'ucl': 4, 'uel': 2, 'ucol': 1, 'rel': 3},  # Premier League
+        'sa': {'ucl': 4, 'uel': 2, 'ucol': 1, 'rel': 3},  # Serie A
+        'bl': {'ucl': 4, 'uel': 2, 'ucol': 1, 'rel': 3},  # Bundesliga
+        'l1': {'ucl': 4, 'uel': 1, 'ucol': 1, 'rel': 3},  # Ligue 1
+        'ed': {'ucl': 2, 'uel': 1, 'ucol': 1, 'rel': 3},  # Eredivisie
+    }
+    spots = LEAGUE_SPOTS.get(lg, {'ucl': 4, 'uel': 2, 'ucol': 1, 'rel': 3})
+    n_ucl = spots['ucl']
+    n_uel = spots['uel']
+    n_ucol = spots['ucol']
+    n_rel = spots['rel']
+    n_euro = n_ucl + n_uel + n_ucol
+    n_mid = n_teams - n_euro - n_rel
     
     if n_matches == 0:
         # Season complete — use actual final standings
@@ -551,17 +569,17 @@ def simulate_position_probs(teams, current_pts, match_list, n_sims=10000):
             for rank, idx in enumerate(order):
                 pos_counts[idx, rank] += 1
     
-    # Convert to category probabilities
+    # Convert to category probabilities using per-league spots
     result = {}
     for i, team in enumerate(teams):
         counts = pos_counts[i]
         result[team] = {
             "1st": round(float(counts[0] / n_sims), 4),
-            "ucl": round(float(counts[:4].sum() / n_sims), 4),
-            "uel": round(float(counts[4:6].sum() / n_sims), 4),
-            "ucol": round(float(counts[6] / n_sims), 4),
-            "mid": round(float(counts[7:17].sum() / n_sims), 4),
-            "rel": round(float(counts[17:].sum() / n_sims), 4)
+            "ucl": round(float(counts[:n_ucl].sum() / n_sims), 4),
+            "uel": round(float(counts[n_ucl:n_ucl+n_uel].sum() / n_sims), 4),
+            "ucol": round(float(counts[n_ucl+n_uel:n_euro].sum() / n_sims), 4),
+            "mid": round(float(counts[n_euro:n_teams-n_rel].sum() / n_sims), 4),
+            "rel": round(float(counts[n_teams-n_rel:].sum() / n_sims), 4)
         }
     return result
 
@@ -589,15 +607,15 @@ def build_match_list(teams, wages, remaining_fixtures, beta, t1, t2):
     return match_list
 
 
-def simulate_current_positions(season_data, wages, beta, t1, t2, remaining_fixtures, n_sims=10000):
+def simulate_current_positions(season_data, wages, beta, t1, t2, remaining_fixtures, n_sims=10000, lg=None):
     """Current season: lock in played results, simulate remaining."""
     teams = list(season_data.keys())
     current_pts = np.array([season_data[t]['a'][-1] if season_data[t]['a'] else 0 for t in teams])
     match_list = build_match_list(teams, wages, remaining_fixtures, beta, t1, t2)
-    return simulate_position_probs(teams, current_pts, match_list, n_sims)
+    return simulate_position_probs(teams, current_pts, match_list, n_sims, lg=lg)
 
 
-def simulate_preseason_positions(wages, beta, t1, t2, fixture_calendar, n_sims=10000):
+def simulate_preseason_positions(wages, beta, t1, t2, fixture_calendar, n_sims=10000, lg=None):
     """Pre-season: simulate full season from scratch using fixture calendar."""
     teams = list(wages.keys())
     n_teams = len(teams)
@@ -623,7 +641,7 @@ def simulate_preseason_positions(wages, beta, t1, t2, fixture_calendar, n_sims=1
                 pd_ = expit(t2 + beta * x) - expit(t1 + beta * x)
                 match_list.append((h_idx, a_idx, ph, pd_))
     
-    return simulate_position_probs(teams, current_pts, match_list, n_sims)
+    return simulate_position_probs(teams, current_pts, match_list, n_sims, lg=lg)
 
 
 def compute_all_position_probs(data, fixtures_cal):
@@ -662,15 +680,15 @@ def compute_all_position_probs(data, fixtures_cal):
             if sn == '25/26' and fixtures_cal and lg in fixtures_cal and '25/26' in fixtures_cal[lg]:
                 cal_data = fixtures_cal[lg]['25/26']
                 cal_list = cal_data.get('calendar', cal_data) if isinstance(cal_data, dict) else cal_data
-                pre = simulate_preseason_positions(wages, p['beta'], p['theta1'], p['theta2'], cal_list)
+                pre = simulate_preseason_positions(wages, p['beta'], p['theta1'], p['theta2'], cal_list, lg=lg)
             else:
-                pre = simulate_preseason_positions(wages, p['beta'], p['theta1'], p['theta2'], cal)
+                pre = simulate_preseason_positions(wages, p['beta'], p['theta1'], p['theta2'], cal, lg=lg)
             pos[lg][sn]['pre'] = pre
             
             # Current (only for 25/26)
             if sn == '25/26':
                 remaining = get_remaining_fixtures(sd, fixtures_cal, lg)
-                cur = simulate_current_positions(sd, wages, p['beta'], p['theta1'], p['theta2'], remaining)
+                cur = simulate_current_positions(sd, wages, p['beta'], p['theta1'], p['theta2'], remaining, lg=lg)
                 pos[lg][sn]['cur'] = cur
             
             # Log top 3
