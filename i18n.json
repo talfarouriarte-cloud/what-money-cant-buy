@@ -1258,5 +1258,9 @@
   "model_lbl": [
     "Model",
     "Modelo"
+  ],
+  "hide_teams": [
+    "Hide",
+    "Ocultar"
   ]
 }
