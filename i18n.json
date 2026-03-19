@@ -1194,5 +1194,37 @@
   "pull_refresh": [
     "Pull to refresh",
     "Tira para refrescar"
+  ],
+  "last_n_seasons": [
+    "Last",
+    "Últimas"
+  ],
+  "trailing_10": [
+    "Last 10 seasons",
+    "Últimas 10 temporadas"
+  ],
+  "h2h_home_record": [
+    "At home",
+    "En casa"
+  ],
+  "h2h_away_record": [
+    "Away",
+    "Fuera"
+  ],
+  "h2h_record": [
+    "H2H record",
+    "Historial"
+  ],
+  "at_ground": [
+    "At",
+    "En casa de"
+  ],
+  "h2h_at_home": [
+    "at home",
+    "en casa"
+  ],
+  "last_n": [
+    "last",
+    "últimos"
   ]
 }
