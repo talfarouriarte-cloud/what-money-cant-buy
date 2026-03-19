@@ -644,6 +644,165 @@ def simulate_preseason_positions(wages, beta, t1, t2, fixture_calendar, n_sims=1
     return simulate_position_probs(teams, current_pts, match_list, n_sims, lg=lg)
 
 
+def generate_narratives_all(data):
+    """Generate bilingual narrative sentences for each team in 25/26."""
+    LEAGUE_SPOTS = {
+        'll': {'ucl': 4, 'uel': 2, 'ucol': 1, 'rel': 3},
+        'pl': {'ucl': 4, 'uel': 2, 'ucol': 1, 'rel': 3},
+        'sa': {'ucl': 4, 'uel': 2, 'ucol': 1, 'rel': 3},
+        'bl': {'ucl': 4, 'uel': 2, 'ucol': 1, 'rel': 3},
+        'l1': {'ucl': 4, 'uel': 1, 'ucol': 1, 'rel': 3},
+        'ed': {'ucl': 2, 'uel': 1, 'ucol': 1, 'rel': 3},
+    }
+    
+    def ordinal(rank, lang='en'):
+        if lang == 'es': return f"{rank}º"
+        if rank == 1: return "1st"
+        if rank == 2: return "2nd"
+        if rank == 3: return "3rd"
+        return f"{rank}th"
+    
+    def zone_names(rank, n, spots):
+        n_ucl, n_uel, n_ucol, n_rel = spots['ucl'], spots['uel'], spots['ucol'], spots['rel']
+        n_euro = n_ucl + n_uel + n_ucol
+        if rank <= 1: return ('champion', 'campeón', 1)
+        if rank <= n_ucl: return ('Champions League', 'Champions League', 2)
+        if rank <= n_ucl + n_uel: return ('Europa League', 'Europa League', 3)
+        if rank <= n_euro: return ('Conference League', 'Conference League', 4)
+        if rank <= n - n_rel: return ('mid-table', 'mitad de tabla', 5)
+        return ('relegation', 'descenso', 6)
+    
+    result = {}
+    
+    for lg in PARAMS:
+        sd = data['seasons'][lg].get('25/26', {})
+        if not sd: continue
+        
+        pos = data.get('pos', {}).get(lg, {}).get('25/26', {})
+        cur = pos.get('cur', {})
+        if not cur: continue
+        
+        bands = data.get('bands', {}).get(lg, {})
+        pre_b = data.get('pre', {}).get(lg, {})
+        wages = {t: sd[t]['w'] for t in sd if sd[t].get('w', 0) > 0}
+        teams = list(sd.keys())
+        n = len(teams)
+        spots = LEAGUE_SPOTS.get(lg, LEAGUE_SPOTS['ll'])
+        
+        # Projected ranks (current)
+        proj_pts = {}
+        for t in teams:
+            if bands and t in bands and bands[t].get('p50'):
+                proj_pts[t] = bands[t]['p50'][-1]
+            elif sd[t].get('a') and len(sd[t]['a']) > 0:
+                gp = len(sd[t]['a'])
+                proj_pts[t] = round(sd[t]['a'][-1] / gp * 38) if gp > 0 else 0
+        proj_rank = {t: i+1 for i, (t, _) in enumerate(sorted(proj_pts.items(), key=lambda x: -x[1]))}
+        
+        # Pre-season ranks
+        pre_pts = {}
+        for t in teams:
+            if pre_b and t in pre_b and pre_b[t].get('p50'):
+                pre_pts[t] = pre_b[t]['p50'][-1]
+            elif sd[t].get('e') and len(sd[t]['e']) > 0:
+                pre_pts[t] = round(sd[t]['e'][-1])
+        pre_rank = {t: i+1 for i, (t, _) in enumerate(sorted(pre_pts.items(), key=lambda x: -x[1]))}
+        
+        # Wage ranks
+        wage_rank = {t: i+1 for i, (t, _) in enumerate(sorted(wages.items(), key=lambda x: -x[1]))}
+        
+        narr = {}
+        for t in teams:
+            if t not in cur or t not in proj_rank: continue
+            c = cur[t]
+            pr = proj_rank[t]
+            wr = wage_rank.get(t, pr)
+            prer = pre_rank.get(t, pr)
+            
+            ze, zs, zi = zone_names(pr, n, spots)
+            _, _, prezi = zone_names(prer, n, spots)
+            
+            p_ucl = round(c.get('ucl', 0) * 100)
+            p_rel = round(c.get('rel', 0) * 100)
+            p_1st = round(c.get('1st', 0) * 100)
+            
+            rank_diff = prer - pr
+            budget_diff = wr - pr
+            
+            # === ENGLISH ===
+            if zi == 1:
+                en = f"Projected {ordinal(pr)} with a {p_1st}% chance of the title." if p_1st >= 60 else f"Leading the title race — {p_1st}% chance of being crowned champion."
+            elif zi == 2:
+                en = f"Projected {ordinal(pr)}, in Champions League places ({p_ucl}% to qualify)."
+            elif zi == 3:
+                en = f"Projected {ordinal(pr)}, on track for Europa League."
+            elif zi == 4:
+                en = f"Projected {ordinal(pr)}, in Conference League contention."
+            elif zi == 5:
+                en = f"Projected {ordinal(pr)}, set for a mid-table finish."
+            else:
+                en = f"Projected {ordinal(pr)} — facing a {p_rel}% risk of relegation." if p_rel >= 60 else f"Projected {ordinal(pr)}, in the relegation battle ({p_rel}% risk)."
+            
+            if abs(rank_diff) >= 3 and zi < prezi:
+                en += f" A remarkable rise from {ordinal(prer)} pre-season."
+            elif abs(rank_diff) >= 3 and zi > prezi:
+                en += f" A sharp fall from {ordinal(prer)} pre-season expectations."
+            elif budget_diff >= 5:
+                en += f" Punching well above their weight as the {ordinal(wr)}-biggest budget."
+            elif budget_diff <= -5:
+                en += f" Underperforming for the {ordinal(wr)}-biggest budget in the league."
+            elif rank_diff > 0 and zi < prezi:
+                en += f" Improving on pre-season expectations ({ordinal(prer)})."
+            elif rank_diff < 0 and zi > prezi:
+                en += f" Below pre-season expectations ({ordinal(prer)})."
+            elif abs(budget_diff) >= 3 and budget_diff > 0:
+                en += f" Outperforming their {ordinal(wr)}-place budget."
+            elif abs(budget_diff) >= 3 and budget_diff < 0:
+                en += f" Struggling despite the {ordinal(wr)}-biggest wage bill."
+            else:
+                en += f" Performing in line with their {ordinal(wr)}-place budget."
+            
+            # === SPANISH ===
+            if zi == 1:
+                es = f"Previsto {ordinal(pr,'es')} con un {p_1st}% de probabilidad de ganar la liga." if p_1st >= 60 else f"Lidera la carrera por el título — {p_1st}% de ser campeón."
+            elif zi == 2:
+                es = f"Previsto {ordinal(pr,'es')}, en puestos de Champions League ({p_ucl}% de clasificarse)."
+            elif zi == 3:
+                es = f"Previsto {ordinal(pr,'es')}, camino de la Europa League."
+            elif zi == 4:
+                es = f"Previsto {ordinal(pr,'es')}, en pugna por la Conference League."
+            elif zi == 5:
+                es = f"Previsto {ordinal(pr,'es')}, apunta a mitad de tabla."
+            else:
+                es = f"Previsto {ordinal(pr,'es')} — un {p_rel}% de riesgo de descenso." if p_rel >= 60 else f"Previsto {ordinal(pr,'es')}, en lucha por la permanencia ({p_rel}% de riesgo)."
+            
+            if abs(rank_diff) >= 3 and zi < prezi:
+                es += f" Notable ascenso desde el {ordinal(prer,'es')} previsto en pretemporada."
+            elif abs(rank_diff) >= 3 and zi > prezi:
+                es += f" Fuerte caída respecto al {ordinal(prer,'es')} de pretemporada."
+            elif budget_diff >= 5:
+                es += f" Rinde muy por encima de su presupuesto ({ordinal(wr,'es')} en masa salarial)."
+            elif budget_diff <= -5:
+                es += f" Rinde por debajo de su presupuesto ({ordinal(wr,'es')} en masa salarial)."
+            elif rank_diff > 0 and zi < prezi:
+                es += f" Mejorando respecto a las previsiones ({ordinal(prer,'es')} en pretemporada)."
+            elif rank_diff < 0 and zi > prezi:
+                es += f" Por debajo de las expectativas ({ordinal(prer,'es')} en pretemporada)."
+            elif abs(budget_diff) >= 3 and budget_diff > 0:
+                es += f" Supera las expectativas de su presupuesto ({ordinal(wr,'es')})."
+            elif abs(budget_diff) >= 3 and budget_diff < 0:
+                es += f" Flaquea pese a tener el {ordinal(wr,'es')} mayor presupuesto."
+            else:
+                es += f" Rinde acorde a su presupuesto ({ordinal(wr,'es')})."
+            
+            narr[t] = {"en": en, "es": es}
+        
+        result[lg] = narr
+        print(f"    {lg}: {len(narr)} narratives")
+    
+    return result
+
+
 def compute_all_position_probs(data, fixtures_cal):
     """Compute position probabilities for all seasons."""
     pos = data.get('pos', {})
@@ -811,6 +970,10 @@ def update():
     # Compute position probabilities for all seasons
     print("  Computing position probabilities...")
     data['pos'] = compute_all_position_probs(data, fixtures_cal)
+    
+    # Generate narratives for 25/26
+    print("  Generating narratives...")
+    data['narratives'] = generate_narratives_all(data)
     
     # Update cumulative with 25/26 partial season
     print("  Updating cumulative with 25/26...")

@@ -1267,14 +1267,6 @@
     "Pick a team...",
     "Elige un equipo..."
   ],
-  "improving": [
-    "Improving",
-    "Mejorando"
-  ],
-  "declining": [
-    "Declining",
-    "Empeorando"
-  ],
   "on_track": [
     "On track",
     "En línea"
@@ -1283,8 +1275,56 @@
     "with pre-season forecast",
     "con la previsión de pretemporada"
   ],
-  "pre_season_expected": [
-    "pre-season expected",
-    "pretemporada preveía"
+  "zone_champion": [
+    "Champion",
+    "Campeón"
+  ],
+  "zone_ucl": [
+    "Champions League",
+    "Champions League"
+  ],
+  "zone_uel": [
+    "Europa League",
+    "Europa League"
+  ],
+  "zone_conf": [
+    "Conference League",
+    "Conference League"
+  ],
+  "zone_mid": [
+    "Mid-table",
+    "Mitad de tabla"
+  ],
+  "zone_rel": [
+    "Relegation",
+    "Descenso"
+  ],
+  "expected_finish": [
+    "Expected to finish",
+    "Se espera que acabe"
+  ],
+  "in_zone": [
+    "in",
+    "en zona de"
+  ],
+  "improving_from": [
+    "Improving on pre-season forecast",
+    "Mejorando respecto a la previsión de pretemporada"
+  ],
+  "declining_from": [
+    "Below pre-season expectations",
+    "Por debajo de las expectativas de pretemporada"
+  ],
+  "climbing": [
+    "Climbing within",
+    "Subiendo dentro de"
+  ],
+  "slipping": [
+    "Slipping within",
+    "Bajando dentro de"
+  ],
+  "pre_season_short": [
+    "pre-season",
+    "pretemporada"
   ]
 }

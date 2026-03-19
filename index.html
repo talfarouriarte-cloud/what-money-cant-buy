@@ -978,37 +978,22 @@ h("span",{className:"ml-1",style:{fontSize:"0.85em"}},h("span",{style:{color:G,f
 e(Card,{q:_t("card_ahead"),tab:"predictions",tabName:_t("tab_predictions"),go:props.go,color:"#1A56DB"},
 curPos?function(){
 var L=LEAGUES[lg]||LEAGUES.ll;
-// Find best current zone
-var zones=[{k:"1st",v:curPos["1st"],l:_t("pct_champion"),c:"#8B6914",i:1},
-{k:"ucl",v:Math.max(0,curPos.ucl-curPos["1st"]),l:"UCL (2-"+L.ucl+")",c:"#1A56DB",i:2},
-{k:"uel",v:curPos.uel,l:_t("col_uel"),c:"#E67E22",i:3},
-{k:"ucol",v:curPos.ucol,l:_t("col_conf"),c:"#27AE60",i:4},
-{k:"mid",v:curPos.mid,l:_t("col_mid"),c:"#95A5A6",i:5},
-{k:"rel",v:curPos.rel,l:_t("col_rel"),c:"#E74C3C",i:6}];
-var best=zones.reduce(function(a,b){return b.v>a.v?b:a;});
-// Pre-season best zone
-var preZones=prePos?[{k:"1st",v:prePos["1st"],i:1},{k:"ucl",v:Math.max(0,prePos.ucl-prePos["1st"]),i:2},{k:"uel",v:prePos.uel,i:3},{k:"ucol",v:prePos.ucol,i:4},{k:"mid",v:prePos.mid,i:5},{k:"rel",v:prePos.rel,i:6}]:null;
-var preBest=preZones?preZones.reduce(function(a,b){return b.v>a.v?b:a;}):null;
-// Narrative
-var pct=Math.round(best.v*100);
-var line1=h("div",{className:"text-sm"},h("b",{style:{color:best.c}},pct+"% "+best.l));
-// Secondary probabilities
-var notable=zones.filter(function(z){return z.k!==best.k&&z.v>=0.08;}).sort(function(a,b){return b.v-a.v;}).slice(0,2);
-var line2=notable.length>0?h("div",{className:"text-xs text-gray-500 mt-1"},notable.map(function(z,i){return h("span",{key:z.k},i>0?" · ":"",h("span",{style:{color:z.c,fontWeight:600}},Math.round(z.v*100)+"%")," "+z.l);})):null;
-// Trend vs pre-season
-var line3=null;
-if(preBest&&prePos){
-var dir=best.i<preBest.i?"up":best.i>preBest.i?"down":"same";
-if(dir==="up"){
-var fromL=zones.find(function(z){return z.i===preBest.i;});
-line3=h("div",{className:"text-xs mt-2",style:{color:G}},"\u2191 ",_t("improving")||"Improving",": ",_t("pre_season_expected")||"pre-season expected"," ",fromL?fromL.l:""," (",Math.round(preBest.v*100)+"%)");
-}else if(dir==="down"){
-var fromL2=zones.find(function(z){return z.i===preBest.i;});
-line3=h("div",{className:"text-xs mt-2",style:{color:R}},"\u2193 ",_t("declining")||"Declining",": ",_t("pre_season_expected")||"pre-season expected"," ",fromL2?fromL2.l:""," (",Math.round(preBest.v*100)+"%)");
-}else{
-line3=h("div",{className:"text-xs mt-2 text-gray-400"},"\u2192 ",_t("on_track")||"On track"," ",_t("with_pre_season")||"with pre-season forecast");
-}}
-return h("div",null,line1,line2,line3);
+var zones=[{k:"1st",v:curPos["1st"],l:_t("zone_champion")||"Champion",c:"#8B6914",i:1},
+{k:"ucl",v:Math.max(0,curPos.ucl-curPos["1st"]),l:_t("zone_ucl")||"Champions League",c:"#1A56DB",i:2},
+{k:"uel",v:curPos.uel,l:_t("zone_uel")||"Europa League",c:"#E67E22",i:3},
+{k:"ucol",v:curPos.ucol,l:_t("zone_conf")||"Conference League",c:"#27AE60",i:4},
+{k:"mid",v:curPos.mid,l:_t("zone_mid")||"Mid-table",c:"#95A5A6",i:5},
+{k:"rel",v:curPos.rel,l:_t("zone_rel")||"Relegation",c:"#E74C3C",i:6}];
+var narr=D.narratives&&D.narratives[lg]&&D.narratives[lg][team]?D.narratives[lg][team]:null;
+var notable=zones.filter(function(z){return z.v>=0.05;}).sort(function(a,b){return b.v-a.v;}).slice(0,3);
+var badges=h("div",{className:"flex flex-wrap gap-1.5 mt-2"},notable.map(function(z){
+return h("span",{key:z.k,className:"text-xs px-2 py-0.5 rounded-full font-semibold",
+style:{background:z.c+"18",color:z.c,border:"1px solid "+z.c+"30"}},
+Math.round(z.v*100)+"% "+z.l);}));
+return h("div",null,
+narr?h("div",{className:"text-sm",style:{lineHeight:"1.5"}},narr[_lang]||narr.en):
+h("div",{className:"text-sm text-gray-500"},_t("no_projection")),
+badges);
 }():h("div",{className:"text-gray-400 text-sm"},_t("no_projection"))),
 e(Card,{q:_t("card_run"),tab:"badrun",tabName:_t("tab_badrun"),go:props.go,color:l5d>=0?G:R},
 h("div",{className:"text-sm"},_t("last5"),h("b",null,l5a+" "+_t("pts_lc"))," ("+_t("exp_short")+" "+l5e.toFixed(1)+")",h("span",{style:{color:l5d>=0?G:R,fontWeight:700,marginLeft:6}},(l5d>=0?"+":"")+l5d.toFixed(1)),sp5!==null?h("span",{className:"text-gray-400",style:{marginLeft:6}},"\u2022 "+Math.round(sp5)+"% "+_t("of_seasons")):null),
@@ -1393,7 +1378,7 @@ mobileMenu?h("div",{className:"sm:hidden border-t bg-white shadow-lg"},tabs.map(
 h("div",{style:{maxWidth:950,margin:"0 auto",padding:"8px 16px 0 16px"}},h("div",{className:"flex items-center justify-end gap-1",style:{fontSize:13}},h("button",{onClick:function(){var ids=tabs.map(function(t){return t.id;});var i=ids.indexOf(activeTab);sTab(ids[(i-1+ids.length)%ids.length],"right");},className:"px-2 py-0.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 font-bold",title:"Previous tab"},"‹"),tabs.map(function(t,i){return h("span",{key:t.id,style:{display:"inline-block",width:i===_ti?6:5,height:i===_ti?6:5,borderRadius:"50%",background:i===_ti?(i===0?"#D4772C":"#1A3A6B"):(i===0?"#e8c4a0":"#d1d5db"),margin:"0 1.5px",transition:"all .2s"}});}),h("button",{onClick:function(){var ids=tabs.map(function(t){return t.id;});var i=ids.indexOf(activeTab);sTab(ids[(i+1)%ids.length],"left");},className:"px-2 py-0.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 font-bold",title:"Next tab"},"›"))),h("div",{key:slideKey,onTouchStart:onTS,onTouchEnd:onTE,className:slideDir==="left"?"slide-left":slideDir==="right"?"slide-right":"",style:{maxWidth:SCR.ch(950,950,1100,1300),margin:"0 auto",padding:SCR.ch(10,14,18,24)}},activeTab==="home"?e(Home,{go:sTab}):null,activeTab==="tracker"?e(Tracker):null,activeTab==="predictions"?e(Predictions):null,activeTab==="badrun"?e(BadRun):null,activeTab==="h2h"?e(H2H):null,activeTab==="explorer"?e(Explorer):null,activeTab==="calc"?e(Calc):null,activeTab==="method"?e(Methodology):null,activeTab==="data"?e(DataSources):null,activeTab==="history"?e(History):null,activeTab==="matches"?e(MatchGrid):null),
 h("div",{className:"text-center text-xs py-4",style:{backgroundImage:"linear-gradient(135deg,rgba(26,58,107,0.75) 0%,rgba(15,40,71,0.8) 100%),url(header-bg.jpeg)",backgroundSize:"cover",backgroundPosition:"center bottom",color:"#cbd5e1"}},!isStandalone&&(deferredPrompt||isIOS)?h("button",{onClick:deferredPrompt?installApp:function(){alert(_t("ios_install_alert")||"To install: tap the share button (\u2B06\uFE0F) in Safari, then \"Add to Home Screen\"");},className:"mr-2",style:{color:"#93c5fd",textDecoration:"underline",background:"none",border:"none",cursor:"pointer",fontSize:"inherit"}},"📲 "+(_t("install_app")||"Install app")):null,!isStandalone&&(deferredPrompt||isIOS)?h("span",{className:"mx-2"},"|"):null,h("a",{href:"https://footballbeyondmoney.uk/What%20money%20cant%20buy.pdf",target:"_blank",style:{color:"#93c5fd",textDecoration:"underline"}},_t("read_full")),h("span",{className:"mx-2"},"|"),_t("footer_leagues")+" \u2022 2013\u20132026"));}
 
-Promise.all([fetch("data.json").then(function(r){return r.json();}),fetch("i18n.json").then(function(r){return r.json();}),fetch("crests.json?v="+Date.now()).then(function(r){return r.json();}).catch(function(){return {};}),fetch("fixtures.json").then(function(r){return r.ok?r.json():{};}).catch(function(){return {};})]).then(function(res){D=res[0];_T=res[1];CR=res[2]||{};FIX=res[3]||{};CUR_SN=Object.keys(D.seasons.ll).sort().reverse()[0];ReactDOM.render(e(App),document.getElementById("root"));}).catch(function(err){document.getElementById("root").innerHTML="<p style='padding:40px;text-align:center;color:red'>Error: "+err.message+"</p>";});
+Promise.all([fetch("data.json").then(function(r){return r.json();}),fetch("i18n.json").then(function(r){return r.json();}),fetch("crests.json?v="+Date.now()).then(function(r){return r.json();}).catch(function(){return {};}),fetch("fixtures.json").then(function(r){return r.ok?r.json():{};}).catch(function(){return {};}),fetch("narratives.json?v="+Date.now()).then(function(r){return r.ok?r.json():{};}).catch(function(){return {};})]).then(function(res){D=res[0];_T=res[1];CR=res[2]||{};FIX=res[3]||{};NAR=res[4]||{};CUR_SN=Object.keys(D.seasons.ll).sort().reverse()[0];ReactDOM.render(e(App),document.getElementById("root"));}).catch(function(err){document.getElementById("root").innerHTML="<p style='padding:40px;text-align:center;color:red'>Error: "+err.message+"</p>";});
 </script>
 
 <script>

@@ -1,4 +1,4 @@
-var CACHE_NAME = 'fbm-v32';
+var CACHE_NAME = 'fbm-v35';
 var ASSETS = [
   '/',
   '/index.html',
@@ -34,7 +34,7 @@ self.addEventListener('fetch', function(e) {
   var url = new URL(e.request.url);
 
   // Network-first for data files AND main app (ensures updates apply immediately)
-  if (url.pathname.endsWith('data.json') || url.pathname.endsWith('fixtures.json') || url.pathname.endsWith('crests.json') || url.pathname.endsWith('i18n.json') || url.pathname.endsWith('.html') || url.pathname === '/') {
+  if (url.pathname.endsWith('data.json') || url.pathname.endsWith('fixtures.json') || url.pathname.endsWith('crests.json') || url.pathname.endsWith('i18n.json') || url.pathname.endsWith('narratives.json') || url.pathname.endsWith('.html') || url.pathname === '/') {
     e.respondWith(
       fetch(e.request).then(function(resp) {
         var clone = resp.clone();
