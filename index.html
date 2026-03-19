@@ -155,7 +155,7 @@ if(kept.length>0&&kept.length<sel.length){sSel(kept);}
 else if(kept.length===0){/* keep sel unchanged — show "not in league" message */}}},[sn,lg]);
 React.useEffect(function(){setHash("sel",sel.join(","));},[sel]);
 function switchLg(v){sLg(v);var sd2=D.seasons[v]||{};var sKeys=Object.keys(sd2);if(sKeys.length>0){var lastS=sKeys.sort()[sKeys.length-1];sSn(lastS);var t2=Object.keys(sd2[lastS]||{});if(t2.length>0){t2.sort(function(a,b){return(sd2[lastS][b].a[sd2[lastS][b].a.length-1]||0)-(sd2[lastS][a].a[sd2[lastS][a].a.length-1]||0);});sSel([t2[0]]);}}}
-function tog(n){sSel(function(p){if(p.indexOf(n)>=0){if(p.length<=1)return p;return p.filter(function(x){return x!==n;});}if(p.length>=3)return[p[1],p[2],n];return p.concat([n]);});}
+function tog(n){setShowList(false);sSel(function(p){if(p.indexOf(n)>=0){if(p.length<=1)return p;return p.filter(function(x){return x!==n;});}if(p.length>=3)return[p[1],p[2],n];return p.concat([n]);});}
 var pr=sD[sel[0]];
 var nP=pr?pr.a.length:0,iC=sn==="25/26";
 var bd=iC&&!multi&&pr&&D.bands[lg]&&D.bands[lg][sel[0]]?D.bands[lg][sel[0]]:null;
@@ -610,7 +610,7 @@ var p=pval(cumOP,nS*38);return Math.round((cumOP>=0?1:-1)*(100-p*100));}
 var tl=React.useMemo(function(){return Object.entries(teams).map(function(en){
 var nW=getSeasons(en[1]);return{n:en[0],c:getSummary(en[1]),ns:nW.length};}).sort(function(a,b){return b.c-a.c;});},[teams,mode,win]);
 var cols=[B,O,G,R,"#8B5CF6"];
-function tog(n){sSel(function(p){if(p.indexOf(n)>=0)return p.filter(function(x){return x!==n;});if(p.length<5)return p.concat([n]);return p;});}
+function tog(n){setShowList(false);sSel(function(p){if(p.indexOf(n)>=0)return p.filter(function(x){return x!==n;});if(p.length<5)return p.concat([n]);return p;});}
 var cd=React.useMemo(function(){return ss.map(function(s){var r={s:s};sel.forEach(function(t){var td=teams[t];if(!td)return;
 var sd=td[3].find(function(x){return x[0]===s;});if(!sd)return;
 var d=sd[3]-sd[2];
