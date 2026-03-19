@@ -126,6 +126,7 @@ function getHash(){try{var h=window.location.hash.slice(1);var o={};h.split("&")
 function setHash(k,v){var o=getHash();o[k]=v;var parts=[];for(var key in o){if(o[key])parts.push(key+"="+encodeURIComponent(o[key]));}var newHash="#"+parts.join("&");if(window.location.hash!==newHash){window.history.pushState(null,"",newHash);}}
 var initH=getHash();
 if(initH.lang)_lang=initH.lang;
+function SN(sn,sSn,sL,cur){return h("div",{className:"flex items-center gap-1"},h("button",{onClick:function(){var i=sL.indexOf(sn);if(i<sL.length-1)sSn(sL[i+1]);},disabled:sL.indexOf(sn)>=sL.length-1,className:"px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-default",style:{fontSize:14,lineHeight:1}},"\u25C0"),h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s+(cur&&s===CUR_SN?" ("+_t("current")+")":""));})),h("button",{onClick:function(){var i=sL.indexOf(sn);if(i>0)sSn(sL[i-1]);},disabled:sL.indexOf(sn)<=0,className:"px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-default",style:{fontSize:14,lineHeight:1}},"\u25B6"));}
 function LP(p){return h("div",{className:"flex items-center gap-2"},
 h("select",{value:p.lg,onChange:function(ev){p.set(ev.target.value);},
 className:"px-3 py-1.5 rounded-lg text-sm font-semibold border border-gray-200",
@@ -140,7 +141,6 @@ var hh=getHash();
 var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
 var _2=React.useState(hh.sel?hh.sel.split(","):[_defT(hh.lg||"ll")]),sel=_2[0],sSel=_2[1];
 var _3=React.useState(hh.sn||"25/26"),sn=_3[0],sSn0=_3[1];
-var _4=React.useState(false),showList=_4[0],setShowList=_4[1];
 function sLg(v){sLg0(v);setHash("lg",v);}
 function sSn(v){sSn0(v);setHash("sn",v);}
 var sL=React.useMemo(function(){return Object.keys(D.seasons[lg]).sort().reverse();},[lg]);
@@ -155,7 +155,7 @@ if(kept.length>0&&kept.length<sel.length){sSel(kept);}
 else if(kept.length===0){/* keep sel unchanged — show "not in league" message */}}},[sn,lg]);
 React.useEffect(function(){setHash("sel",sel.join(","));},[sel]);
 function switchLg(v){sLg(v);var sd2=D.seasons[v]||{};var sKeys=Object.keys(sd2);if(sKeys.length>0){var lastS=sKeys.sort()[sKeys.length-1];sSn(lastS);var t2=Object.keys(sd2[lastS]||{});if(t2.length>0){t2.sort(function(a,b){return(sd2[lastS][b].a[sd2[lastS][b].a.length-1]||0)-(sd2[lastS][a].a[sd2[lastS][a].a.length-1]||0);});sSel([t2[0]]);}}}
-function tog(n){setShowList(false);sSel(function(p){if(p.indexOf(n)>=0){if(p.length<=1)return p;return p.filter(function(x){return x!==n;});}if(p.length>=3)return[p[1],p[2],n];return p.concat([n]);});}
+function tog(n){sSel(function(p){if(p.indexOf(n)>=0){if(p.length<=1)return p;return p.filter(function(x){return x!==n;});}if(p.length>=3)return[p[1],p[2],n];return p.concat([n]);});}
 var pr=sD[sel[0]];
 var nP=pr?pr.a.length:0,iC=sn==="25/26";
 var bd=iC&&!multi&&pr&&D.bands[lg]&&D.bands[lg][sel[0]]?D.bands[lg][sel[0]]:null;
@@ -301,11 +301,11 @@ st.filter(function(s){return sel.indexOf(s.n)<0;}).map(function(s){return h("opt
 sel.length>1?h("div",{className:"flex gap-1"},sel.slice(1).map(function(t,i){return h("span",{key:t,onClick:function(){tog(t);},
 className:"px-2 py-0.5 rounded-full cursor-pointer text-xs font-semibold",
 style:{background:T[i+1]+"20",color:T[i+1],border:"1px solid "+T[i+1]+"40"}},t+" ×");})):null);
-if(!pr)return h("div",null,h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},e(LP,{lg:lg,set:switchLg}),h("div",{className:"flex items-center gap-1"},h("button",{onClick:function(){var i=sL.indexOf(sn);if(i<sL.length-1)sSn(sL[i+1]);},disabled:sL.indexOf(sn)>=sL.length-1,className:"px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-default",style:{fontSize:14,lineHeight:1}},"◀"),h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s);})),h("button",{onClick:function(){var i=sL.indexOf(sn);if(i>0)sSn(sL[i-1]);},disabled:sL.indexOf(sn)<=0,className:"px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-default",style:{fontSize:14,lineHeight:1}},"▶")),h("select",{value:"",onChange:function(ev){if(ev.target.value)sSel([ev.target.value]);},className:"border rounded px-2 py-1 text-sm text-gray-500"},h("option",{value:""},(_t("pick_team")||"Pick a team...")),st.map(function(s){return h("option",{key:s.n,value:s.n},s.n);}))),h("div",{className:"text-center py-8"},h("div",{className:"text-gray-400 mb-2"},Cr(sel[0],24)),h("div",{className:"text-gray-500 font-semibold"},sel[0]),h("div",{className:"text-gray-400 mt-2"},(_t("not_in_league")||"Not in this league in")+" "+sn),h("div",{className:"mt-4"},h("button",{onClick:function(){sSn(CUR_SN);},className:"px-3 py-1 rounded bg-blue-50 text-blue-600 text-sm font-semibold"},(_t("go_current")||"Go to current season")))));
+if(!pr)return h("div",null,h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},e(LP,{lg:lg,set:switchLg}),SN(sn,sSn,sL,false),h("select",{value:"",onChange:function(ev){if(ev.target.value)sSel([ev.target.value]);},className:"border rounded px-2 py-1 text-sm text-gray-500"},h("option",{value:""},(_t("pick_team")||"Pick a team...")),st.map(function(s){return h("option",{key:s.n,value:s.n},s.n);}))),h("div",{className:"text-center py-8"},h("div",{className:"text-gray-400 mb-2"},Cr(sel[0],24)),h("div",{className:"text-gray-500 font-semibold"},sel[0]),h("div",{className:"text-gray-400 mt-2"},(_t("not_in_league")||"Not in this league in")+" "+sn),h("div",{className:"mt-4"},h("button",{onClick:function(){sSn(CUR_SN);},className:"px-3 py-1 rounded bg-blue-50 text-blue-600 text-sm font-semibold"},(_t("go_current")||"Go to current season")))));
 return h("div",null,
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},
 e(LP,{lg:lg,set:switchLg}),
-h("div",{className:"flex items-center gap-1"},h("button",{onClick:function(){var i=sL.indexOf(sn);if(i<sL.length-1)sSn(sL[i+1]);},disabled:sL.indexOf(sn)>=sL.length-1,className:"px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-default",style:{fontSize:14,lineHeight:1}},"◀"),h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s+(s===CUR_SN?" ("+_t("current")+")":""));})),h("button",{onClick:function(){var i=sL.indexOf(sn);if(i>0)sSn(sL[i-1]);},disabled:sL.indexOf(sn)<=0,className:"px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-default",style:{fontSize:14,lineHeight:1}},"▶"))),
+SN(sn,sSn,sL,true)),
 e(Info,null,_t("info_tracker"),h("br"),h("br"),h("b",null,_t("info_tracker_single_title")),_t("info_tracker_single"),h("br"),h("br"),h("b",null,_t("info_tracker_multi_title")),_t("info_tracker_multi")),
 h("div",null,
 h("div",{className:"mb-3"},teamListEl),
@@ -403,7 +403,7 @@ React.useEffect(function(){if(t){var nP=t.a.length;quickSet("10",nP);}},[sel,sn,
 if(!t)return h("div",null,
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},
 e(LP,{lg:lg,set:function(v){sLg(v);sSn(Object.keys(D.seasons[v]).sort().reverse()[0]);sSel(_defT(v));}}),
-h("div",{className:"flex items-center gap-1"},h("button",{onClick:function(){var i=sL.indexOf(sn);if(i<sL.length-1)sSn(sL[i+1]);},disabled:sL.indexOf(sn)>=sL.length-1,className:"px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-default",style:{fontSize:14,lineHeight:1}},"◀"),h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s);})),h("button",{onClick:function(){var i=sL.indexOf(sn);if(i>0)sSn(sL[i-1]);},disabled:sL.indexOf(sn)<=0,className:"px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-default",style:{fontSize:14,lineHeight:1}},"▶")),
+SN(sn,sSn,sL,false),
 h("select",{value:sel,onChange:function(ev){sSel(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},tl.map(function(t2){return h("option",{key:t2,value:t2},t2);}))),
 h("div",{className:"text-center py-8"},h("div",{className:"text-gray-400 mb-2"},Cr(sel,24)),h("div",{className:"text-gray-500 font-semibold"},sel),h("div",{className:"text-gray-400 mt-2"},(_t("not_in_league")||"Not in this league in")+" "+sn),h("div",{className:"mt-4"},h("button",{onClick:function(){sSn(CUR_SN);},className:"px-3 py-1 rounded bg-blue-50 text-blue-600 text-sm font-semibold"},_t("go_current")||"Go to current season"))));
 var SIG=1.58;
@@ -459,7 +459,7 @@ style:qSel===val?{background:N}:{}},label);};
 return h("div",null,
 e(Info,null,_t("info_badrun"),h("b",null,_t("info_badrun_over_title")),_t("info_badrun_over"),h("b",null,_t("info_badrun_under_title")),_t("info_badrun_under")),
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},e(LP,{lg:lg,set:function(v){sLg(v);sSn(Object.keys(D.seasons[v]).sort().reverse()[0]);sSel(_defT(v));}}),
-h("div",{className:"flex items-center gap-1"},h("button",{onClick:function(){var i=sL.indexOf(sn);if(i<sL.length-1)sSn(sL[i+1]);},disabled:sL.indexOf(sn)>=sL.length-1,className:"px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-default",style:{fontSize:14,lineHeight:1}},"◀"),h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s);})),h("button",{onClick:function(){var i=sL.indexOf(sn);if(i>0)sSn(sL[i-1]);},disabled:sL.indexOf(sn)<=0,className:"px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-default",style:{fontSize:14,lineHeight:1}},"▶"))),
+SN(sn,sSn,sL,false)),
 h("div",{className:"flex flex-wrap gap-4 mb-3"},
 h("select",{value:sel,onChange:function(ev){sSel(ev.target.value);},className:"border rounded px-2 py-1.5 text-base font-semibold flex-shrink-0",style:{minWidth:160}},tl.map(function(x){return h("option",{key:x,value:x},x);}))),
 h("div",{className:"flex flex-wrap items-center gap-3 mb-4"},
@@ -742,7 +742,7 @@ return h("div",null,
 e(Info,null,_t("info_predictions")),
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},
 e(LP,{lg:lg,set:function(v){sLg(v);var sk=Object.keys(D.pos&&D.pos[v]||{}).sort().reverse();if(sk.length>0)sSn(sk[0]);}}),
-h("div",{className:"flex items-center gap-1"},h("button",{onClick:function(){var i=sL.indexOf(sn);if(i<sL.length-1)sSn(sL[i+1]);},disabled:sL.indexOf(sn)>=sL.length-1,className:"px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-default",style:{fontSize:14,lineHeight:1}},"◀"),h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s+(s===CUR_SN?" ("+_t("current")+")":""));})),h("button",{onClick:function(){var i=sL.indexOf(sn);if(i>0)sSn(sL[i-1]);},disabled:sL.indexOf(sn)<=0,className:"px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-default",style:{fontSize:14,lineHeight:1}},"▶"))),
+SN(sn,sSn,sL,true)),
 !posD?h("div",{className:"text-gray-400 text-center py-8"},_t("no_data_season")):
 h("div",{className:"overflow-x-auto rounded-lg",style:{border:"1px solid #e5e7eb"}},h("table",{className:"w-full",style:{minWidth:680,fontSize:11,borderCollapse:"separate",borderSpacing:0}},
 h("thead",null,
@@ -1215,7 +1215,7 @@ return h("div",null,
 e(Info,null,_t("info_matches")||"Season match grid. Teams sorted by payroll. Upper-right triangle: row team is home. Lower-left: column team is home. Green=home win, yellow=draw, red=away win. Unplayed matches show expected home win probability."),
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},
 e(LP,{lg:lg,set:sLg}),
-h("div",{className:"flex items-center gap-1"},h("button",{onClick:function(){var i=sL.indexOf(sn);if(i<sL.length-1)sSn(sL[i+1]);},disabled:sL.indexOf(sn)>=sL.length-1,className:"px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-default",style:{fontSize:14,lineHeight:1}},"◀"),h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s+(s===CUR_SN?" ("+_t("current")+")":""));})),h("button",{onClick:function(){var i=sL.indexOf(sn);if(i>0)sSn(sL[i-1]);},disabled:sL.indexOf(sn)<=0,className:"px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-default",style:{fontSize:14,lineHeight:1}},"▶"))),
+SN(sn,sSn,sL,true)),
 h("div",{ref:gridRef,style:{position:"relative",width:"100%"},
 onTouchStart:function(ev){isTouchDev.current=true;if(!ev.touches[0])return;var t0=ev.touches[0];var startRi=-1,startCi=-1,startTip=null,startRect=null;var tbl0=gridRef.current?gridRef.current.querySelector("table"):null;if(tbl0){var rows0=tbl0.querySelectorAll("tr");for(var r0=1;r0<rows0.length;r0++){var cells0=rows0[r0].querySelectorAll("td");for(var c0=1;c0<cells0.length;c0++){var rc0=cells0[c0].getBoundingClientRect();if(t0.clientX>=rc0.left&&t0.clientX<=rc0.right&&t0.clientY>=rc0.top&&t0.clientY<=rc0.bottom){startRi=r0-1;startCi=c0-1;startTip=tipLookup[startRi]&&tipLookup[startRi][startCi]?tipLookup[startRi][startCi]:null;startRect=rc0;break;}}if(startRi>=0)break;}}touchRef.current={sx:t0.clientX,sy:t0.clientY,st:Date.now(),moved:false,startRi:startRi,startCi:startCi,startTip:startTip,startRect:startRect,lastRi:startRi,lastCi:startCi,lastTip:startTip,lastRect:startRect};},
 onTouchMove:function(ev){if(!gridRef.current||!ev.touches[0])return;ev.preventDefault();var tr=touchRef.current;var tx=ev.touches[0].clientX,ty=ev.touches[0].clientY;if(!tr.moved){var dx=tx-tr.sx,dy=ty-tr.sy;if(Math.abs(dx)+Math.abs(dy)>6){tr.moved=true;setIsDrag(true);setPinned(null);setHRow(-1);setHCol(-1);setTip(null);unpinTime.current=0;}}if(!tr.moved)return;var tbl=gridRef.current.querySelector("table");if(!tbl)return;var rows=tbl.querySelectorAll("tr");for(var r=1;r<rows.length;r++){var cells=rows[r].querySelectorAll("td");for(var cc2=1;cc2<cells.length;cc2++){var rect=cells[cc2].getBoundingClientRect();if(tx>=rect.left&&tx<=rect.right&&ty>=rect.top&&ty<=rect.bottom){var ri2=r-1,ci2=cc2-1;tr.lastRi=ri2;tr.lastCi=ci2;var td2=tipLookup[ri2]&&tipLookup[ri2][ci2]?tipLookup[ri2][ci2]:null;tr.lastTip=td2;tr.lastRect=rect;if(td2){setTip(td2);setTipPos({x:tx,y:ty});setHRow(ri2);setHCol(ci2);}return;}}};},
