@@ -406,16 +406,10 @@ def recalculate_budget_bands(fixtures_cal, wages, beta, t1, t2, lg, season_data,
                 elif rng[s,m] < pw + pd: sim[s,m] = 1
         
         cum = np.cumsum(sim, axis=1)
-        # Deterministic cumulative expected
-        det_cum = []
-        det_total = 0.0
-        for pw, pd in probs:
-            det_total += pw * 3 + pd
-            det_cum.append(round(det_total, 1))
-        
+        # Use MC percentile for p50 (consistent with run_mc_simulation)
         bands[team] = {
             'p10': [int(np.percentile(cum[:,i], 10)) for i in range(n)],
-            'p50': det_cum,
+            'p50': [int(np.percentile(cum[:,i], 50)) for i in range(n)],
             'p90': [int(np.percentile(cum[:,i], 90)) for i in range(n)]
         }
     return bands
@@ -966,6 +960,18 @@ def update():
                 ps = pre_bands.get(sample, {})
                 if ps:
                     print(f"  Budget: {sample} p10/p50/p90 = {ps['p10'][-1]}/{ps['p50'][-1]}/{ps['p90'][-1]}")
+                
+                # DIAGNOSTIC: compare future slopes
+                nP_diag = len(result[sample]['a'])
+                mc_p50 = new_bands[sample]['p50']
+                bu_p50 = pre_bands[sample]['p50']
+                if len(mc_p50) > nP_diag and len(bu_p50) > nP_diag:
+                    mc_slope = mc_p50[-1] - mc_p50[nP_diag - 1]
+                    bu_slope = bu_p50[-1] - bu_p50[nP_diag - 1]
+                    print(f"  DIAG {sample}: played={nP_diag}, MC future slope={mc_slope}, Budget future slope={bu_slope}, diff={mc_slope - bu_slope}")
+                    # Print remaining opponents for verification
+                    rem_opps = [(fix_name(r[0]), 'H' if r[1] else 'A') for r in remaining.get(sample, [])[:5]]
+                    print(f"  DIAG remaining (first 5): {rem_opps}")
     
     # Compute position probabilities for all seasons
     print("  Computing position probabilities...")
