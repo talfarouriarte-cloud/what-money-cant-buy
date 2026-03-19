@@ -534,71 +534,51 @@ h("div",{className:"flex gap-3 mb-5 flex-wrap mt-3"},
 h("div",null,h("label",{className:"text-xs text-gray-500 block mb-1"},_t("team_a")),h("select",{value:tA,onChange:function(ev){sTA(ev.target.value);},className:"border rounded px-2 py-1.5 text-sm",style:{minWidth:150,color:B,fontWeight:600}},allT.map(function(t){return h("option",{key:t,value:t},t);}))),
 h("div",{className:"flex items-end pb-1 text-gray-400 font-bold"},_t("vs")),
 h("div",null,h("label",{className:"text-xs text-gray-500 block mb-1"},_t("team_b")),h("select",{value:tB,onChange:function(ev){sTB(ev.target.value);},className:"border rounded px-2 py-1.5 text-sm",style:{minWidth:150,color:O,fontWeight:600}},allT.map(function(t){return h("option",{key:t,value:t},t);})))),
-// Current season match probabilities
-(function(){var sdC=D.seasons[lg][CUR_SN]||{};var wA=sdC[tA]&&sdC[tA].w?sdC[tA].w:0;var wB=sdC[tB]&&sdC[tB].w?sdC[tB].w:0;
-if(wA<=0||wB<=0)return null;
-var modK=lg;var mod=D.model[modK];if(!mod)return null;
-var xAH=Math.log2(wB/wA),phAH=1-Sg(mod.theta2+mod.beta*xAH),pdAH=Sg(mod.theta2+mod.beta*xAH)-Sg(mod.theta1+mod.beta*xAH),paAH=1-phAH-pdAH;
-var xBH=Math.log2(wA/wB),phBH=1-Sg(mod.theta2+mod.beta*xBH),pdBH=Sg(mod.theta2+mod.beta*xBH)-Sg(mod.theta1+mod.beta*xBH),paBH=1-phBH-pdBH;
+// Unified pill-table: model vs history, by venue
+(function(){var sdC=D.seasons[lg][CUR_SN]||{};var wAv=sdC[tA]&&sdC[tA].w?sdC[tA].w:0;var wBv=sdC[tB]&&sdC[tB].w?sdC[tB].w:0;
+var modK=lg;var mod=D.model[modK];
+var phAH=0,pdAH=0,plAH=0,phBH=0,pdBH=0,plBH=0;
+if(mod&&wAv>0&&wBv>0){
+var xAH=Math.log2(wBv/wAv);phAH=1-Sg(mod.theta2+mod.beta*xAH);pdAH=Sg(mod.theta2+mod.beta*xAH)-Sg(mod.theta1+mod.beta*xAH);plAH=1-phAH-pdAH;
+var xBH=Math.log2(wAv/wBv);phBH=1-Sg(mod.theta2+mod.beta*xBH);pdBH=Sg(mod.theta2+mod.beta*xBH)-Sg(mod.theta1+mod.beta*xBH);plBH=1-phBH-pdBH;}
+var hasModel=mod&&wAv>0&&wBv>0;
+// Pill helper: colored mini-pill
+function pill(val,lbl,clr,bg){return h("div",{className:"flex-1 rounded py-0.5 text-center",style:{background:bg||clr+"15",minWidth:28}},h("div",{className:"font-bold",style:{color:clr,fontSize:13}},val),lbl?h("div",{style:{fontSize:8,color:"#999"}},lbl):null);}
+// Row helper
+function pillRow(label,icon,mW,mD,mL,hW,hD,hL,hN,pts,exp,diff){
+var showMod=hasModel&&typeof mW==="number";
+return h("div",{className:"flex items-center gap-2 py-2",style:{borderBottom:"1px solid #f0f0f0"}},
+h("div",{style:{width:SCR.ch(70,90,110,130),flexShrink:0}},h("div",{className:"text-xs font-semibold flex items-center gap-1"},icon,label)),
+h("div",{className:"flex-1"},
+h("div",{className:"flex gap-1 mb-1 items-center"},
+h("span",{style:{fontSize:8,color:"#bbb",width:SCR.ch(28,32,38,42),flexShrink:0}},_t("model_lbl")),
+showMod?pill(mW+"%",_t("w_short"),G):pill("—",_t("w_short"),"#ccc","#f5f5f5"),
+showMod?pill(mD+"%",_t("d_short"),"#888","#88888812"):pill("—",_t("d_short"),"#ccc","#f5f5f5"),
+showMod?pill(mL+"%",_t("l_short"),R):pill("—",_t("l_short"),"#ccc","#f5f5f5")),
+h("div",{className:"flex gap-1 items-center"},
+h("span",{style:{fontSize:8,color:"#bbb",width:SCR.ch(28,32,38,42),flexShrink:0}},_t("h2h_record")),
+pill(hW,_t("w_short"),G,G+"15"),
+pill(hD,_t("d_short"),"#888","#88888812"),
+pill(hL,_t("l_short"),R,R+"15"))),
+h("div",{style:{width:SCR.ch(70,80,100,110),flexShrink:0,textAlign:"right"}},
+h("div",{className:"text-xs"},h("b",{style:{color:B}},pts),h("span",{style:{color:"#aaa"}}," / "+exp)),
+h("div",{className:"text-xs font-bold",style:{color:diff>=0?G:R}},(diff>=0?"+":"")+diff.toFixed(1)),
+h("div",{style:{fontSize:9,color:"#bbb"}},hN+" "+_t("matches_lc"))));}
 return h("div",{className:"rounded-lg p-3 mb-4",style:{background:"#f8f9fa",border:"1px solid #e9ecef"}},
-h("div",{className:"text-xs text-gray-500 mb-2 text-center"},_t("h2h_current_probs")),
-h("div",{className:"grid grid-cols-2 gap-3"},
-h("div",null,h("div",{className:"text-xs font-semibold text-center mb-1"},Cr(tA,16)," ",tA," ",h("span",{className:"text-gray-400"},_t("home_lc"))),
-h("div",{className:"flex gap-1 text-center"},
-h("div",{className:"flex-1 rounded py-1",style:{background:G+"18"}},h("div",{className:"font-bold text-sm",style:{color:G}},Math.round(phAH*100)+"%"),h("div",{style:{fontSize:9,color:"#888"}},_t("w_short"))),
-h("div",{className:"flex-1 rounded py-1",style:{background:"#88888812"}},h("div",{className:"font-bold text-sm",style:{color:"#888"}},Math.round(pdAH*100)+"%"),h("div",{style:{fontSize:9,color:"#888"}},_t("d_short"))),
-h("div",{className:"flex-1 rounded py-1",style:{background:R+"18"}},h("div",{className:"font-bold text-sm",style:{color:R}},Math.round(paAH*100)+"%"),h("div",{style:{fontSize:9,color:"#888"}},_t("l_short"))))),
-h("div",null,h("div",{className:"text-xs font-semibold text-center mb-1"},Cr(tB,16)," ",tB," ",h("span",{className:"text-gray-400"},_t("home_lc"))),
-h("div",{className:"flex gap-1 text-center"},
-h("div",{className:"flex-1 rounded py-1",style:{background:G+"18"}},h("div",{className:"font-bold text-sm",style:{color:G}},Math.round(phBH*100)+"%"),h("div",{style:{fontSize:9,color:"#888"}},_t("w_short"))),
-h("div",{className:"flex-1 rounded py-1",style:{background:"#88888812"}},h("div",{className:"font-bold text-sm",style:{color:"#888"}},Math.round(pdBH*100)+"%"),h("div",{style:{fontSize:9,color:"#888"}},_t("d_short"))),
-h("div",{className:"flex-1 rounded py-1",style:{background:R+"18"}},h("div",{className:"font-bold text-sm",style:{color:R}},Math.round(paBH*100)+"%"),h("div",{style:{fontSize:9,color:"#888"}},_t("l_short")))))));})(),
+h("div",{className:"text-xs mb-3 flex items-center gap-1 flex-wrap"},
+Cr(tA,14),h("b",{style:{color:B}},tA)," ",_t("vs")," ",Cr(tB,14),h("b",{style:{color:O}},tB),
+h("span",{style:{color:"#999"}}," — "+(_t("h2h_from_perspective"))+" "),h("span",{style:{color:B,fontWeight:600}},tA)),
+sm.hmA.n>0?pillRow((_lang==="es"?"En casa "+tA:tA+" home"),"\uD83C\uDFE0",
+Math.round(phAH*100),Math.round(pdAH*100),Math.round(plAH*100),
+sm.hmA.w,sm.hmA.d,sm.hmA.l,sm.hmA.n,sm.hmA.tp,Math.round(sm.hmA.te*10)/10,sm.hmA.tp-sm.hmA.te):null,
+sm.hmB.n>0?pillRow((_lang==="es"?"En casa "+tB:tB+" home"),"✈\uFE0F",
+Math.round(plBH*100),Math.round(pdBH*100),Math.round(phBH*100),
+sm.hmB.w,sm.hmB.d,sm.hmB.l,sm.hmB.n,sm.hmB.tp,Math.round(sm.hmB.te*10)/10,sm.hmB.tp-sm.hmB.te):null,
+pillRow(_t("total"),"\u03A3",
+null,null,null,
+sm.wA,sm.dr,sm.wB,sm.n,sm.tpA,sm.teA,sm.tpA-sm.teA));})(),
 mt.length===0?h("div",{className:"text-gray-400 text-center py-8"},_t("no_matches")):
 h("div",null,
-h("div",{className:"grid grid-cols-3 gap-2 sm:gap-3 mb-5"},
-h("div",{className:"p-3 rounded-lg text-center",style:{background:B+"10",border:"2px solid "+B+"30"}},h("div",{className:"text-2xl font-bold",style:{color:B}},sm.wA),h("div",{className:"text-xs text-gray-500"},Cr(tA,14),h("span",{style:{marginLeft:CR[tA]?3:0}},tA+" "+_t("wins_lc"))),h("div",{className:"text-sm mt-1"},h("b",null,sm.tpA)," pts ",h("span",{className:"text-gray-400"},"("+_t("exp_short")+" "+sm.teA+")")),h("div",{className:"text-xs font-bold",style:{color:sm.tpA-sm.teA>=0?G:R}},(sm.tpA-sm.teA>=0?"+":"")+(sm.tpA-sm.teA).toFixed(1))),
-h("div",{className:"p-3 rounded-lg text-center bg-gray-50"},h("div",{className:"text-2xl font-bold text-gray-500"},sm.dr),h("div",{className:"text-xs text-gray-500"},_t("draws")),h("div",{className:"text-sm text-gray-400 mt-1"},sm.n+" "+_t("matches_lc"))),
-h("div",{className:"p-3 rounded-lg text-center",style:{background:O+"10",border:"2px solid "+O+"30"}},h("div",{className:"text-2xl font-bold",style:{color:O}},sm.wB),h("div",{className:"text-xs text-gray-500"},Cr(tB,14),h("span",{style:{marginLeft:CR[tB]?3:0}},tB+" "+_t("wins_lc"))),h("div",{className:"text-sm mt-1"},h("b",null,sm.tpB)," pts ",h("span",{className:"text-gray-400"},"("+_t("exp_short")+" "+sm.teB+")")),h("div",{className:"text-xs font-bold",style:{color:sm.tpB-sm.teB>=0?G:R}},(sm.tpB-sm.teB>=0?"+":"")+(sm.tpB-sm.teB).toFixed(1)))),
-sm.n>0?h("div",{className:"mb-4",style:{background:"#f8f9fa",borderRadius:8,padding:"10px 12px",border:"1px solid #e9ecef"}},
-h("div",{className:"text-xs font-semibold mb-2",style:{color:N}},h("span",{className:"flex items-center gap-1 flex-wrap"},Cr(tA,14),tA," ",_t("vs")," ",Cr(tB,14),tB," — ",_t("h2h_from_perspective")+" ",h("span",{style:{color:B}},tA))),
-h("table",{className:"w-full text-xs",style:{borderCollapse:"collapse"}},
-h("thead",null,h("tr",{style:{borderBottom:"2px solid #ddd"}},
-h("th",{className:"text-left py-1 pr-2"},""),
-h("th",{className:"text-center px-1",style:{color:G,fontSize:10}},_t("w_short")),
-h("th",{className:"text-center px-1",style:{color:"#999",fontSize:10}},_t("d_short")),
-h("th",{className:"text-center px-1",style:{color:R,fontSize:10}},_t("l_short")),
-h("th",{className:"text-center px-1",style:{color:"#999",fontSize:10}},"N"),
-h("th",{className:"text-right px-1",style:{color:B,fontSize:10}},_t("pts_lc")),
-h("th",{className:"text-right px-1",style:{color:"#999",fontSize:10}},_t("model_lbl")),
-h("th",{className:"text-right px-1",style:{color:"#999",fontSize:10}},"+/−"))),
-h("tbody",null,
-h("tr",{style:{borderBottom:"1px solid #eee",fontWeight:600}},
-h("td",{className:"py-1 pr-2"},_t("total")),
-h("td",{className:"text-center px-1",style:{color:G}},sm.wA),
-h("td",{className:"text-center px-1"},sm.dr),
-h("td",{className:"text-center px-1",style:{color:R}},sm.wB),
-h("td",{className:"text-center px-1 text-gray-400"},sm.n),
-h("td",{className:"text-right px-1",style:{color:B}},sm.tpA),
-h("td",{className:"text-right px-1 text-gray-400"},sm.teA),
-h("td",{className:"text-right px-1",style:{color:sm.tpA-sm.teA>=0?G:R}},(sm.tpA-sm.teA>=0?"+":"")+(sm.tpA-sm.teA).toFixed(1))),
-sm.hmA.n>0?h("tr",{style:{borderBottom:"1px solid #f0f0f0"}},
-h("td",{className:"py-1 pr-2",style:{paddingLeft:8}},h("span",{className:"flex items-center gap-1"},"\uD83C\uDFE0",(_lang==="es"?"En casa del ":"At ")+tA+(_lang==="es"?"":"'s"))),
-h("td",{className:"text-center px-1",style:{color:G}},sm.hmA.w),
-h("td",{className:"text-center px-1"},sm.hmA.d),
-h("td",{className:"text-center px-1",style:{color:R}},sm.hmA.l),
-h("td",{className:"text-center px-1 text-gray-400"},sm.hmA.n),
-h("td",{className:"text-right px-1",style:{color:B}},sm.hmA.tp),
-h("td",{className:"text-right px-1 text-gray-400"},(Math.round(sm.hmA.te*10)/10)),
-h("td",{className:"text-right px-1",style:{color:sm.hmA.tp-sm.hmA.te>=0?G:R}},(sm.hmA.tp-sm.hmA.te>=0?"+":"")+(sm.hmA.tp-sm.hmA.te).toFixed(1))):null,
-sm.hmB.n>0?h("tr",null,
-h("td",{className:"py-1 pr-2",style:{paddingLeft:8}},h("span",{className:"flex items-center gap-1"},"✈\uFE0F",(_lang==="es"?"En casa del ":"At ")+tB+(_lang==="es"?"":"'s"))),
-h("td",{className:"text-center px-1",style:{color:G}},sm.hmB.w),
-h("td",{className:"text-center px-1"},sm.hmB.d),
-h("td",{className:"text-center px-1",style:{color:R}},sm.hmB.l),
-h("td",{className:"text-center px-1 text-gray-400"},sm.hmB.n),
-h("td",{className:"text-right px-1",style:{color:B}},sm.hmB.tp),
-h("td",{className:"text-right px-1 text-gray-400"},(Math.round(sm.hmB.te*10)/10)),
-h("td",{className:"text-right px-1",style:{color:sm.hmB.tp-sm.hmB.te>=0?G:R}},(sm.hmB.tp-sm.hmB.te>=0?"+":"")+(sm.hmB.tp-sm.hmB.te).toFixed(1))):null))):null,
 h("div",{className:"text-sm font-semibold mb-1",style:{color:N}},_t("cumulative_points")),
 h("div",{style:{height:SCR.ch(180,220,280,340)},className:"chart-wrap"},e(RC.ResponsiveContainer,null,e(RC.LineChart,{data:cumD,margin:{left:0,right:5,top:5,bottom:30}},
 e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),e(RC.XAxis,{dataKey:"lb",tick:{fontSize:SCR.fs(8,11,13,14),fontWeight:600,angle:-35,textAnchor:"end"},height:55,interval:Math.max(0,Math.floor(cumD.length/10)-1)}),e(RC.YAxis,{tick:{fontSize:SCR.fs(8,11,13,14)}}),e(RC.Tooltip,{content:function(tp){if(!tp.active||!tp.payload||!tp.payload.length)return null;var d=tp.payload[0].payload;
