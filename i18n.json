@@ -1262,5 +1262,9 @@
   "compare_add": [
     "+ Compare with...",
     "+ Comparar con..."
+  ],
+  "pick_team": [
+    "Pick a team...",
+    "Elige un equipo..."
   ]
 }
