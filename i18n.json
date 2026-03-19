@@ -19,10 +19,6 @@
     "Premier League",
     "Premier League"
   ],
-  "prem_short": [
-    "Prem. League",
-    "Prem. League"
-  ],
   "tab_home": [
     "Home",
     "Inicio"
@@ -183,10 +179,6 @@
     "Projected final: ",
     "Proyección final: "
   ],
-  "pre_season": [
-    "Pre-season: ",
-    "Pre-temporada: "
-  ],
   "champion": [
     "champion",
     "campeón"
@@ -194,10 +186,6 @@
   "relegation": [
     "relegation",
     "descenso"
-  ],
-  "n_games_label": [
-    "{n} games",
-    "{n} partidos"
   ],
   "extra_pts_in": [
     "extra pts in",
@@ -267,14 +255,6 @@
     "Expected (budget)",
     "Esperado (presupuesto)"
   ],
-  "show_teams": [
-    "Show teams",
-    "Mostrar equipos"
-  ],
-  "hide_teams": [
-    "Hide teams",
-    "Ocultar equipos"
-  ],
   "no_data": [
     "No data",
     "Sin datos"
@@ -286,10 +266,6 @@
   "last10_btn": [
     "Last 10",
     "Últ. 10"
-  ],
-  "all_btn": [
-    "All",
-    "Todos"
   ],
   "overperf_50_75": [
     "Overperf 50–75%",
@@ -310,10 +286,6 @@
   "actual_vs": [
     "Actual: ",
     "Real: "
-  ],
-  "expected_vs": [
-    "Expected: ",
-    "Esperado: "
   ],
   "team_a": [
     "Team A",
@@ -375,14 +347,6 @@
     "Trailing {n}yr",
     "Últimos {n} años"
   ],
-  "add_btn": [
-    "+Add",
-    "+Añadir"
-  ],
-  "hide_teams_btn": [
-    "Hide teams",
-    "Ocultar equipos"
-  ],
   "raw_overperf_tip": [
     "Raw overperformance: actual minus expected points per season",
     "Sobrerendimiento bruto: puntos reales menos esperados por temporada"
@@ -415,10 +379,6 @@
     "Expected pts/match: Home ",
     "Pts esperados/partido: Local "
   ],
-  "away_comma": [
-    ", Away ",
-    ", Visitante "
-  ],
   "range_colon": [
     "Range: ",
     "Rango: "
@@ -430,10 +390,6 @@
   "away_lbl": [
     "Away",
     "Visitante"
-  ],
-  "select_team_season": [
-    "Select a team from this season",
-    "Seleccione un equipo de esta temporada"
   ],
   "custom_select": [
     "Custom / select team...",
@@ -502,10 +458,6 @@
   "col_v": [
     "V",
     "L"
-  ],
-  "col_diff": [
-    "+/-",
-    "+/-"
   ],
   "col_hash": [
     "#",
@@ -583,10 +535,6 @@
     "Budget forecast expected points",
     "Puntos esperados por presupuesto"
   ],
-  "tip_actual_pts": [
-    "Actual points",
-    "Puntos reales"
-  ],
   "tip_cur_actual": [
     "Current actual points",
     "Puntos reales actuales"
@@ -663,10 +611,6 @@
     "roughly {x} in {y} seasons",
     "aproximadamente {x} de cada {y} temporadas"
   ],
-  "of_n_total": [
-    "of {n}",
-    "de {n}"
-  ],
   "actual_vs_expected": [
     "{a} actual vs {e} expected in {n} games ({f}–{t} of {total})",
     "{a} reales vs {e} esperados en {n} partidos ({f}–{t} de {total})"
@@ -699,10 +643,6 @@
     "Data sources",
     "Fuentes de datos"
   ],
-  "meth_wages_by_team": [
-    "Wage data by team",
-    "Datos salariales por equipo"
-  ],
   "meth_budget_forecast": [
     "Budget forecast",
     "Previsión presupuestaria"
@@ -722,14 +662,6 @@
   "meth_reference": [
     "Reference",
     "Referencia"
-  ],
-  "meth_show_wages": [
-    "Show wage table",
-    "Mostrar tabla salarial"
-  ],
-  "meth_hide_wages": [
-    "Hide wage table",
-    "Ocultar tabla salarial"
   ],
   "meth_matches": [
     "Matches",
@@ -782,18 +714,6 @@
   "meth_params_p1": [
     "Separate models are estimated for each league, reflecting structural differences in competitiveness. For example, the Premier League's higher β means wage differences translate more strongly into results there than in La Liga or Ligue 1:",
     "Se estiman modelos separados para cada liga, reflejando diferencias estructurales en competitividad. Por ejemplo, el β más alto de la Premier League significa que las diferencias salariales se traducen más fuertemente en resultados allí que en La Liga o Ligue 1:"
-  ],
-  "meth_results_desc": [
-    ". Complete match-by-match results for all six leagues from 2013/14 to present, downloaded and processed daily.",
-    ". Resultados completos partido a partido de las seis ligas desde 2013/14 hasta el presente, descargados y procesados diariamente."
-  ],
-  "meth_wages_desc": [
-    ". Annual gross wage bills per club (in €M for continental leagues, £M for the Premier League). Reliable coverage starts in 2013/14. Some promoted teams in 25/26 use estimates where Capology data is not yet available.",
-    ". Masa salarial bruta anual por club (en M€ para las ligas continentales, M£ para la Premier League). La cobertura fiable comienza en 2013/14. Algunos equipos recién ascendidos en 25/26 usan estimaciones donde los datos de Capology aún no están disponibles."
-  ],
-  "meth_coverage_desc": [
-    ": 26,810 matches, 900+ team-seasons across six leagues, 13 seasons each (2013/14–2025/26). Three team-seasons in La Liga lack wage data (Espanyol 13/14–14/15, Deportivo 14/15) and are excluded from that league's model estimation.",
-    ": 26.810 partidos, 900+ equipos-temporada en seis ligas, 13 temporadas cada una (2013/14–2025/26). Tres equipos-temporada de La Liga carecen de datos salariales (Espanyol 13/14–14/15, Deportivo 14/15) y se excluyen de la estimación del modelo de esa liga."
   ],
   "meth_budget_p1": [
     "Before the season starts, each league match is assigned win/draw/loss probabilities from the ordered logit model using that season's wage data. The full season is then simulated 10,000 times. In each simulation, every match is drawn independently from its probability distribution, producing a complete league table. Expected points = the mean across all 10,000 simulations.",
@@ -886,10 +806,6 @@
   "info_home_q4": [
     " — Win/draw/loss probabilities for the upcoming fixture based on both teams’ wage bills. ",
     " — Probabilidades de victoria/empate/derrota para el próximo partido basadas en las masas salariales de ambos equipos. "
-  ],
-  "info_home_q5_title": [
-    "Long-term management",
-    "Gestión a largo plazo"
   ],
   "info_home_q5": [
     " — How well or poorly a team has been managed across multiple seasons relative to its spending.",
@@ -999,10 +915,6 @@
     "Total",
     "Total"
   ],
-  "selected": [
-    "selected",
-    "seleccionados"
-  ],
   "meth_model_p2_s1": [
     "When ",
     "Cuando "
@@ -1042,14 +954,6 @@
   "and": [
     " and ",
     " y "
-  ],
-  "pct_champion": [
-    "champion",
-    "campeón"
-  ],
-  "pct_relegation": [
-    "relegation",
-    "descenso"
   ],
   "or_more": [
     "or more",
@@ -1099,10 +1003,6 @@
     "26,810 matches across 900+ team-seasons in six European leagues. Three team-seasons in La Liga lack wage data (Espanyol 13/14–14/15, Deportivo 14/15).",
     "26.810 partidos en 900+ equipos-temporada de seis ligas europeas. Tres equipos-temporada de La Liga carecen de datos salariales (Espanyol 13/14–14/15, Deportivo 14/15)."
   ],
-  "data_season_col": [
-    "Season",
-    "Temporada"
-  ],
   "data_team_col": [
     "Team",
     "Equipo"
@@ -1110,10 +1010,6 @@
   "data_wage_col": [
     "Wage bill",
     "Masa salarial"
-  ],
-  "menu": [
-    "Menu",
-    "Menú"
   ],
   "select_language": [
     "Language",
@@ -1267,14 +1163,6 @@
     "Pick a team...",
     "Elige un equipo..."
   ],
-  "on_track": [
-    "On track",
-    "En línea"
-  ],
-  "with_pre_season": [
-    "with pre-season forecast",
-    "con la previsión de pretemporada"
-  ],
   "zone_champion": [
     "Champion",
     "Campeón"
@@ -1299,32 +1187,12 @@
     "Relegation",
     "Descenso"
   ],
-  "expected_finish": [
-    "Expected to finish",
-    "Se espera que acabe"
+  "release_refresh": [
+    "Release to refresh",
+    "Suelta para refrescar"
   ],
-  "in_zone": [
-    "in",
-    "en zona de"
-  ],
-  "improving_from": [
-    "Improving on pre-season forecast",
-    "Mejorando respecto a la previsión de pretemporada"
-  ],
-  "declining_from": [
-    "Below pre-season expectations",
-    "Por debajo de las expectativas de pretemporada"
-  ],
-  "climbing": [
-    "Climbing within",
-    "Subiendo dentro de"
-  ],
-  "slipping": [
-    "Slipping within",
-    "Bajando dentro de"
-  ],
-  "pre_season_short": [
-    "pre-season",
-    "pretemporada"
+  "pull_refresh": [
+    "Pull to refresh",
+    "Tira para refrescar"
   ]
 }
