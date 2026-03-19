@@ -1226,5 +1226,33 @@
   "last_n": [
     "last",
     "últimos"
+  ],
+  "in": [
+    "in",
+    "en"
+  ],
+  "overperf_pct": [
+    "above budget",
+    "sobre presupuesto"
+  ],
+  "underperf_pct": [
+    "below budget",
+    "bajo presupuesto"
+  ],
+  "per_season": [
+    "per season",
+    "por temporada"
+  ],
+  "significant": [
+    "significant",
+    "significativo"
+  ],
+  "not_significant": [
+    "not significant",
+    "no significativo"
+  ],
+  "ms_score": [
+    "MS",
+    "MS"
   ]
 }
