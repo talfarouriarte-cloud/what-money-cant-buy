@@ -1250,5 +1250,17 @@
   "upcoming": [
     "Upcoming",
     "Próximos"
+  ],
+  "not_in_league": [
+    "Not in this league in",
+    "No estaba en esta liga en"
+  ],
+  "go_current": [
+    "Go to current season",
+    "Ir a la temporada actual"
+  ],
+  "compare_add": [
+    "+ Compare with...",
+    "+ Comparar con..."
   ]
 }
