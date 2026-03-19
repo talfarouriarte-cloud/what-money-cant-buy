@@ -976,12 +976,40 @@ h("span",{style:{color:"#bbb",fontSize:"0.8em",marginLeft:3}},(_cur(lg))+(sd25[l
 h("span",{className:"ml-1",style:{fontSize:"0.85em"}},h("span",{style:{color:G,fontWeight:600}},Math.round(last.pW*100)),h("span",{style:{color:"#aaa"}},"-"),h("span",{style:{color:"#888",fontWeight:600}},Math.round(last.pD*100)),h("span",{style:{color:"#aaa"}},"-"),h("span",{style:{color:R,fontWeight:600}},Math.round(last.pL*100))));}()):null
 ):h("div",{className:"text-gray-400 text-sm"},_t("season_complete"))),
 e(Card,{q:_t("card_ahead"),tab:"predictions",tabName:_t("tab_predictions"),go:props.go,color:"#1A56DB"},
-curPos?h("div",null,
-h("div",{className:"flex gap-3 flex-wrap text-sm"},
-curPos["1st"]>0.005?h("span",null,h("b",{style:{color:"#8B6914"}},Math.round(curPos["1st"]*100)+"%")," "+_t("pct_champion")):null,
-h("span",null,h("b",{style:{color:"#1A56DB"}},Math.round(curPos.ucl*100)+"%")," UCL"),
-curPos.rel>0.005?h("span",null,h("b",{style:{color:"#E74C3C"}},Math.round(curPos.rel*100)+"%")," "+_t("pct_relegation")):null),
-prePos?h("div",{className:"text-xs text-gray-400 mt-2"},_t("pre_season"),Math.round(prePos["1st"]*100)+"% "+_t("pct_champion")+", ",Math.round(prePos.ucl*100)+"% UCL"):null):h("div",{className:"text-gray-400 text-sm"},_t("no_projection"))),
+curPos?function(){
+var L=LEAGUES[lg]||LEAGUES.ll;
+// Find best current zone
+var zones=[{k:"1st",v:curPos["1st"],l:_t("pct_champion"),c:"#8B6914",i:1},
+{k:"ucl",v:Math.max(0,curPos.ucl-curPos["1st"]),l:"UCL (2-"+L.ucl+")",c:"#1A56DB",i:2},
+{k:"uel",v:curPos.uel,l:_t("col_uel"),c:"#E67E22",i:3},
+{k:"ucol",v:curPos.ucol,l:_t("col_conf"),c:"#27AE60",i:4},
+{k:"mid",v:curPos.mid,l:_t("col_mid"),c:"#95A5A6",i:5},
+{k:"rel",v:curPos.rel,l:_t("col_rel"),c:"#E74C3C",i:6}];
+var best=zones.reduce(function(a,b){return b.v>a.v?b:a;});
+// Pre-season best zone
+var preZones=prePos?[{k:"1st",v:prePos["1st"],i:1},{k:"ucl",v:Math.max(0,prePos.ucl-prePos["1st"]),i:2},{k:"uel",v:prePos.uel,i:3},{k:"ucol",v:prePos.ucol,i:4},{k:"mid",v:prePos.mid,i:5},{k:"rel",v:prePos.rel,i:6}]:null;
+var preBest=preZones?preZones.reduce(function(a,b){return b.v>a.v?b:a;}):null;
+// Narrative
+var pct=Math.round(best.v*100);
+var line1=h("div",{className:"text-sm"},h("b",{style:{color:best.c}},pct+"% "+best.l));
+// Secondary probabilities
+var notable=zones.filter(function(z){return z.k!==best.k&&z.v>=0.08;}).sort(function(a,b){return b.v-a.v;}).slice(0,2);
+var line2=notable.length>0?h("div",{className:"text-xs text-gray-500 mt-1"},notable.map(function(z,i){return h("span",{key:z.k},i>0?" · ":"",h("span",{style:{color:z.c,fontWeight:600}},Math.round(z.v*100)+"%")," "+z.l);})):null;
+// Trend vs pre-season
+var line3=null;
+if(preBest&&prePos){
+var dir=best.i<preBest.i?"up":best.i>preBest.i?"down":"same";
+if(dir==="up"){
+var fromL=zones.find(function(z){return z.i===preBest.i;});
+line3=h("div",{className:"text-xs mt-2",style:{color:G}},"\u2191 ",_t("improving")||"Improving",": ",_t("pre_season_expected")||"pre-season expected"," ",fromL?fromL.l:""," (",Math.round(preBest.v*100)+"%)");
+}else if(dir==="down"){
+var fromL2=zones.find(function(z){return z.i===preBest.i;});
+line3=h("div",{className:"text-xs mt-2",style:{color:R}},"\u2193 ",_t("declining")||"Declining",": ",_t("pre_season_expected")||"pre-season expected"," ",fromL2?fromL2.l:""," (",Math.round(preBest.v*100)+"%)");
+}else{
+line3=h("div",{className:"text-xs mt-2 text-gray-400"},"\u2192 ",_t("on_track")||"On track"," ",_t("with_pre_season")||"with pre-season forecast");
+}}
+return h("div",null,line1,line2,line3);
+}():h("div",{className:"text-gray-400 text-sm"},_t("no_projection"))),
 e(Card,{q:_t("card_run"),tab:"badrun",tabName:_t("tab_badrun"),go:props.go,color:l5d>=0?G:R},
 h("div",{className:"text-sm"},_t("last5"),h("b",null,l5a+" "+_t("pts_lc"))," ("+_t("exp_short")+" "+l5e.toFixed(1)+")",h("span",{style:{color:l5d>=0?G:R,fontWeight:700,marginLeft:6}},(l5d>=0?"+":"")+l5d.toFixed(1)),sp5!==null?h("span",{className:"text-gray-400",style:{marginLeft:6}},"\u2022 "+Math.round(sp5)+"% "+_t("of_seasons")):null),
 l10n>=10?h("div",{className:"text-sm mt-0.5"},_t("last10"),h("b",null,l10a+" "+_t("pts_lc"))," ("+_t("exp_short")+" "+l10e.toFixed(1)+")",h("span",{style:{color:l10d>=0?G:R,fontWeight:700,marginLeft:6}},(l10d>=0?"+":"")+l10d.toFixed(1)),sp10!==null?h("span",{className:"text-gray-400",style:{marginLeft:6}},"\u2022 "+Math.round(sp10)+"% "+_t("of_seasons")):null):null,

@@ -524,8 +524,8 @@
     "Probabilidad de ganar la liga (10.000 simulaciones)"
   ],
   "tip_pucl": [
-    "Probability of finishing in top 4 (Champions League)",
-    "Probabilidad de terminar en el top 4 (Champions League)"
+    "Probability of finishing in UCL places (2nd-4th, excl. champion)",
+    "Probabilidad de acabar en puestos UCL (2º-4º, sin campeón)"
   ],
   "tip_puel": [
     "Probability of finishing 5th-6th (Europa League)",
@@ -556,8 +556,8 @@
     "Probabilidad actual de ganar la liga"
   ],
   "tip_cur_ucl": [
-    "Current probability of top 4",
-    "Probabilidad actual de top 4"
+    "Updated probability of UCL places (2nd-4th, excl. champion)",
+    "Probabilidad actualizada de puestos UCL (2º-4º, sin campeón)"
   ],
   "tip_cur_uel": [
     "Current probability of 5th-6th",
@@ -1266,5 +1266,25 @@
   "pick_team": [
     "Pick a team...",
     "Elige un equipo..."
+  ],
+  "improving": [
+    "Improving",
+    "Mejorando"
+  ],
+  "declining": [
+    "Declining",
+    "Empeorando"
+  ],
+  "on_track": [
+    "On track",
+    "En línea"
+  ],
+  "with_pre_season": [
+    "with pre-season forecast",
+    "con la previsión de pretemporada"
+  ],
+  "pre_season_expected": [
+    "pre-season expected",
+    "pretemporada preveía"
   ]
 }
