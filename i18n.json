@@ -1262,5 +1262,9 @@
   "hide_teams": [
     "Hide",
     "Ocultar"
+  ],
+  "h2h_from_perspective": [
+    "results for",
+    "resultados de"
   ]
 }
