@@ -943,27 +943,23 @@ if(!nextM)return null;
 var opp=nextM[0];var isHome=nextM[1]===1;
 var sL2=Object.keys(D.seasons[lg]).sort().reverse();
 var sn10=sL2.slice(0,10),sn5=sL2.slice(0,5);
-var all=[],a10=[],a5=[];
-// venue-specific: record at the ground where THIS match is played
-var venW=0,venD=0,venL=0,venN=0;
+var v10={w:0,d:0,l:0,n:0},v5={w:0,d:0,l:0,n:0};
+// venue 5yr pts tracking
+var v5pT=0,v5eT=0,v5pO=0,v5eO=0;
 sL2.forEach(function(sn2){var sd2=D.seasons[lg][sn2];if(!sd2||!sd2[team])return;
 sd2[team].m.forEach(function(m2){if(m2[0]!==opp)return;
 var isH=m2[1]===1;var w=m2[2]===3?1:0,d=m2[2]===1?1:0,l=m2[2]===0?1:0;
-all.push({w:w,d:d,l:l,isH:isH,sn:sn2});
-if(sn10.indexOf(sn2)>=0)a10.push({w:w,d:d,l:l,isH:isH});
-if(sn5.indexOf(sn2)>=0)a5.push({w:w,d:d,l:l,isH:isH});
-// venue match: if next is at home, count home games; if away, count away games
-if(isHome&&isH){venN++;venW+=w;venD+=d;venL+=l;}
-if(!isHome&&!isH){venN++;venW+=w;venD+=d;venL+=l;}
-});});
-if(all.length===0)return null;
-function sum(arr){var w=0,o=0,d=0;arr.forEach(function(m){w+=m.w;d+=m.d;o+=m.l;});return{w:w,o:o,d:d,n:arr.length};}
-var sAll=sum(all),s10=sum(a10),s5=sum(a5);
-// Budget ratio
+var sameVen=(isHome&&isH)||(!isHome&&!isH);
+if(sameVen&&sn10.indexOf(sn2)>=0){v10.n++;v10.w+=w;v10.d+=d;v10.l+=l;}
+if(sameVen&&sn5.indexOf(sn2)>=0){v5.n++;v5.w+=w;v5.d+=d;v5.l+=l;
+v5pT+=m2[2];v5eT+=m2[3];
+var oppPts=m2[2]===3?0:m2[2]===0?3:1;v5pO+=oppPts;
+// Get opp expected from their match data
+var oppTd=sd2[opp];if(oppTd)oppTd.m.forEach(function(mo){if(mo[0]===team&&mo[1]!==m2[1])v5eO+=mo[3];});
+}});});
+if(v10.n===0&&v5.n===0)return null;
 var wT=t.w||0,wO=sd25[opp]?sd25[opp].w:0;
-var ratio=wO>0&&wT>0?Math.round(Math.max(wT,wO)/Math.min(wT,wO)*10)/10:0;
-var teamSpendMore=wT>wO;
-return{all:sAll,s10:s10,s5:s5,venW:venW,venD:venD,venL:venL,venN:venN,isHome:isHome,opp:opp,ratio:ratio,teamSpendMore:teamSpendMore,wT:wT,wO:wO};
+return{v10:v10,v5:v5,isHome:isHome,opp:opp,wT:wT,wO:wO,v5pT:v5pT,v5eT:Math.round(v5eT*10)/10,v5pO:v5pO,v5eO:Math.round(v5eO*10)/10};
 },[lg,team,nextM,sd25]);
 // Last 5 games
 var last5=t.m.slice(Math.max(0,nP-5));
@@ -1081,41 +1077,31 @@ nextM?h("div",null,
 h("div",{className:"text-sm font-semibold mb-2"},Cr(nextM[0],18)," ",nextM[1]?"vs ":"@ ",nextM[0],nextM[5]?h("span",{className:"text-gray-400 font-normal"}," \u00b7 "+_t("col_gw")+nextM[5]):null,nextM[6]?h("span",{className:"text-gray-400 font-normal"}," \u00b7 "+nextM[6]):null),
 h("div",{style:{color:"#aaa",fontSize:"0.8em",marginBottom:4}},(_cur(lg))+(t.w||"")+"M vs "+(_cur(lg))+(sd25[nextM[0]]?sd25[nextM[0]].w:"")+"M"),
 h("div",{className:"flex gap-2"},
+h("div",{style:{width:SCR.ch(60,70,80,90),flexShrink:0,display:"flex",alignItems:"center"}},h("span",{className:"text-xs font-semibold",style:{color:N}},_t("model_lbl")||"Model")),
 h("div",{className:"flex-1 rounded p-1.5 text-center",style:{background:G+"18"}},h("div",{className:"text-lg font-bold",style:{color:G}},nxW+"%"),h("div",{className:"text-xs text-gray-500"},_t("win"))),
 h("div",{className:"flex-1 rounded p-1.5 text-center",style:{background:"#88888818"}},h("div",{className:"text-lg font-bold",style:{color:"#888"}},nxD+"%"),h("div",{className:"text-xs text-gray-500"},_t("draw"))),
 h("div",{className:"flex-1 rounded p-1.5 text-center",style:{background:R+"18"}},h("div",{className:"text-lg font-bold",style:{color:R}},nxL+"%"),h("div",{className:"text-xs text-gray-500"},_t("loss")))),
-h2hRec?function(){
-var r=h2hRec,o=r.opp,cur2=_cur(lg);
-// History
-var h10="",h5="";
-if(r.s10.n>=2){
-var ldr=r.s10.w>r.s10.o?team:r.s10.o>r.s10.w?o:null;
-h10=_lang==="es"?"10a: "+(ldr?ldr+" "+Math.max(r.s10.w,r.s10.o)+"-"+Math.min(r.s10.w,r.s10.o):"igualados "+r.s10.w+"-"+r.s10.o)+" ("+r.s10.d+"E)":"10yr: "+(ldr?ldr+" "+Math.max(r.s10.w,r.s10.o)+"-"+Math.min(r.s10.w,r.s10.o):"level "+r.s10.w+"-"+r.s10.o)+" ("+r.s10.d+"D)";}
-if(r.s5.n>=2&&r.s5.n<r.s10.n){
-var ldr5=r.s5.w>r.s5.o?team:r.s5.o>r.s5.w?o:null;
-var ldr10=r.s10.n>=2?(r.s10.w>r.s10.o?team:r.s10.o>r.s10.w?o:null):null;
-var shift=ldr10!==ldr5;
-h5=_lang==="es"?(shift?"Últimos 5a: "+r.s5.w+"-"+r.s5.o+" — distinto":"5a: "+r.s5.w+"-"+r.s5.o):(shift?"Last 5yr: "+r.s5.w+"-"+r.s5.o+" — shifting":"5yr: "+r.s5.w+"-"+r.s5.o);}
-// Budget
-var budg="";
-var wp=r.s10.n>0?Math.round(r.s10.w/r.s10.n*100):0;
-if(r.ratio>=1.5){
-var big=r.teamSpendMore?team:o;var expW=r.teamSpendMore?nxW:nxL;
-budg=_lang==="es"?big+" ~"+r.ratio+"x más presupuesto (modelo espera "+expW+"%), histórico: "+wp+"%.":big+" ~"+r.ratio+"x budget (model expects "+expW+"%), actual: "+wp+"%.";}
-// Venue
-var ven="";
-if(r.venN>=2){
-ven=_lang==="es"?(r.isHome?"En casa: ":"Fuera: ")+r.venW+"V-"+r.venD+"E-"+r.venL+"D.":(r.isHome?"At home: ":"Away: ")+r.venW+"W-"+r.venD+"D-"+r.venL+"L.";}
-// Prediction
-var fav=nxW>nxL?team:nxL>nxW?o:null;
-var pred=_lang==="es"?(fav?"Modelo: "+Math.max(nxW,nxL)+"% "+fav+".":"Modelo: partido igualado."):(fav?"Model: "+Math.max(nxW,nxL)+"% "+fav+".":"Model: even contest.");
-return h("div",{className:"mt-2 pt-2",style:{borderTop:"1px solid #f0f0f0"}},
-h("div",{className:"text-xs",style:{lineHeight:"1.55",color:"#555"}},
-h10?h("span",{style:{fontWeight:600,color:N}},h10):null,
-h5?h("span",null,". ",h5):null,
-budg?h("span",null," ",budg):null,
-ven?h("span",null," ",ven):null,
-" ",pred));
+h2hRec&&h2hRec.v10.n>0?h("div",{className:"flex gap-2 mt-1"},
+h("div",{style:{width:SCR.ch(60,70,80,90),flexShrink:0,display:"flex",alignItems:"center"}},h("span",{className:"text-xs",style:{color:"#888"}},"10yr"+(h2hRec.isHome?" "+(_t("home_lc")||"H"):" "+(_t("away_lc")||"A")))),
+h("div",{className:"flex-1 rounded p-1 text-center",style:{background:G+"0A"}},h("div",{className:"text-sm font-bold",style:{color:G}},h2hRec.v10.n>0?Math.round(h2hRec.v10.w/h2hRec.v10.n*100)+"%":"—")),
+h("div",{className:"flex-1 rounded p-1 text-center",style:{background:"#8880"}},h("div",{className:"text-sm font-bold",style:{color:"#888"}},h2hRec.v10.n>0?Math.round(h2hRec.v10.d/h2hRec.v10.n*100)+"%":"—")),
+h("div",{className:"flex-1 rounded p-1 text-center",style:{background:R+"0A"}},h("div",{className:"text-sm font-bold",style:{color:R}},h2hRec.v10.n>0?Math.round(h2hRec.v10.l/h2hRec.v10.n*100)+"%":"—")),
+h("div",{style:{display:"flex",alignItems:"center"}},h("span",{className:"text-xs text-gray-300"},h2hRec.v10.n))):null,
+h2hRec&&h2hRec.v5.n>0?h("div",{className:"flex gap-2 mt-1"},
+h("div",{style:{width:SCR.ch(60,70,80,90),flexShrink:0,display:"flex",alignItems:"center"}},h("span",{className:"text-xs",style:{color:"#888"}},"5yr"+(h2hRec.isHome?" "+(_t("home_lc")||"H"):" "+(_t("away_lc")||"A")))),
+h("div",{className:"flex-1 rounded p-1 text-center",style:{background:G+"0A"}},h("div",{className:"text-sm font-bold",style:{color:G}},h2hRec.v5.n>0?Math.round(h2hRec.v5.w/h2hRec.v5.n*100)+"%":"—")),
+h("div",{className:"flex-1 rounded p-1 text-center",style:{background:"#8880"}},h("div",{className:"text-sm font-bold",style:{color:"#888"}},h2hRec.v5.n>0?Math.round(h2hRec.v5.d/h2hRec.v5.n*100)+"%":"—")),
+h("div",{className:"flex-1 rounded p-1 text-center",style:{background:R+"0A"}},h("div",{className:"text-sm font-bold",style:{color:R}},h2hRec.v5.n>0?Math.round(h2hRec.v5.l/h2hRec.v5.n*100)+"%":"—")),
+h("div",{style:{display:"flex",alignItems:"center"}},h("span",{className:"text-xs text-gray-300"},h2hRec.v5.n))):null,
+h2hRec&&h2hRec.v5.n>=2?function(){
+var dT=h2hRec.v5pT-h2hRec.v5eT,dO=h2hRec.v5pO-h2hRec.v5eO;
+var vLbl=h2hRec.isHome?(_lang==="es"?"en casa":"at home"):(_lang==="es"?"fuera":"away");
+return h("div",{className:"text-xs mt-2",style:{color:"#555",fontStyle:"italic",lineHeight:"1.4"}},
+_lang==="es"?"5 años "+vLbl+": ":"5yr "+vLbl+": ",
+h("b",{style:{color:dT>=0?G:R}},team+" "+h2hRec.v5pT+"pts"),
+" ("+(_t("exp_short"))+" "+h2hRec.v5eT+") ",
+h("b",{style:{color:dO>=0?G:R}},h2hRec.opp+" "+h2hRec.v5pO+"pts"),
+" ("+(_t("exp_short"))+" "+h2hRec.v5eO+")");
 }():null
 ):h("div",{className:"text-gray-400 text-sm"},_t("season_complete"))),
 e(Card,{q:_t("card_mgmt"),tab:"explorer",tabName:_t("tab_explorer"),go:props.go,color:cum&&cum[0]>=0?G:R},
