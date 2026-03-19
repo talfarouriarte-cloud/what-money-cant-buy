@@ -406,10 +406,16 @@ def recalculate_budget_bands(fixtures_cal, wages, beta, t1, t2, lg, season_data,
                 elif rng[s,m] < pw + pd: sim[s,m] = 1
         
         cum = np.cumsum(sim, axis=1)
-        # Use MC percentile for p50 (consistent with run_mc_simulation)
+        # p50 = deterministic expected value (consistent with run_mc_simulation)
+        det_cum = []
+        det_total = 0.0
+        for pw, pd in probs:
+            det_total += pw * 3 + pd
+            det_cum.append(round(det_total, 1))
+        
         bands[team] = {
             'p10': [int(np.percentile(cum[:,i], 10)) for i in range(n)],
-            'p50': [int(np.percentile(cum[:,i], 50)) for i in range(n)],
+            'p50': det_cum,
             'p90': [int(np.percentile(cum[:,i], 90)) for i in range(n)]
         }
     return bands
@@ -502,10 +508,13 @@ def run_mc_simulation(season_data, wages, beta, t1, t2, remaining_fixtures, n_si
         p50 = list(season_data[team]['a'])
         p90 = list(season_data[team]['a'])
         
+        # p50 = deterministic expected value (identical to budget bands)
+        det_total = float(base_pts)
         for gw_offset in range(n_rem):
             total = base_pts + cum_sim[:, gw_offset]
             p10.append(int(np.percentile(total, 10)))
-            p50.append(int(np.percentile(total, 50)))
+            det_total += probs[gw_offset][0] * 3 + probs[gw_offset][1]
+            p50.append(round(det_total, 1))
             p90.append(int(np.percentile(total, 90)))
         
         bands[team] = {'p10': p10, 'p50': p50, 'p90': p90}
@@ -961,15 +970,22 @@ def update():
                 if ps:
                     print(f"  Budget: {sample} p10/p50/p90 = {ps['p10'][-1]}/{ps['p50'][-1]}/{ps['p90'][-1]}")
                 
-                # DIAGNOSTIC: compare future slopes
+                # DIAGNOSTIC: compare future slopes step by step
                 nP_diag = len(result[sample]['a'])
                 mc_p50 = new_bands[sample]['p50']
                 bu_p50 = pre_bands[sample]['p50']
                 if len(mc_p50) > nP_diag and len(bu_p50) > nP_diag:
-                    mc_slope = mc_p50[-1] - mc_p50[nP_diag - 1]
-                    bu_slope = bu_p50[-1] - bu_p50[nP_diag - 1]
-                    print(f"  DIAG {sample}: played={nP_diag}, MC future slope={mc_slope}, Budget future slope={bu_slope}, diff={mc_slope - bu_slope}")
-                    # Print remaining opponents for verification
+                    mismatches = 0
+                    for gi in range(nP_diag, min(len(mc_p50), len(bu_p50))):
+                        mc_step = round(mc_p50[gi] - mc_p50[gi-1], 2) if gi > 0 else mc_p50[gi]
+                        bu_step = round(bu_p50[gi] - bu_p50[gi-1], 2) if gi > 0 else bu_p50[gi]
+                        if abs(mc_step - bu_step) > 0.01:
+                            mismatches += 1
+                            if mismatches <= 3:
+                                print(f"  DIAG MISMATCH GW{gi+1}: MC step={mc_step}, Budget step={bu_step}")
+                    mc_slope = round(mc_p50[-1] - mc_p50[nP_diag - 1], 1)
+                    bu_slope = round(bu_p50[-1] - bu_p50[nP_diag - 1], 1)
+                    print(f"  DIAG {sample}: played={nP_diag}, MC slope={mc_slope}, Budget slope={bu_slope}, step mismatches={mismatches}")
                     rem_opps = [(fix_name(r[0]), 'H' if r[1] else 'A') for r in remaining.get(sample, [])[:5]]
                     print(f"  DIAG remaining (first 5): {rem_opps}")
     
