@@ -1,12 +1,23 @@
-# Football beyond money — v2.0
+# Football beyond money — v3.0
 
-**Payroll-adjusted performance analysis and prediction**
+**Payroll-adjusted performance analysis and prediction across Europe's top 6 leagues**
 
-Interactive bilingual (English/Spanish) dashboard analysing football team performance against budget expectations in La Liga and the Premier League across 13 seasons (2013/14–2025/26), using ordered logistic regression and Monte Carlo simulation.
+Interactive bilingual (English/Spanish) dashboard analysing football team performance against budget expectations using ordered logistic regression and Monte Carlo simulation. Covers 6 leagues, 13 seasons (2013/14–2025/26), 201 teams, and 26,810 matches.
 
 **Live site:** [footballbeyondmoney.uk](https://footballbeyondmoney.uk)
 
 **Full research paper (PDF):** [What money can't buy](https://footballbeyondmoney.uk/What%20money%20cant%20buy.pdf)
+
+## Leagues
+
+| League | Seasons | Matches | Teams | Currency |
+|--------|---------|---------|-------|----------|
+| La Liga | 13 | 4,820 | 33 | € |
+| Premier League | 13 | 4,850 | 35 | £ |
+| Serie A | 13 | 4,849 | 36 | € |
+| Bundesliga | 13 | 3,906 | 33 | € |
+| Ligue 1 | 13 | 4,544 | 34 | € |
+| Eredivisie | 12 | 3,841 | 30 | € |
 
 ## How it works
 
@@ -18,49 +29,45 @@ The app updates automatically every day at 08:00 UTC via GitHub Actions, downloa
 
 | Tab | What it does |
 |-----|-------------|
-| **Home** | Team selector with payroll. 6 summary cards: Season Tracker, Next Matchday (closest & most unbalanced matches), Predictions, Run Evaluator, Head to Head, Overperformance. |
-| **Season Tracker** | Game-by-game actual vs expected points with W/D/L coloured dots with halos. MC projection bands (p10–p90). Budget forecast line (deterministic expected, parallel to actual). Tooltip: Home vs Away with crests, payroll, date, probabilities. |
-| **Matches** | 20×20 interactive match grid. Teams sorted by payroll. Row = home, column = away. Heatmap shows predicted home win probability. Coloured dots for results. Touch sliding with pin/unpin, connector lines, row/column highlight. Next matchday fixtures highlighted. Legend, counter, top 5 surprises. |
-| **Predictions** | Position group probabilities (champion, UCL, Europa, Conference, relegation) from 10,000 joint league simulations. Budget vs updated forecast. |
-| **Run Evaluator** | Select any range of games. Compares actual to expected with probability bands. Overlapping windows for season probability. Tooltip: Home vs Away with payroll. |
-| **Head to Head** | Two teams, full historical record. Time filter (all/10yr/5yr/3yr). Cumulative chart with per-match win probabilities, payroll per season. |
+| **Home** | Team selector with payroll. 6 summary cards: Season Tracker snapshot, Next Matches (10 nearest by date, sorted by competitiveness), What Lies Ahead (template narrative + zone probability badges), Run Evaluator (last 5/10), Head to Head, Overperformance. |
+| **Season Tracker** | Game-by-game actual vs expected points with W/D/L coloured dots. MC projection bands (p10–p90). Budget forecast line. Native dropdown team selector with compare function (up to 3 teams). Season arrows ◀ ▶. "Not in this league" message when team absent from selected season. |
+| **Matches** | 20×20 (or 18×18) interactive match grid. Teams sorted by payroll. Heatmap of predicted home win probability. Coloured dots for results. Touch sliding with pin/unpin. Next fixtures highlighted. |
+| **Predictions** | Position group probabilities (champion, UCL, UEL, Conference, mid-table, relegation) from 10,000 joint league simulations. Per-league European/relegation spots. Budget vs updated forecast. Sticky first column. Selected team highlighted. Mutually exclusive categories summing to 100%. |
+| **Run Evaluator** | Select any range of games. Compares actual to expected with probability bands. Overlapping windows for season probability. Team/league/season selectors. |
+| **Head to Head** | Two teams, full historical record. Time filter (all/10yr/5yr/3yr). Cumulative chart with per-match win probabilities and payroll per season. Per-league default matchups. |
 | **Overperformance** | Cumulative extra points across all seasons. Three metrics (extra pts, normalised, Managerial Score) and three time windows (all/5yr/3yr). Up to 5 teams. |
 | **Calculator** | Wage bills in → match probabilities out. Select real teams or set custom values. |
-| **Methodology** | Full model description, parameter table, data sources. |
-| **Data & Sources** | Wage tables by season, data source cards, coverage summary. |
+| **Methodology** | Full model description, 6-league parameter table, data sources. |
+| **Data & Sources** | Wage tables by season per league, data source cards, coverage summary. |
 | **History** | Historical distribution of match results (W/D/L). Compare teams against league average. Filter by venue and time period. |
 
 ## Features
 
-- **Bilingual**: Full English/Spanish interface (308 translation keys). Language selectable on first visit and via header dropdown.
-- **PWA**: Installable as a mobile app. Service worker with offline support. Install prompt for Android, instructions for iOS.
-- **Responsive**: Adapts to mobile, tablet, and desktop. Chart heights, fonts, grid cell sizes, and layout scale across 4 breakpoints.
-- **Interactive match grid**: 20×20 heatmap with touch sliding, tap pin/unpin, SVG connector lines, row/column highlight, next matchday markers. Touch-optimised with scroll prevention on data cells only.
-- **Payroll everywhere**: All tooltips show Home vs Away format with team crests and payroll comparison.
-- **Compact dates**: Match dates shown as day-of-week abbreviation + day/month (e.g. M15/2).
-- **Budget forecast**: Deterministic expected line using same match order as actual season, recalculated daily from current fixture calendar.
-- **Welcome screen**: First-time visitors choose language, league, and team.
-- **Team crests**: 52 team crests loaded from crests.json.
-- **Daily updates**: GitHub Actions fetches results, fixture calendar, recalculates budget, reruns MC simulations, and commits automatically.
-- **No backend**: All computation happens in the browser and in the daily Python update script.
+- **6 European leagues** with league selector (flags: 🇪🇸🏴󠁧󠁢󠁥󠁮󠁧󠁿🇮🇹🇩🇪🇫🇷🇳🇱), per-league model parameters, European spots, and default teams.
+- **Bilingual**: Full English/Spanish interface (332 translation keys).
+- **Narrative summaries**: Template-based bilingual sentences per team on the Home card, combining projected rank, zone, pre-season expectations, and budget position. Generated by `update.py`, stored in `data.json`.
+- **PWA**: Installable as a mobile app. Service worker with network-first for HTML and data, cache-first for assets.
+- **Responsive**: 4 breakpoints. Native `<select>` dropdowns for team selection (iOS-compatible).
+- **Season navigation**: ◀ ▶ arrows on all season selectors.
+- **Per-league position config**: UCL/UEL/Conference/relegation spots correctly configured per league.
+- **Team crests**: 201 team crests from `crests.json`.
+- **Daily updates**: GitHub Actions at 08:00 UTC.
+- **No backend**: All computation in browser + daily Python script.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `index.html` | The app — single-file React + Recharts via CDN (~137KB) |
-| `data.json` | Complete dataset: 13 seasons of match-by-match results with dates, MC bands, position probabilities, cumulative overperformance |
+| `index.html` | The app — single-file React 18.2.0 + Recharts 2.12.7 via CDN |
+| `test.html` | Identical copy of index.html (testing/cache bypass) |
+| `data.json` | 6 leagues × 13 seasons: matches, MC bands, positions, overperformance, narratives |
 | `fixtures.json` | Fixture calendar with dates from football-data.org API |
-| `i18n.json` | 308 translation keys (English + Spanish) |
-| `crests.json` | Team crest URLs (52 teams across 4 divisions) |
-| `manifest.json` | PWA manifest |
-| `sw.js` | Service worker (network-first for data, cache-first for assets) |
-| `header-bg.jpeg` | Header/footer/welcome background image |
-| `og-image.jpeg` | Social media preview image (1200×630) |
-| `icon-*.png` | PWA icons (48–512px + maskable) |
-| `update.py` | Daily update: results + fixture calendar + MC simulations + budget recalculation + match dates |
+| `i18n.json` | 332 translation keys (English + Spanish) |
+| `crests.json` | 201 team crest URLs |
+| `sw.js` | Service worker (network-first for .html + data, cache-first for assets) |
+| `update.py` | Daily update: results + fixtures + MC + budget + positions + narratives |
 | `setup_season.py` | Run once at start of each season |
-| `build_crests.py` | Queries football-data.org API to build crest URL mapping |
+| `build_crests.py` | Queries football-data.org API for crest URLs |
 | `.github/workflows/update.yml` | Daily update at 08:00 UTC |
 | `.github/workflows/build-crests.yml` | Manual trigger to regenerate crests |
 
@@ -68,10 +75,25 @@ The app updates automatically every day at 08:00 UTC via GitHub Actions, downloa
 
 | League | β | θ₁ | θ₂ | Matches | Seasons |
 |--------|------|--------|--------|---------|---------|
-| La Liga | 0.4719 | −1.0404 | 0.2081 | 4,448 | 13 |
-| Premier League | 0.6760 | −0.8358 | 0.2422 | 4,560 | 13 |
+| La Liga | 0.4719 | −1.0404 | 0.2081 | 4,820 | 13 |
+| Premier League | 0.6760 | −0.8358 | 0.2422 | 4,850 | 13 |
+| Serie A | 0.5974 | −0.8601 | 0.3391 | 4,849 | 13 |
+| Bundesliga | 0.4269 | −0.8439 | 0.2673 | 3,906 | 13 |
+| Ligue 1 | 0.4237 | −0.8941 | 0.2411 | 4,544 | 13 |
+| Eredivisie | 0.6100 | −0.9014 | 0.2038 | 3,841 | 12 |
 
 σ = 1.58 (standard deviation of match points, used for probability bands and Managerial Score).
+
+## European & relegation spots
+
+| League | UCL | UEL | Conference | Relegation |
+|--------|-----|-----|------------|------------|
+| La Liga | 4 | 2 | 1 | 3 |
+| Premier League | 4 | 2 | 1 | 3 |
+| Serie A | 4 | 2 | 1 | 3 |
+| Bundesliga | 4 | 2 | 1 | 3 |
+| Ligue 1 | 4 | 1 | 1 | 3 |
+| Eredivisie | 2 | 1 | 1 | 3 |
 
 ## Data sources
 
@@ -82,8 +104,9 @@ The app updates automatically every day at 08:00 UTC via GitHub Actions, downloa
 
 ## Version history
 
-- **v2.0** (Mar 2026): Match grid, responsive layout, PWA, touch interactions, payroll in all tooltips, Home vs Away format, budget deterministic line, match dates, next matchday markers
-- **v1.0** (Mar 2026): Initial launch with 9 tabs, bilingual, daily updates
+- **v3.0** (Mar 2026): 6 European leagues, 201 teams, per-league model parameters and European spots, narrative template system, native team selectors, mutually exclusive prediction categories, season navigation arrows, network-first SW.
+- **v2.0** (Mar 2026): Match grid, responsive layout, PWA, touch interactions, budget deterministic line, match dates.
+- **v1.0** (Mar 2026): Initial launch, La Liga + Premier League.
 
 ## Operations
 
