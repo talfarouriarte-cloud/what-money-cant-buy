@@ -547,6 +547,7 @@ function pill(val,lbl,clr,bg){return h("div",{className:"flex-1 rounded py-0.5 t
 // Row helper
 function pillRow(label,icon,mW,mD,mL,hW,hD,hL,hN,pts,exp,diff){
 var showMod=hasModel&&typeof mW==="number";
+var hWp=hN>0?Math.round(hW/hN*100):0,hDp=hN>0?Math.round(hD/hN*100):0,hLp=hN>0?Math.round(hL/hN*100):0;
 return h("div",{className:"flex items-center gap-2 py-2",style:{borderBottom:"1px solid #f0f0f0"}},
 h("div",{style:{width:SCR.ch(70,90,110,130),flexShrink:0}},h("div",{className:"text-xs font-semibold flex items-center gap-1"},icon,label)),
 h("div",{className:"flex-1"},
@@ -557,14 +558,20 @@ showMod?pill(mD+"%",_t("d_short"),"#888","#88888812"):pill("—",_t("d_short"),"
 showMod?pill(mL+"%",_t("l_short"),R):pill("—",_t("l_short"),"#ccc","#f5f5f5")),
 h("div",{className:"flex gap-1 items-center"},
 h("span",{style:{fontSize:8,color:"#bbb",width:SCR.ch(28,32,38,42),flexShrink:0}},_t("h2h_record")),
-pill(hW,_t("w_short"),G,G+"15"),
-pill(hD,_t("d_short"),"#888","#88888812"),
-pill(hL,_t("l_short"),R,R+"15"))),
+pill(hWp+"%",h("span",{style:{fontSize:8,color:"#999"}},hW),G,G+"15"),
+pill(hDp+"%",h("span",{style:{fontSize:8,color:"#999"}},hD),"#888","#88888812"),
+pill(hLp+"%",h("span",{style:{fontSize:8,color:"#999"}},hL),R,R+"15"))),
 h("div",{style:{width:SCR.ch(70,80,100,110),flexShrink:0,textAlign:"right"}},
 h("div",{className:"text-xs"},h("b",{style:{color:B}},pts),h("span",{style:{color:"#aaa"}}," / "+exp)),
 h("div",{className:"text-xs font-bold",style:{color:diff>=0?G:R}},(diff>=0?"+":"")+diff.toFixed(1)),
 h("div",{style:{fontSize:9,color:"#bbb"}},hN+" "+_t("matches_lc"))));}
-return h("div",{className:"rounded-lg p-3 mb-4",style:{background:"#f8f9fa",border:"1px solid #e9ecef"}},
+// Weighted average model for total
+var totMW=null,totMD=null,totML=null;
+if(hasModel&&sm.hmA.n+sm.hmB.n>0){
+var nA=sm.hmA.n,nB=sm.hmB.n,nT=nA+nB;
+totMW=Math.round((phAH*nA+plBH*nB)/nT*100);
+totMD=Math.round((pdAH*nA+pdBH*nB)/nT*100);
+totML=Math.round((plAH*nA+phBH*nB)/nT*100);}return h("div",{className:"rounded-lg p-3 mb-4",style:{background:"#f8f9fa",border:"1px solid #e9ecef"}},
 h("div",{className:"text-xs mb-3 flex items-center gap-1 flex-wrap"},
 Cr(tA,14),h("b",{style:{color:B}},tA)," ",_t("vs")," ",Cr(tB,14),h("b",{style:{color:O}},tB),
 h("span",{style:{color:"#999"}}," — "+(_t("h2h_from_perspective"))+" "),h("span",{style:{color:B,fontWeight:600}},tA)),
@@ -575,7 +582,7 @@ sm.hmB.n>0?pillRow((_lang==="es"?"En casa "+tB:tB+" home"),"✈\uFE0F",
 Math.round(plBH*100),Math.round(pdBH*100),Math.round(phBH*100),
 sm.hmB.w,sm.hmB.d,sm.hmB.l,sm.hmB.n,sm.hmB.tp,Math.round(sm.hmB.te*10)/10,sm.hmB.tp-sm.hmB.te):null,
 pillRow(_t("total"),"\u03A3",
-null,null,null,
+totMW,totMD,totML,
 sm.wA,sm.dr,sm.wB,sm.n,sm.tpA,sm.teA,sm.tpA-sm.teA));})(),
 mt.length===0?h("div",{className:"text-gray-400 text-center py-8"},_t("no_matches")):
 h("div",null,
