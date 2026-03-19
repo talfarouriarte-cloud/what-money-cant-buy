@@ -290,8 +290,17 @@ var trkPreRks=React.useMemo(function(){return rankByPts(trkPrePts);},[trkPrePts]
 var trkCurPts=React.useMemo(function(){if(!iC)return{};var pts={};var teams=Object.keys(sD);teams.forEach(function(t){
 if(D.bands&&D.bands[lg]&&D.bands[lg][t]){var b=D.bands[lg][t];pts[t]=b.p50[b.p50.length-1];}});return pts;},[sD,lg,iC]);
 var trkCurRks=React.useMemo(function(){return rankByPts(trkCurPts);},[trkCurPts]);
-var teamListEl=h("div",{className:"overflow-y-auto rounded bg-gray-50 p-1 text-xs",style:{maxHeight:400,WebkitOverflowScrolling:"touch"}},
-st.map(function(s,i){var idx=sel.indexOf(s.n);return h("div",{key:s.n,onClick:function(){tog(s.n);},className:"cursor-pointer px-1 py-0.5 rounded flex justify-between "+(idx>=0?"font-bold":"hover:bg-gray-100"),style:idx>=0?{background:T[idx]+"18",color:T[idx]}:{}},h("span",{className:"truncate"},Cr(s.n,14),h("span",{style:{marginLeft:CR[s.n]?3:0}},i+1+". "+s.n)),h("span",null,s.p));}));
+var teamListEl=h("div",{className:"flex flex-wrap gap-2 items-center"},
+h("select",{value:sel[0],onChange:function(ev){sSel([ev.target.value]);},
+className:"border rounded px-2 py-1.5 text-sm font-semibold",style:{maxWidth:200}},
+st.map(function(s,i){return h("option",{key:s.n,value:s.n},(i+1)+". "+s.n+" ("+s.p+")");})),
+sel.length<3?h("select",{value:"",onChange:function(ev){if(ev.target.value){tog(ev.target.value);}},
+className:"border rounded px-2 py-1 text-xs text-gray-500",style:{maxWidth:180}},
+h("option",{value:""},(_t("compare_add")||"+ Compare...")),
+st.filter(function(s){return sel.indexOf(s.n)<0;}).map(function(s){return h("option",{key:s.n,value:s.n},s.n);})):null,
+sel.length>1?h("div",{className:"flex gap-1"},sel.slice(1).map(function(t,i){return h("span",{key:t,onClick:function(){tog(t);},
+className:"px-2 py-0.5 rounded-full cursor-pointer text-xs font-semibold",
+style:{background:T[i+1]+"20",color:T[i+1],border:"1px solid "+T[i+1]+"40"}},t+" ×");})):null);
 if(!pr)return h("div",null,h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},e(LP,{lg:lg,set:switchLg}),h("div",{className:"flex items-center gap-1"},h("button",{onClick:function(){var i=sL.indexOf(sn);if(i<sL.length-1)sSn(sL[i+1]);},disabled:sL.indexOf(sn)>=sL.length-1,className:"px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-default",style:{fontSize:14,lineHeight:1}},"◀"),h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s);})),h("button",{onClick:function(){var i=sL.indexOf(sn);if(i>0)sSn(sL[i-1]);},disabled:sL.indexOf(sn)<=0,className:"px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-default",style:{fontSize:14,lineHeight:1}},"▶"))),h("div",{className:"flex gap-4"},h("div",{className:"hidden sm:block w-44 shrink-0",style:{alignSelf:"flex-start"}},teamListEl),h("div",{className:"flex-1 text-center py-8"},h("div",{className:"text-gray-400 mb-2"},Cr(sel[0],24)),h("div",{className:"text-gray-500 font-semibold"},sel[0]),h("div",{className:"text-gray-400 mt-2"},(_t("not_in_league")||"Not in this league in")+" "+sn),h("div",{className:"mt-4"},h("button",{onClick:function(){sSn(CUR_SN);},className:"px-3 py-1 rounded bg-blue-50 text-blue-600 text-sm font-semibold"},(_t("go_current")||"Go to current season"))))));
 return h("div",null,
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},
@@ -299,10 +308,7 @@ e(LP,{lg:lg,set:switchLg}),
 h("div",{className:"flex items-center gap-1"},h("button",{onClick:function(){var i=sL.indexOf(sn);if(i<sL.length-1)sSn(sL[i+1]);},disabled:sL.indexOf(sn)>=sL.length-1,className:"px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-default",style:{fontSize:14,lineHeight:1}},"◀"),h("select",{value:sn,onChange:function(ev){sSn(ev.target.value);},className:"border rounded px-2 py-1 text-sm"},sL.map(function(s){return h("option",{key:s,value:s},s+(s===CUR_SN?" ("+_t("current")+")":""));})),h("button",{onClick:function(){var i=sL.indexOf(sn);if(i>0)sSn(sL[i-1]);},disabled:sL.indexOf(sn)<=0,className:"px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-default",style:{fontSize:14,lineHeight:1}},"▶"))),
 e(Info,null,_t("info_tracker"),h("br"),h("br"),h("b",null,_t("info_tracker_single_title")),_t("info_tracker_single"),h("br"),h("br"),h("b",null,_t("info_tracker_multi_title")),_t("info_tracker_multi")),
 h("div",null,
-h("div",{className:"mb-2 flex items-center gap-2 flex-wrap"},
-h("button",{onClick:function(){setShowList(!showList);},className:"text-xs px-3 py-1 rounded font-medium",style:{background:showList?"#1A3A6B":"#f0f0f0",color:showList?"white":"#555"}},showList?(_t("hide_teams")||"Hide teams"):(_t("show_teams")||"Show teams")),
-sel.map(function(t,i){return h("span",{key:t,className:"flex items-center gap-1 text-xs font-semibold",style:{color:T[i]}},Cr(t,14),t);})),
-showList?h("div",{className:"mb-3",style:{border:"1px solid #e5e7eb",borderRadius:8,padding:4}},teamListEl):null,
+h("div",{className:"mb-3"},teamListEl),
 h("div",{style:{minWidth:0}},
 h("div",{className:"flex gap-3 mb-2 flex-wrap text-sm"},ops.map(function(o,i){return h("span",{key:o.name,className:"flex items-center gap-1"},h("span",{style:{width:8,height:8,borderRadius:4,background:T[i],display:"inline-block"}}),h("b",{style:{color:T[i]}},Cr(o.name,14),h("span",{style:{marginLeft:CR[o.name]?3:0}},o.name))," ",h("span",{className:"text-gray-400"},o.p+"pts"),h("span",{style:{color:Number(o.op)>=0?G:R,fontWeight:700}},(Number(o.op)>=0?"+":"")+o.op));})),
 h("div",{style:{height:SCR.ch(240,300,380,440)},className:"chart-wrap"},e(RC.ResponsiveContainer,null,e(RC.AreaChart,{data:cd,margin:{left:0,right:5,top:5,bottom:5}},cc))),
