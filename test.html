@@ -1281,6 +1281,7 @@ React.useEffect(function(){var el=gridRef.current;if(!el)return;function noScrol
 
 // Feature 1: auto-highlight selected team's next fixture on mount
 var selTeamRef=React.useRef(null);
+var _sfx=React.useState(null),selFix=_sfx[0],setSelFix=_sfx[1];
 React.useEffect(function(){
 var ht=getHash().sel?getHash().sel.split(",")[0]:null;
 if(!ht||selTeamRef.current===ht+"|"+sn)return;
@@ -1291,19 +1292,8 @@ var ri2,ci2;
 if(isH){ri2=teams.indexOf(ht);ci2=teams.indexOf(opp);}
 else{ri2=teams.indexOf(opp);ci2=teams.indexOf(ht);}
 if(ri2<0||ci2<0)return;
-var tl=tipLookup[ri2]&&tipLookup[ri2][ci2]?tipLookup[ri2][ci2]:null;
-if(!tl)return;
-setPinned({ri:ri2,ci:ci2});setHRow(ri2);setHCol(ci2);setTip(tl);
-// Position from DOM after render
-requestAnimationFrame(function(){
-var tbl=gridRef.current?gridRef.current.querySelector("table"):null;
-if(!tbl)return;
-var rows=tbl.querySelectorAll("tr");
-if(rows[ri2+1]){var cells=rows[ri2+1].querySelectorAll("td");
-if(cells[ci2+1]){var rc=cells[ci2+1].getBoundingClientRect();
-setPinPos({cx:rc.left+rc.width/2,cy:rc.top+rc.height/2,x:rc.left+rc.width/2,y:rc.top});}}
-});
-},[teams,sD,sn,tipLookup]);
+setSelFix({ri:ri2,ci:ci2});
+},[teams,sD,sn]);
 
 var tipLookup=React.useMemo(function(){
 var lk={};
@@ -1410,15 +1400,15 @@ onClick:function(ev){if(isTouchDev.current)return;if(!tipContent)return;if(pinne
 onMouseEnter:function(ev){if(isTouchDev.current)return;if(!pinned&&tipContent){setTip(tipContent);setTipPos({x:ev.clientX,y:ev.clientY});}},
 onMouseMove:function(ev){if(isTouchDev.current)return;if(!pinned&&tipContent){setTip(tipContent);setTipPos({x:ev.clientX,y:ev.clientY});}},
 onMouseLeave:function(){if(isTouchDev.current)return;if(!pinned){setTip(null);}},
-className:"grid-cell",style:{width:cellSz,height:cellSz,minWidth:cellSz,background:bg,border:pinned&&pinned.ri===ri&&pinned.ci===ci?"2.5px solid #D4A017":nextFixCells[ri+","+ci]?(probs?"2.5px solid "+(probs.w>probs.l?"rgba(46,139,87,0.7)":probs.l>probs.w?"rgba(192,57,43,0.7)":"rgba(200,180,50,0.7)"):"2.5px solid #aaa"):"0.5px solid #f0f0f0",overflow:"visible",textAlign:"center",verticalAlign:"middle",padding:0,cursor:tipContent?"pointer":"default",position:"relative",opacity:(hRow>=0||hCol>=0)&&ri!==hRow&&ci!==hCol?0.25:1,boxShadow:pinned&&pinned.ri===ri&&pinned.ci===ci?"0 0 6px rgba(212,160,23,0.5)":(ri===hRow||ci===hCol?"inset 0 0 0 1px rgba(26,58,107,0.15)":"none"),transition:"opacity 0.1s"}},
+className:"grid-cell",style:{width:cellSz,height:cellSz,minWidth:cellSz,background:bg,border:(selFix&&selFix.ri===ri&&selFix.ci===ci)?"2.5px solid #D4A017":(pinned&&pinned.ri===ri&&pinned.ci===ci?"2.5px solid #1A3A6B":nextFixCells[ri+","+ci]?(probs?"2.5px solid "+(probs.w>probs.l?"rgba(46,139,87,0.7)":probs.l>probs.w?"rgba(192,57,43,0.7)":"rgba(200,180,50,0.7)"):"2.5px solid #aaa"):"0.5px solid #f0f0f0"),overflow:"visible",textAlign:"center",verticalAlign:"middle",padding:0,cursor:tipContent?"pointer":"default",position:"relative",opacity:(hRow>=0||hCol>=0)&&ri!==hRow&&ci!==hCol?0.25:1,boxShadow:(selFix&&selFix.ri===ri&&selFix.ci===ci)?"0 0 6px rgba(212,160,23,0.5)":(pinned&&pinned.ri===ri&&pinned.ci===ci?"0 0 6px rgba(26,58,107,0.4)":(ri===hRow||ci===hCol?"inset 0 0 0 1px rgba(26,58,107,0.15)":"none")),transition:"opacity 0.1s"}},
 dotColor?h("div",{style:{width:SCR.ch(8,10,12,14),height:SCR.ch(8,10,12,14),borderRadius:"50%",background:dotColor,margin:"auto",boxShadow:pinned&&pinned.ri===ri&&pinned.ci===ci?"0 0 0 3px white, 0 0 0 5px "+dotColor:"none",position:"relative",zIndex:pinned&&pinned.ri===ri&&pinned.ci===ci?5:1}}):
 label?h("span",{style:{color:"#999",fontSize:Math.max(6,fSz-1),fontWeight:pinned&&pinned.ri===ri&&pinned.ci===ci?"bold":"normal"}},label):null
 );
 }));
 }))),
 // Floating tooltip
-pinned&&tip&&!isDrag?function(){var tx=Math.min(Math.max(10,(pinPos.x)-100),window.innerWidth-220)+90;var ty=Math.min(Math.max(10,(pinPos.y)-130),window.innerHeight-200)+30;return h("svg",{style:{position:"fixed",top:0,left:0,width:"100%",height:"100%",pointerEvents:isTouchDev.current?"none":pinned?"auto":"none",cursor:pinned?"pointer":"default",zIndex:49}},h("line",{x1:pinPos.cx,y1:pinPos.cy,x2:tx,y2:ty,stroke:"rgba(26,58,107,0.5)",strokeWidth:2,strokeDasharray:"5 3"}));}():null,
-tip?h("div",{onClick:function(ev){if(!isTouchDev.current){setPinned(null);setTip(null);setHRow(-1);setHCol(-1);}},style:{position:"fixed",top:Math.min(Math.max(10,(pinned?pinPos.y:tipPos.y)-130),window.innerHeight-200),left:Math.min(Math.max(10,(pinned?pinPos.x:tipPos.x)-100),window.innerWidth-220),background:"white",border:"2px solid "+(tip.md&&tip.md.played?(tip.md.pts===3?"#2E8B57":tip.md.pts===1?"#d4a017":"#C0392B"):"#ccc"),borderRadius:8,padding:"10px 14px",fontSize:SCR.fs(11,12,14,15),boxShadow:"0 4px 20px rgba(0,0,0,0.15)",zIndex:50,minWidth:180,pointerEvents:isTouchDev.current?"none":pinned?"auto":"none",cursor:pinned?"pointer":"default"}},
+pinned&&tip&&!isDrag?function(){var tx=Math.min(Math.max(10,(pinPos.x)-100),window.innerWidth-220)+90;var ty=Math.min(Math.max(10,(pinPos.y)-130),window.innerHeight-200)+30;return h("svg",{onTouchEnd:function(ev){ev.stopPropagation();setPinned(null);setTip(null);setHRow(-1);setHCol(-1);},onClick:function(){setPinned(null);setTip(null);setHRow(-1);setHCol(-1);},style:{position:"fixed",top:0,left:0,width:"100%",height:"100%",pointerEvents:pinned?"auto":"none",cursor:"pointer",zIndex:49}},h("line",{x1:pinPos.cx,y1:pinPos.cy,x2:tx,y2:ty,stroke:"rgba(26,58,107,0.5)",strokeWidth:2,strokeDasharray:"5 3"}));}():null,
+tip?h("div",{onTouchEnd:function(ev){ev.stopPropagation();setPinned(null);setTip(null);setHRow(-1);setHCol(-1);},onClick:function(){setPinned(null);setTip(null);setHRow(-1);setHCol(-1);},style:{position:"fixed",top:Math.min(Math.max(10,(pinned?pinPos.y:tipPos.y)-130),window.innerHeight-200),left:Math.min(Math.max(10,(pinned?pinPos.x:tipPos.x)-100),window.innerWidth-220),background:"white",border:"2px solid "+(tip.md&&tip.md.played?(tip.md.pts===3?"#2E8B57":tip.md.pts===1?"#d4a017":"#C0392B"):"#ccc"),borderRadius:8,padding:"10px 14px",fontSize:SCR.fs(11,12,14,15),boxShadow:"0 4px 20px rgba(0,0,0,0.15)",zIndex:50,minWidth:180,pointerEvents:"auto",cursor:"pointer"}},
 h("div",{className:"font-bold mb-1",style:{display:"flex",alignItems:"center",gap:4}},Cr(tip.home,16)," ",tip.home," vs ",tip.away," ",Cr(tip.away,16)),
 h("div",{style:{fontSize:SCR.fs(9,10,11,12),color:"#999",marginBottom:2}},sD[tip.home]?cur+sD[tip.home].w+"M":"","  vs  ",sD[tip.away]?cur+sD[tip.away].w+"M":""),
 tip.date?h("div",{style:{color:"#888",fontSize:SCR.fs(9,10,11,12),marginBottom:3}},tip.date):null,
@@ -1486,8 +1476,8 @@ function sTab(v,dir){sTab0(v);setHash("tab",v);setSlideDir(dir||null);setSlideKe
 var _sl=React.useState(null),slideDir=_sl[0],setSlideDir=_sl[1];
 var _sk=React.useState(0),slideKey=_sk[0],setSlideKey=_sk[1];
 var touchRef=React.useRef(null);
-function onTS(ev){var t=ev.touches[0];touchRef.current={x:t.clientX,y:t.clientY,time:Date.now()};}
-function onTE(ev){if(!touchRef.current)return;var t=ev.changedTouches[0];var dx=t.clientX-touchRef.current.x;var dy=t.clientY-touchRef.current.y;var dt=Date.now()-touchRef.current.time;touchRef.current=null;if(dt>400||Math.abs(dx)<100||Math.abs(dy)>Math.abs(dx)*0.4)return;var ids=tabs.map(function(t){return t.id;});var i=ids.indexOf(activeTab);if(dx<0)sTab(ids[(i+1)%ids.length],"left");else sTab(ids[(i-1+ids.length)%ids.length],"right");}
+function onTS(ev){var t=ev.touches[0];var el=ev.target;var inChart=false;while(el){if(el.classList&&(el.classList.contains("recharts-surface")||el.classList.contains("chart-wrap")||el.classList.contains("grid-cell")||el.tagName==="TABLE"||el.tagName==="TBODY"||el.classList.contains("overflow-x-auto"))){inChart=true;break;}el=el.parentElement;}touchRef.current={x:t.clientX,y:t.clientY,time:Date.now(),inChart:inChart};}
+function onTE(ev){if(!touchRef.current)return;var t=ev.changedTouches[0];var dx=t.clientX-touchRef.current.x;var dy=t.clientY-touchRef.current.y;var dt=Date.now()-touchRef.current.time;var ic=touchRef.current.inChart;touchRef.current=null;if(ic)return;if(dt>400||Math.abs(dx)<120||Math.abs(dy)>Math.abs(dx)*0.35)return;var ids=tabs.map(function(t){return t.id;});var i=ids.indexOf(activeTab);if(dx<0)sTab(ids[(i+1)%ids.length],"left");else sTab(ids[(i-1+ids.length)%ids.length],"right");}
 var activeTab=getHash().tab||tab;
 var _ti=tabs.map(function(t){return t.id;}).indexOf(activeTab);
 return showWelcome?function(){
