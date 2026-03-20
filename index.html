@@ -14,6 +14,7 @@
 .range-thumb::-moz-range-thumb{pointer-events:all;width:14px;height:14px;border-radius:50%;background:white;border:2px solid #2E75B6;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.2);}
 .range-thumb::-webkit-slider-runnable-track{-webkit-appearance:none;background:transparent;}
 .range-thumb::-moz-range-track{background:transparent;}.recharts-tooltip-wrapper .recharts-default-tooltip{border-radius:10px!important;box-shadow:0 4px 12px rgba(0,0,0,0.1)!important;border:1px solid #e5e7eb!important;}
+.recharts-tooltip-wrapper{pointer-events:auto!important;}
 .chart-wrap{border-radius:12px;background:linear-gradient(180deg,#fff 0%,#f9fafb 100%);box-shadow:0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);padding:8px 4px 4px 0;}
 @keyframes slideInLeft{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:translateX(0)}}
 @keyframes slideInRight{from{opacity:0;transform:translateX(-60px)}to{opacity:1;transform:translateX(0)}}
@@ -1293,7 +1294,16 @@ if(isH){ri2=teams.indexOf(ht);ci2=teams.indexOf(opp);}
 else{ri2=teams.indexOf(opp);ci2=teams.indexOf(ht);}
 if(ri2<0||ci2<0)return;
 setSelFix({ri:ri2,ci:ci2});
-},[teams,sD,sn]);
+var tl=tipLookup[ri2]&&tipLookup[ri2][ci2]?tipLookup[ri2][ci2]:null;
+if(tl){setPinned({ri:ri2,ci:ci2});setHRow(ri2);setHCol(ci2);setTip(tl);
+requestAnimationFrame(function(){requestAnimationFrame(function(){
+var tbl=gridRef.current?gridRef.current.querySelector("table"):null;
+if(!tbl)return;var rows=tbl.querySelectorAll("tr");
+if(rows[ri2+1]){var cells=rows[ri2+1].querySelectorAll("td");
+if(cells[ci2+1]){var rc=cells[ci2+1].getBoundingClientRect();
+setPinPos({cx:rc.left+rc.width/2,cy:rc.top+rc.height/2,x:rc.left+rc.width/2,y:rc.top});}}
+});});}
+},[teams,sD,sn,tipLookup]);
 
 var tipLookup=React.useMemo(function(){
 var lk={};
@@ -1465,7 +1475,7 @@ var _wLg=React.useState("ll"),wLg=_wLg[0],setWLg=_wLg[1];
 var _wTm=React.useState(""),wTeam=_wTm[0],setWTeam=_wTm[1];
 React.useEffect(function(){function close(){if(_thSet)_thSet(null);}document.addEventListener("click",close);return function(){document.removeEventListener("click",close);};},[]);
 React.useEffect(function(){function onPop(){forceUpdate(function(c){return c+1;});}window.addEventListener("popstate",onPop);return function(){window.removeEventListener("popstate",onPop);};},[]);
-React.useEffect(function(){var last=0;function onChartTouch(ev){var el=ev.target;while(el){if(el.classList&&el.classList.contains("recharts-surface")){var now=Date.now();if(now-last>400){last=now;hap(8);}return;}el=el.parentElement;}}document.addEventListener("touchstart",onChartTouch,{passive:true});return function(){document.removeEventListener("touchstart",onChartTouch);};},[]);
+React.useEffect(function(){var last=0;function onChartTouch(ev){var el=ev.target;var inChart=false;var inTooltip=false;while(el){if(el.classList){if(el.classList.contains("recharts-tooltip-wrapper")||el.classList.contains("recharts-default-tooltip"))inTooltip=true;if(el.classList.contains("recharts-surface"))inChart=true;}el=el.parentElement;}if(inTooltip||!inChart){var surfaces=document.querySelectorAll(".recharts-surface");surfaces.forEach(function(s){s.dispatchEvent(new MouseEvent("mouseleave",{bubbles:true}));});}if(inChart&&!inTooltip){var now=Date.now();if(now-last>400){last=now;hap(8);}}}document.addEventListener("touchstart",onChartTouch,{passive:true});return function(){document.removeEventListener("touchstart",onChartTouch);};},[]);
 var _ptr=React.useState(0),ptrY=_ptr[0],setPtrY=_ptr[1];
 var ptrRef=React.useRef(0);
 React.useEffect(function(){if(!isStandalone)return;var sy=0;function ts(ev){if(window.scrollY<1)sy=ev.touches[0].clientY;else sy=0;}function tm(ev){if(!sy)return;var dy=ev.touches[0].clientY-sy;if(dy>0&&window.scrollY<1){var v=Math.min(dy*0.5,60);ptrRef.current=dy;setPtrY(v);}}function te(){if(ptrRef.current>60){setPtrY(0);ptrRef.current=0;window.location.reload();}else{setPtrY(0);ptrRef.current=0;}sy=0;}document.addEventListener("touchstart",ts,{passive:true});document.addEventListener("touchmove",tm,{passive:false});document.addEventListener("touchend",te,{passive:true});return function(){document.removeEventListener("touchstart",ts);document.removeEventListener("touchmove",tm);document.removeEventListener("touchend",te);};},[isStandalone]);
