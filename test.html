@@ -1003,11 +1003,11 @@ h("span",{className:"text-gray-400"},nP+" games"),
 h("span",{style:{color:df>=0?G:R,fontWeight:700}},(df>=0?"+":"")+df.toFixed(1)+" "+_t("vs_budget")),
 h("span",{style:{color:"#aaa",marginLeft:8,fontSize:"0.85em"}},(_cur(lg))+t.w+"M"))),
 h("div",{className:"grid gap-4",style:{gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))"}},
-e(Card,{q:_tf("card_howis",{team:team}),tab:"tracker",tabName:_t("tab_tracker"),go:props.go,color:B},
+e(Card,{q:_tf("card_howis",{team:team}),tab:"tracker",tabName:_t("tab_tracker"),go:function(){setHash("sn",CUR_SN);props.go("tracker");},color:B},
 h("div",{className:"flex items-baseline gap-2"},h("span",{className:"text-2xl font-bold",style:{color:N}},Cr(team,22),h("span",{style:{marginLeft:CR[team]?6:0}},ap+" "+_t("pts_lc"))),h("span",{className:"text-sm text-gray-500"},_tf("after_n_games",{n:nP}))),
 h("div",{className:"text-sm mt-1"},_t("expected_colon"),h("span",{className:"text-gray-500"},Math.round(ep)),h("span",{style:{color:df>=0?G:R,fontWeight:600,marginLeft:8}},(df>=0?"+":"")+df.toFixed(1)+" "+_t("pts_lc"))),
 bd?h("div",{className:"text-xs text-gray-400 mt-1"},_t("projected_final"),h("b",{style:{color:N}},projFin+" "+_t("pts_lc")),projRk?" ("+_t("rank")+" "+projRk+")":""):null),
-e(Card,{q:_t("card_matches"),tab:"matches",tabName:_t("tab_matches"),go:props.go,color:"#6366F1"},
+e(Card,{q:_t("card_matches"),tab:"matches",tabName:_t("tab_matches"),go:function(){setHash("sn",CUR_SN);props.go("matches");},color:"#6366F1"},
 nextMD.matches.length>0?h("div",null,
 h("div",{className:"text-xs text-gray-400 mb-2"},(_t("upcoming")||"Upcoming")+" \u00b7 "+nextMD.matches.length+" "+(_t("matches_lc")||" matches")),
 h("div",{className:"text-sm font-semibold mb-1",style:{color:G}},_t("closest_matches")),
@@ -1044,7 +1044,7 @@ narr?h("div",{className:"text-sm",style:{lineHeight:"1.5"}},narr[_lang]||narr.en
 h("div",{className:"text-sm text-gray-500"},_t("no_projection")),
 badges);
 }():h("div",{className:"text-gray-400 text-sm"},_t("no_projection"))),
-e(Card,{q:_t("card_run"),tab:"badrun",tabName:_t("tab_badrun"),go:props.go,color:l5d>=0?G:R},
+e(Card,{q:h("span",{className:"flex items-center gap-1"},Cr(team,14),_t("card_run")),tab:"badrun",tabName:_t("tab_badrun"),go:function(){setHash("sn",CUR_SN);setHash("br",team);props.go("badrun");},color:l5d>=0?G:R},
 function(){
 var bestSp=sp10!==null&&l10n>=10?sp10:sp5;
 var bestD=sp10!==null&&l10n>=10?l10d:l5d;
@@ -1094,7 +1094,7 @@ h("b",{style:{color:dO>=0?G:R}},h2hRec.opp+" "+h2hRec.v5pO+"pts"),
 " ("+(_t("exp_short"))+" "+h2hRec.v5eO+")");
 }():null
 ):h("div",{className:"text-gray-400 text-sm"},_t("season_complete"))),
-e(Card,{q:_t("card_mgmt"),tab:"explorer",tabName:_t("tab_explorer"),go:props.go,color:cum&&cum[0]>=0?G:R},
+e(Card,{q:_t("card_mgmt"),tab:"explorer",tabName:_t("tab_explorer"),go:function(){setHash("ex",team);props.go("explorer");},color:cum&&cum[0]>=0?G:R},
 cum?function(){var arr=cum[3]||[];var nAll=cum[1];var totOP=cum[0];
 var totExp=0;arr.forEach(function(s){totExp+=s[2];});
 var pctOP=totExp>0?Math.round(totOP/totExp*1000)/10:0;
