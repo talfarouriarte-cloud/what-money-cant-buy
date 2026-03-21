@@ -312,7 +312,14 @@ def download_current_season():
 
 def process_season(filepath, wages, beta, t1, t2, fixtures_calendar=None, lg=None):
     df = pd.read_csv(filepath, encoding='utf-8', on_bad_lines='skip', low_memory=False)
-    df = df[['HomeTeam','AwayTeam','FTR']].dropna()
+    has_goals = 'FTHG' in df.columns and 'FTAG' in df.columns
+    cols = ['HomeTeam','AwayTeam','FTR']
+    if has_goals:
+        cols += ['FTHG','FTAG']
+    df = df[cols].dropna()
+    if has_goals:
+        df['FTHG'] = df['FTHG'].astype(int)
+        df['FTAG'] = df['FTAG'].astype(int)
     # Map CSV names to internal names
     df['HomeTeam'] = df['HomeTeam'].apply(fix_name)
     df['AwayTeam'] = df['AwayTeam'].apply(fix_name)
@@ -333,7 +340,7 @@ def process_season(filepath, wages, beta, t1, t2, fixtures_calendar=None, lg=Non
     
     td = {}
     for t in sorted(set(df['HomeTeam']) | set(df['AwayTeam'])):
-        td[t] = {'pts':[],'exp':[],'m':[],'cp':0,'ce':0.0}
+        td[t] = {'pts':[],'exp':[],'m':[],'cp':0,'ce':0.0,'gf':0,'ga':0}
     for _, r in df.iterrows():
         h, a = r['HomeTeam'], r['AwayTeam']
         wh, wa = wages.get(h, wages.get(fix_name(h), 20)), wages.get(a, wages.get(fix_name(a), 20))
@@ -347,12 +354,17 @@ def process_season(filepath, wages, beta, t1, t2, fixtures_calendar=None, lg=Non
         eh, ea = ph * 3 + pd_, pa * 3 + pd_
         official_gw = gw_lookup.get((fix_name(h), fix_name(a)), 0)
         mdate = date_lookup.get((fix_name(h), fix_name(a)), '')
+        # Track goals
+        hg = int(r['FTHG']) if has_goals else 0
+        ag = int(r['FTAG']) if has_goals else 0
+        td[h]['gf'] += hg; td[h]['ga'] += ag
+        td[a]['gf'] += ag; td[a]['ga'] += hg
         for team, pts, exp, opp, ih in [(h,hp,eh,a,1),(a,ap,ea,h,0)]:
             td[team]['cp'] += pts; td[team]['ce'] += exp
             td[team]['pts'].append(td[team]['cp'])
             td[team]['exp'].append(round(td[team]['ce'], 1))
             td[team]['m'].append([opp, ih, pts, round(exp, 2), official_gw, mdate])
-    return {t: {'a':d['pts'],'e':d['exp'],'m':d['m'],'w':round(wages.get(t, wages.get(fix_name(t), 0)))} for t,d in td.items()}
+    return {t: {'a':d['pts'],'e':d['exp'],'m':d['m'],'w':round(wages.get(t, wages.get(fix_name(t), 0))),'gd':d['gf']-d['ga']} for t,d in td.items()}
 
 
 def recalculate_budget_bands(fixtures_cal, wages, beta, t1, t2, lg, season_data, remaining_fixtures, n_sims=10000):
