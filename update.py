@@ -313,13 +313,11 @@ def download_current_season():
 def process_season(filepath, wages, beta, t1, t2, fixtures_calendar=None, lg=None):
     df = pd.read_csv(filepath, encoding='utf-8', on_bad_lines='skip', low_memory=False)
     has_goals = 'FTHG' in df.columns and 'FTAG' in df.columns
-    cols = ['HomeTeam','AwayTeam','FTR']
+    print(f"    CSV columns: {list(df.columns[:10])}... has_goals={has_goals}")
+    df = df.dropna(subset=['HomeTeam','AwayTeam','FTR'])
     if has_goals:
-        cols += ['FTHG','FTAG']
-    df = df[cols].dropna()
-    if has_goals:
-        df['FTHG'] = df['FTHG'].astype(int)
-        df['FTAG'] = df['FTAG'].astype(int)
+        df['FTHG'] = pd.to_numeric(df['FTHG'], errors='coerce').fillna(0).astype(int)
+        df['FTAG'] = pd.to_numeric(df['FTAG'], errors='coerce').fillna(0).astype(int)
     # Map CSV names to internal names
     df['HomeTeam'] = df['HomeTeam'].apply(fix_name)
     df['AwayTeam'] = df['AwayTeam'].apply(fix_name)
@@ -941,7 +939,8 @@ def update():
         
         sample = list(result.keys())[0]
         new_gw = len(result[sample]['a'])
-        print(f"  {lg}: {len(result)} teams, GW {old_gw} -> {new_gw}")
+        sample_gd = result[sample].get('gd', 'MISSING')
+        print(f"  {lg}: {len(result)} teams, GW {old_gw} -> {new_gw}, {sample} gd={sample_gd}")
         
         # Run MC simulation with fixture calendar
         print(f"  Running MC simulation...")
