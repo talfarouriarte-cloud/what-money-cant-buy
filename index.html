@@ -88,7 +88,7 @@ table{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
 <body>
 <div id="root"><p style="padding:40px;text-align:center;color:#888">Loading app...</p></div>
 <script>
-var e=React.createElement,RC=Recharts,D=null,CR={},FIX={},CUR_SN="25/26";
+var e=React.createElement,RC=Recharts,D=null,CR={},FIX={},CUR_SN=null;
 var LEAGUES={
   ll:{name:"La Liga",cur:"€",flag:"🇪🇸",def:"Barcelona",n:20,ucl:4,uel:2,ucol:1,rel:3},
   pl:{name:"Premier League",cur:"£",flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",def:"Liverpool",n:20,ucl:4,uel:2,ucol:1,rel:3},
@@ -142,7 +142,7 @@ function Tracker(){
 var hh=getHash();
 var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
 var _2=React.useState(hh.sel?hh.sel.split(","):[_defT(hh.lg||"ll")]),sel=_2[0],sSel=_2[1];
-var _3=React.useState(hh.sn||"25/26"),sn=_3[0],sSn0=_3[1];
+var _3=React.useState(hh.sn||CUR_SN),sn=_3[0],sSn0=_3[1];
 function sLg(v){sLg0(v);setHash("lg",v);}
 function sSn(v){sSn0(v);setHash("sn",v);}
 var sL=React.useMemo(function(){return Object.keys(D.seasons[lg]).sort().reverse();},[lg]);
@@ -161,7 +161,7 @@ function tog(n){sSel(function(p){if(p.indexOf(n)>=0){if(p.length<=1)return p;ret
 var _sl2=React.useState(false),showList=_sl2[0],setShowList=_sl2[1];
 function togT(n){setShowList(false);tog(n);}
 var pr=sD[sel[0]];
-var nP=pr?pr.a.length:0,iC=sn==="25/26";
+var nP=pr?pr.a.length:0,iC=sn===CUR_SN;
 var bd=iC&&!multi&&pr&&D.bands[lg]&&D.bands[lg][sel[0]]?D.bands[lg][sel[0]]:null;
 var pre=iC&&!multi&&pr&&D.pre[lg]&&D.pre[lg][sel[0]]?D.pre[lg][sel[0]]:null;
 var cd=React.useMemo(function(){if(!pr)return[];var rows=[],mG=38;
@@ -377,7 +377,7 @@ iC?h("td",{className:"px-1 py-0.5 text-right",style:{color:B,fontWeight:600}},tC
 function BadRun(){
 var hh=getHash();
 var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
-var _2=React.useState(hh.sn||"25/26"),sn=_2[0],sSn0=_2[1];
+var _2=React.useState(hh.sn||CUR_SN),sn=_2[0],sSn0=_2[1];
 var _3=React.useState(hh.br||hh.sel||"Barcelona"),sel=_3[0],sSel0=_3[1];
 var _4=React.useState(hh.rf?Number(hh.rf):0),gwFrom=_4[0],setFrom0=_4[1];
 var _5=React.useState(hh.rt?Number(hh.rt):0),gwTo=_5[0],setTo0=_5[1];
@@ -629,7 +629,7 @@ function setMode(v){setMode0(v);setHash("om",v);}
 function setWin(v){setWin0(v);setHash("ow",v);}
 React.useEffect(function(){setHash("ex",sel.join(","));},[sel]);
 var teams=D.cumulative&&D.cumulative[lg]?D.cumulative[lg]:{};
-var ss=["13/14","14/15","15/16","16/17","17/18","18/19","19/20","20/21","21/22","22/23","23/24","24/25","25/26"];
+var ss=Object.keys(D.seasons[lg]||{}).sort();
 var SIG=1.58;
 function normCDF(z){var t=1/(1+0.2316419*Math.abs(z));var d=0.3989423*Math.exp(-z*z/2);var p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return z>0?1-p:p;}
 function pval(cumOP,nMatches){if(nMatches<=0||cumOP===0)return 1;var z=Math.abs(cumOP)/(SIG*Math.sqrt(nMatches));return 2*(1-normCDF(z));}
@@ -689,7 +689,7 @@ function Calc(){
 var _1=React.useState("ll"),lg=_1[0],sLg=_1[1];
 var _2=React.useState(100),hW=_2[0],sH=_2[1];var _3=React.useState(50),aW=_3[0],sA=_3[1];
 var _4=React.useState(""),hTeam=_4[0],sHT=_4[1];var _5=React.useState(""),aTeam=_5[0],sAT=_5[1];
-// Get teams with wages for current season (25/26)
+// Get teams with wages for current season
 var lgKey=lg;
 var teamWages=React.useMemo(function(){var sd=D.seasons[lgKey][CUR_SN]||{};var tw=[];Object.keys(sd).forEach(function(t){var w=sd[t].w;if(w>0)tw.push({n:t,w:w});});tw.sort(function(a,b){return b.w-a.w;});return tw;},[lgKey]);
 function pickTeam(side,name){var tw=teamWages.find(function(t){return t.n===name;});if(!tw)return;if(side==="h"){sHT(name);sH(tw.w);}else{sAT(name);sA(tw.w);}}
@@ -723,14 +723,14 @@ h("div",{className:"space-y-2"},[[_t("home_win"),ph,B],[_t("draw"),pd,"#888"],[_
 function Predictions(){
 var hh=getHash();
 var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
-var _2=React.useState(hh.sn||"25/26"),sn=_2[0],sSn0=_2[1];
+var _2=React.useState(hh.sn||CUR_SN),sn=_2[0],sSn0=_2[1];
 var homeTeam=hh.sel?hh.sel.split(",")[0]:null;
 function sLg(v){sLg0(v);setHash("lg",v);}
 function sSn(v){sSn0(v);setHash("sn",v);}
 var sL=React.useMemo(function(){return Object.keys(D.pos&&D.pos[lg]||{}).sort().reverse();},[lg]);
 var posD=D.pos&&D.pos[lg]&&D.pos[lg][sn]?D.pos[lg][sn]:null;
 var sD=D.seasons[lg][sn]||{};
-var iC=sn==="25/26";
+var iC=sn===CUR_SN;
 var cats=[{k:"1st",l:_t("champion"),c:"#FFD700"},{k:"ucl",l:_t("col_ucl"),c:"#1A56DB"},{k:"uel",l:_t("col_uel"),c:"#E67E22"},{k:"ucol",l:_t("col_conf"),c:"#27AE60"},{k:"mid",l:_t("col_mid"),c:"#95A5A6"},{k:"rel",l:_t("col_rel"),c:"#E74C3C"}];
 // Build table data sorted by current P(1st) or pre-season P(1st)
 var predGd=React.useMemo(function(){return gdLookup(sD);},[sD]);
@@ -749,8 +749,8 @@ if(td&&!iC){var allTeams=Object.entries(sD).map(function(e){return{n:e[0],p:e[1]
 for(var k=0;k<allTeams.length;k++){if(allTeams[k].n===t){actPos=k+1;break;}}}
 var prePts=0;if(iC&&D.pre&&D.pre[lg]&&D.pre[lg][t]){prePts=D.pre[lg][t].p50[D.pre[lg][t].p50.length-1];}else if(td&&td.e&&td.e.length>0){prePts=Math.round(td.e[td.e.length-1]);}
 var curPts=null;if(iC&&D.bands&&D.bands[lg]&&D.bands[lg][t]){var b=D.bands[lg][t];curPts=b.p50[b.p50.length-1];}
-return{t:t,pre:pre,cur:cur,actPos:actPos,pts:td?td.a[td.a.length-1]||0:0,preRk:preRks[t]||20,curRk:curRks[t]||null,prePts:prePts,curPts:curPts};});
-rows.sort(function(a,b){if(!iC){return(a.actPos||20)-(b.actPos||20);}var aR=a.curRk!==null?a.curRk:a.preRk;var bR=b.curRk!==null?b.curRk:b.preRk;return aR-bR;});
+return{t:t,pre:pre,cur:cur,actPos:actPos,pts:td?td.a[td.a.length-1]||0:0,gd:td?td.gd||0:0,preRk:preRks[t]||20,curRk:curRks[t]||null,prePts:prePts,curPts:curPts};});
+rows.sort(function(a,b){if(!iC){return(a.actPos||20)-(b.actPos||20);}return a.pts!==b.pts?b.pts-a.pts:(b.gd||0)-(a.gd||0);});
 return rows;},[posD,sD,iC,preRks,curRks,lg]);
 function pctCell(val,cat,key){if(val===null||val===undefined)return h("td",{key:key,className:"px-1 py-0.5 text-right text-gray-200"},"-");
 var pct=Math.round(val*100);var bg="transparent";var fw="400";var clr="#555";

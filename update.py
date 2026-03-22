@@ -17,6 +17,14 @@ from scipy.special import expit
 import json, os, requests, sys
 from datetime import datetime
 
+# ============================================================
+# SEASON — auto-derived from current date with safety check
+# Aug onwards = new season. Wage fallback handled by load_wages().
+# ============================================================
+_now = datetime.now()
+_y = _now.year % 100
+CURRENT_SEASON = f'{_y}/{_y+1:02d}' if _now.month >= 8 else f'{_y-1:02d}/{_y:02d}'
+
 PARAMS = {
     'll': {'beta': 0.4719, 'theta1': -1.0404, 'theta2': 0.2081},
     'pl': {'beta': 0.676,  'theta1': -0.8358, 'theta2': 0.2422},
@@ -25,13 +33,45 @@ PARAMS = {
     'l1': {'beta': 0.4237, 'theta1': -0.8941, 'theta2': 0.2411},
     'ed': {'beta': 0.61,   'theta1': -0.9014, 'theta2': 0.2038},
 }
+_CSV_YEAR = CURRENT_SEASON.replace('/', '')  # 'YY/NN' -> 'YYNN'
+_CSV_BASE = f'https://www.football-data.co.uk/mmz4281/{_CSV_YEAR}'
+
+# Wage data — single source of truth
+WAGES_FILE = os.path.join(os.path.dirname(__file__) or '.', 'all_wages.json')
+WAGES_LG_MAP = {'ll': 'la_liga', 'pl': 'premier_league', 'sa': 'serie_a',
+                'bl': 'bundesliga', 'l1': 'ligue_1', 'ed': 'eredivisie'}
+
+def load_wages(lg, season, _cache={}):
+    """Load wages from all_wages.json. Falls back to previous season for missing teams."""
+    if not _cache:
+        try:
+            with open(WAGES_FILE, 'r') as f:
+                _cache['data'] = json.load(f)
+        except FileNotFoundError:
+            print(f"  ⚠️ {WAGES_FILE} not found")
+            return {}
+    
+    lg_key = WAGES_LG_MAP.get(lg, lg)
+    wages = dict(_cache['data'].get(lg_key, {}).get(season, {}))
+    
+    if len(wages) < 15:
+        prev_y = int(season[:2]) - 1
+        prev_sn = f'{prev_y:02d}/{prev_y+1:02d}'
+        prev_wages = _cache['data'].get(lg_key, {}).get(prev_sn, {})
+        if prev_wages:
+            print(f"  ⚠️ Only {len(wages)} wages for {season} in {lg_key}, filling from {prev_sn}")
+            for t, w in prev_wages.items():
+                if t not in wages:
+                    wages[t] = w
+    
+    return wages
 URLS = {
-    'll': 'https://www.football-data.co.uk/mmz4281/2526/SP1.csv',
-    'pl': 'https://www.football-data.co.uk/mmz4281/2526/E0.csv',
-    'sa': 'https://www.football-data.co.uk/mmz4281/2526/I1.csv',
-    'bl': 'https://www.football-data.co.uk/mmz4281/2526/D1.csv',
-    'l1': 'https://www.football-data.co.uk/mmz4281/2526/F1.csv',
-    'ed': 'https://www.football-data.co.uk/mmz4281/2526/N1.csv',
+    'll': f'{_CSV_BASE}/SP1.csv',
+    'pl': f'{_CSV_BASE}/E0.csv',
+    'sa': f'{_CSV_BASE}/I1.csv',
+    'bl': f'{_CSV_BASE}/D1.csv',
+    'l1': f'{_CSV_BASE}/F1.csv',
+    'ed': f'{_CSV_BASE}/N1.csv',
 }
 NAME_MAP = {
     "Nott'm Forest": "Nottm Forest", "Ath Madrid": "At Madrid",
@@ -282,7 +322,7 @@ def fetch_fixtures_from_api():
             
             if lg not in fixtures:
                 fixtures[lg] = {}
-            fixtures[lg]['25/26'] = {'calendar': calendar}
+            fixtures[lg][CURRENT_SEASON] = {'calendar': calendar}
             
         except Exception as e:
             print(f"    API FAILED: {e}")
@@ -326,7 +366,7 @@ def process_season(filepath, wages, beta, t1, t2, fixtures_calendar=None, lg=Non
     gw_lookup = {}
     date_lookup = {}
     if fixtures_calendar and lg:
-        cal = fixtures_calendar.get(lg, {}).get('25/26', {}).get('calendar', [])
+        cal = fixtures_calendar.get(lg, {}).get(CURRENT_SEASON, {}).get('calendar', [])
         for gw_data in cal:
             gw = gw_data.get('gw', 0)
             dates = gw_data.get('dates', [])
@@ -341,7 +381,7 @@ def process_season(filepath, wages, beta, t1, t2, fixtures_calendar=None, lg=Non
         td[t] = {'pts':[],'exp':[],'m':[],'cp':0,'ce':0.0,'gf':0,'ga':0}
     for _, r in df.iterrows():
         h, a = r['HomeTeam'], r['AwayTeam']
-        wh, wa = wages.get(h, wages.get(fix_name(h), 20)), wages.get(a, wages.get(fix_name(a), 20))
+        wh, wa = wages.get(h, wages.get(fix_name(h), wages.get('_min', 20))), wages.get(a, wages.get(fix_name(a), wages.get('_min', 20)))
         x = np.log2(wa / wh)
         ph = 1 - expit(t2 + beta * x)
         pd_ = expit(t2 + beta * x) - expit(t1 + beta * x)
@@ -396,8 +436,8 @@ def recalculate_budget_bands(fixtures_cal, wages, beta, t1, t2, lg, season_data,
         # Compute probabilities for each match
         probs = []
         for opp, ih in fixes:
-            wh = wages.get(team, 20) if ih else wages.get(opp, wages.get(fix_name(opp), 20))
-            wa = wages.get(opp, wages.get(fix_name(opp), 20)) if ih else wages.get(team, 20)
+            wh = wages.get(team, wages.get('_min', 20)) if ih else wages.get(opp, wages.get(fix_name(opp), wages.get('_min', 20)))
+            wa = wages.get(opp, wages.get(fix_name(opp), wages.get('_min', 20))) if ih else wages.get(team, wages.get('_min', 20))
             x = np.log2(wa / wh)
             ph = 1 - expit(t2 + beta * x)
             pd_ = expit(t2 + beta * x) - expit(t1 + beta * x)
@@ -430,7 +470,7 @@ def recalculate_budget_bands(fixtures_cal, wages, beta, t1, t2, lg, season_data,
         }
     return bands
 
-def get_remaining_fixtures(season_data, fixtures_calendar, lg, season='25/26'):
+def get_remaining_fixtures(season_data, fixtures_calendar, lg, season=CURRENT_SEASON):
     """Get ordered remaining fixtures per team from fixtures.json calendar.
     Returns {team: [(opp, is_home, gw, date), ...]} ordered by date when available."""
     played = {}
@@ -489,8 +529,8 @@ def run_mc_simulation(season_data, wages, beta, t1, t2, remaining_fixtures, n_si
         # Compute probabilities for each remaining fixture
         probs = []
         for opp, is_home, *_ in fixtures:
-            wh = wages.get(team, 20) if is_home else wages.get(opp, wages.get(fix_name(opp), 20))
-            wa = wages.get(opp, wages.get(fix_name(opp), 20)) if is_home else wages.get(team, 20)
+            wh = wages.get(team, wages.get('_min', 20)) if is_home else wages.get(opp, wages.get(fix_name(opp), wages.get('_min', 20)))
+            wa = wages.get(opp, wages.get(fix_name(opp), wages.get('_min', 20))) if is_home else wages.get(team, wages.get('_min', 20))
             x = np.log2(wa / wh)
             ph = 1 - expit(t2 + beta * x)
             pd_ = expit(t2 + beta * x) - expit(t1 + beta * x)
@@ -611,8 +651,8 @@ def build_match_list(teams, wages, remaining_fixtures, beta, t1, t2):
             key = (h_idx, a_idx)
             if key not in matches_seen:
                 matches_seen.add(key)
-                wh = wages.get(teams[h_idx], 20)
-                wa = wages.get(teams[a_idx], 20)
+                wh = wages.get(teams[h_idx], wages.get('_min', 20))
+                wa = wages.get(teams[a_idx], wages.get('_min', 20))
                 x = np.log2(wa / wh)
                 ph = 1 - expit(t2 + beta * x)
                 pd_ = expit(t2 + beta * x) - expit(t1 + beta * x)
@@ -647,8 +687,8 @@ def simulate_preseason_positions(wages, beta, t1, t2, fixture_calendar, n_sims=1
             key = (h_idx, a_idx)
             if key not in matches_seen:
                 matches_seen.add(key)
-                wh = wages.get(h, 20)
-                wa = wages.get(a, 20)
+                wh = wages.get(h, wages.get('_min', 20))
+                wa = wages.get(a, wages.get('_min', 20))
                 x = np.log2(wa / wh)
                 ph = 1 - expit(t2 + beta * x)
                 pd_ = expit(t2 + beta * x) - expit(t1 + beta * x)
@@ -658,7 +698,7 @@ def simulate_preseason_positions(wages, beta, t1, t2, fixture_calendar, n_sims=1
 
 
 def generate_narratives_all(data):
-    """Generate bilingual narrative sentences for each team in 25/26."""
+    """Generate bilingual narrative sentences for each team in the current season."""
     LEAGUE_SPOTS = {
         'll': {'ucl': 4, 'uel': 2, 'ucol': 1, 'rel': 3},
         'pl': {'ucl': 4, 'uel': 2, 'ucol': 1, 'rel': 3},
@@ -688,16 +728,16 @@ def generate_narratives_all(data):
     result = {}
     
     for lg in PARAMS:
-        sd = data['seasons'][lg].get('25/26', {})
+        sd = data['seasons'][lg].get(CURRENT_SEASON, {})
         if not sd: continue
         
-        pos = data.get('pos', {}).get(lg, {}).get('25/26', {})
+        pos = data.get('pos', {}).get(lg, {}).get(CURRENT_SEASON, {})
         cur = pos.get('cur', {})
         if not cur: continue
         
         bands = data.get('bands', {}).get(lg, {})
         pre_b = data.get('pre', {}).get(lg, {})
-        wages = {t: sd[t]['w'] for t in sd if sd[t].get('w', 0) > 0}
+        wages = load_wages(lg, CURRENT_SEASON)
         teams = list(sd.keys())
         n = len(teams)
         spots = LEAGUE_SPOTS.get(lg, LEAGUE_SPOTS['ll'])
@@ -827,12 +867,13 @@ def compute_all_position_probs(data, fixtures_cal):
         
         for sn in sorted(data['seasons'][lg].keys()):
             sd = data['seasons'][lg][sn]
-            wages = {t: sd[t].get('w', 0) for t in sd if sd[t].get('w', 0) > 0}
+            wages = load_wages(lg, sn) if sn == CURRENT_SEASON else {t: sd[t].get('w', 0) for t in sd if sd[t].get('w', 0) > 0}
             if len(wages) < 15:
                 continue
+            wages['_min'] = min(wages.values())
             
             # Skip if already computed (for historical seasons)
-            if sn != '25/26' and sn in pos[lg] and 'pre' in pos[lg][sn]:
+            if sn != CURRENT_SEASON and sn in pos[lg] and 'pre' in pos[lg][sn]:
                 continue
             
             if sn not in pos[lg]:
@@ -849,16 +890,16 @@ def compute_all_position_probs(data, fixtures_cal):
             cal = [{"gw": 1, "matches": [[h, a] for h, a in ms]}]
             
             # Pre-season
-            if sn == '25/26' and fixtures_cal and lg in fixtures_cal and '25/26' in fixtures_cal[lg]:
-                cal_data = fixtures_cal[lg]['25/26']
+            if sn == CURRENT_SEASON and fixtures_cal and lg in fixtures_cal and CURRENT_SEASON in fixtures_cal[lg]:
+                cal_data = fixtures_cal[lg][CURRENT_SEASON]
                 cal_list = cal_data.get('calendar', cal_data) if isinstance(cal_data, dict) else cal_data
                 pre = simulate_preseason_positions(wages, p['beta'], p['theta1'], p['theta2'], cal_list, lg=lg)
             else:
                 pre = simulate_preseason_positions(wages, p['beta'], p['theta1'], p['theta2'], cal, lg=lg)
             pos[lg][sn]['pre'] = pre
             
-            # Current (only for 25/26)
-            if sn == '25/26':
+            # Current season only
+            if sn == CURRENT_SEASON:
                 remaining = get_remaining_fixtures(sd, fixtures_cal, lg)
                 cur = simulate_current_positions(sd, wages, p['beta'], p['theta1'], p['theta2'], remaining, lg=lg)
                 pos[lg][sn]['cur'] = cur
@@ -903,7 +944,7 @@ def update():
         for lg_key in api_fixtures:
             if lg_key not in fixtures_cal:
                 fixtures_cal[lg_key] = {}
-            fixtures_cal[lg_key]['25/26'] = api_fixtures[lg_key]['25/26']
+            fixtures_cal[lg_key][CURRENT_SEASON] = api_fixtures[lg_key][CURRENT_SEASON]
         # Save updated fixtures.json
         with open(FIXTURES_FILE, 'w') as f:
             json.dump(fixtures_cal, f)
@@ -916,12 +957,15 @@ def update():
             print(f"  Skipping {lg}: download failed")
             continue
         
-        existing = data['seasons'][lg].get('25/26', {})
-        wages = {t: d['w'] for t, d in existing.items() if d.get('w', 0) > 0}
+        existing = data['seasons'][lg].get(CURRENT_SEASON, {})
+        wages = load_wages(lg, CURRENT_SEASON)
         
-        if len(wages) < 15:
-            print(f"  WARNING: only {len(wages)} wages for {lg}")
+        if len(wages) < 10:
+            print(f"  WARNING: only {len(wages)} wages for {lg}, skipping")
             continue
+        
+        wages['_min'] = min(wages.values())
+        print(f"  {lg}: {len(wages)-1} wages (from all_wages.json), min={wages['_min']}M")
         
         p = PARAMS[lg]
         result = process_season(files[lg], wages, p['beta'], p['theta1'], p['theta2'], fixtures_cal, lg)
@@ -935,7 +979,7 @@ def update():
                     if m[0] == old: m[0] = new
         
         old_gw = len(list(existing.values())[0]['a']) if existing else 0
-        data['seasons'][lg]['25/26'] = result
+        data['seasons'][lg][CURRENT_SEASON] = result
         
         sample = list(result.keys())[0]
         new_gw = len(result[sample]['a'])
@@ -956,8 +1000,8 @@ def update():
             rem = remaining.get(team, [])
             r_list = []
             for opp, is_home, gw_num, match_date, *_ in rem:
-                wh = wages.get(team, 20) if is_home else wages.get(opp, wages.get(fix_name(opp), 20))
-                wa = wages.get(opp, wages.get(fix_name(opp), 20)) if is_home else wages.get(team, 20)
+                wh = wages.get(team, wages.get('_min', 20)) if is_home else wages.get(opp, wages.get(fix_name(opp), wages.get('_min', 20)))
+                wa = wages.get(opp, wages.get(fix_name(opp), wages.get('_min', 20))) if is_home else wages.get(team, wages.get('_min', 20))
                 x = np.log2(wa / wh)
                 ph = float(round(1 - expit(p['theta2'] + p['beta'] * x), 2))
                 pd_ = float(round(expit(p['theta2'] + p['beta'] * x) - expit(p['theta1'] + p['beta'] * x), 2))
@@ -968,7 +1012,7 @@ def update():
                 else:
                     r_list.append([fix_name(opp), 0, pa, pd_, ph, gw_num, match_date[:10] if match_date else ''])
             result[team]['r'] = r_list
-        data['seasons'][lg]['25/26'] = result
+        data['seasons'][lg][CURRENT_SEASON] = result
         print(f"  Added remaining fixtures: {len(result[sample].get('r',[]))} per team")
     
         # Recalculate budget bands with current calendar order
@@ -1004,18 +1048,18 @@ def update():
     print("  Computing position probabilities...")
     data['pos'] = compute_all_position_probs(data, fixtures_cal)
     
-    # Generate narratives for 25/26
+    # Generate narratives for current season
     print("  Generating narratives...")
     data['narratives'] = generate_narratives_all(data)
     
-    # Update cumulative with 25/26 partial season
-    print("  Updating cumulative with 25/26...")
+    # Update cumulative with current season
+    print(f"  Updating cumulative with {CURRENT_SEASON}...")
     if 'cumulative' not in data:
         data['cumulative'] = {}
     for lg in PARAMS:
         if lg not in data['cumulative']:
             data['cumulative'][lg] = {}
-        sd = data['seasons'][lg].get('25/26', {})
+        sd = data['seasons'][lg].get(CURRENT_SEASON, {})
         for team in sd:
             t = sd[team]
             if not t.get('a') or not t.get('e') or not t.get('w'):
@@ -1028,8 +1072,8 @@ def update():
                 data['cumulative'][lg][team] = [0, 0, 0, []]
             
             c = data['cumulative'][lg][team]
-            c[3] = [s for s in c[3] if s[0] != '25/26']
-            c[3].append(['25/26', wage, round(exp, 1), act])
+            c[3] = [s for s in c[3] if s[0] != CURRENT_SEASON]
+            c[3].append([CURRENT_SEASON, wage, round(exp, 1), act])
             cumOP = sum(s[3] - s[2] for s in c[3])
             nS = len(c[3])
             avgExp = sum(s[2] for s in c[3]) / nS if nS > 0 else 1
