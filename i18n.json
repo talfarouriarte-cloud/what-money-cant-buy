@@ -143,6 +143,18 @@
     "rank",
     "puesto"
   ],
+  "projected_lc": [
+    "Proj",
+    "Proy"
+  ],
+  "budget_lc": [
+    "Budget",
+    "Presupu."
+  ],
+  "col_cur_rk": [
+    "Pos",
+    "Pos"
+  ],
   "current": [
     "current",
     "actual"
