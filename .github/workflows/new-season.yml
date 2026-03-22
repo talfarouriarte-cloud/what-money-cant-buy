@@ -1,0 +1,91 @@
+name: New Season Reminder
+
+# Runs August 1st each year — reminds and prepares for the new season
+on:
+  schedule:
+    - cron: '0 9 1 8 *'  # August 1st at 09:00 UTC
+  workflow_dispatch:       # Manual trigger for testing
+
+jobs:
+  season-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect current and next season
+        id: season
+        run: |
+          # Read current season from update.py
+          CURRENT=$(grep "^CURRENT_SEASON" update.py | grep -oP "'[^']+'" | tr -d "'")
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          
+          # Calculate next season (e.g. 25/26 -> 26/27)
+          YEAR1=$(echo $CURRENT | cut -d'/' -f1)
+          YEAR2=$(echo $CURRENT | cut -d'/' -f2)
+          NEXT_Y1=$((10#$YEAR2))
+          NEXT_Y2=$((NEXT_Y1 + 1))
+          NEXT=$(printf "%02d/%02d" $NEXT_Y1 $NEXT_Y2)
+          echo "next=$NEXT" >> $GITHUB_OUTPUT
+          
+          echo "Current season: $CURRENT"
+          echo "Next season:    $NEXT"
+
+      - name: Check if season needs updating
+        id: check
+        run: |
+          MONTH=$(date +%m)
+          CURRENT="${{ steps.season.outputs.current }}"
+          NEXT="${{ steps.season.outputs.next }}"
+          
+          echo "## 🏟️ New Season Checklist: $NEXT" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Current season in code: **$CURRENT**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Files to update:" >> $GITHUB_STEP_SUMMARY
+          echo "1. \`update.py\` line 23: \`CURRENT_SEASON = '$NEXT'\`" >> $GITHUB_STEP_SUMMARY
+          echo "2. \`index.html\` line ~91: \`CUR_SN=\"$NEXT\"\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Full checklist:" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Collect wage data for all 6 leagues (Capology/FBref)" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Update \`CURRENT_SEASON\` in \`update.py\`" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Update \`CUR_SN\` in \`index.html\` and \`test.html\`" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Update CSV URL year codes in \`update.py\` (\`download_current_season\`)" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Add wages to \`data.json\` for all teams per league" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Check promoted/relegated teams: name mapping, wages, crests" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Run \`build-crests.yml\` workflow to update crests" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Check European spots if UEFA coefficients changed" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Run \`setup_season.py\` for initial fixture calendar" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Trigger daily update Action and verify output" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Verify all teams have wages, fixtures found, probabilities sum to 100%" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See [OPERATIONS.md](OPERATIONS.md) for detailed instructions." >> $GITHUB_STEP_SUMMARY
+
+      - name: Create issue for new season
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const current = '${{ steps.season.outputs.current }}';
+            const next = '${{ steps.season.outputs.next }}';
+            
+            // Check if issue already exists
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'season-rollover'
+            });
+            
+            if (issues.data.length > 0) {
+              console.log('Issue already exists, skipping');
+              return;
+            }
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🏟️ New Season Setup: ${next}`,
+              labels: ['season-rollover'],
+              body: `## Season Rollover: ${current} → ${next}\n\n### Files to update:\n1. \`update.py\` line 23: \`CURRENT_SEASON = '${next}'\`\n2. \`index.html\` line ~91: \`CUR_SN="${next}"\`\n3. \`test.html\`: identical copy of index.html\n\n### Checklist:\n- [ ] Collect wage data for all 6 leagues (after summer window closes, ~September)\n- [ ] Update \`CURRENT_SEASON\` in \`update.py\`\n- [ ] Update \`CUR_SN\` in \`index.html\` + \`test.html\`\n- [ ] Update CSV URL year codes in \`update.py\` (download_current_season)\n- [ ] Add wages to \`data.json\` for all teams per league\n- [ ] Check promoted/relegated teams: name mapping, wages, crests\n- [ ] Run \`build-crests.yml\` workflow\n- [ ] Check European spots (UEFA coefficients)\n- [ ] Run \`setup_season.py\`\n- [ ] Trigger daily update and verify\n- [ ] Verify all teams have wages, fixtures, probabilities OK\n\nSee [OPERATIONS.md](OPERATIONS.md) for details.`
+            });
+            
+            console.log(`Created issue for season ${next}`);
