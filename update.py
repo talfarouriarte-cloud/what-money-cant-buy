@@ -670,7 +670,7 @@ def simulate_current_positions(season_data, wages, beta, t1, t2, remaining_fixtu
 
 def simulate_preseason_positions(wages, beta, t1, t2, fixture_calendar, n_sims=10000, lg=None):
     """Pre-season: simulate full season from scratch using fixture calendar."""
-    teams = list(wages.keys())
+    teams = [t for t in wages.keys() if not t.startswith('_')]
     n_teams = len(teams)
     current_pts = np.zeros(n_teams)
     

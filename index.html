@@ -742,7 +742,7 @@ var curRks=React.useMemo(function(){if(!posD||!posD.cur)return{};
 var pts={};Object.keys(posD.cur).forEach(function(t){
 if(D.bands&&D.bands[lg]&&D.bands[lg][t]){var b=D.bands[lg][t];pts[t]=b.p50[b.p50.length-1];}});return rankByPts(pts,predGd);},[posD,lg,predGd]);
 var tableData=React.useMemo(function(){if(!posD||!posD.pre)return[];
-var teams=Object.keys(posD.pre);var rows=teams.map(function(t){
+var teams=Object.keys(posD.pre).filter(function(t){return t.charAt(0)!=='_';});var rows=teams.map(function(t){
 var pre=posD.pre[t];var cur=posD.cur?posD.cur[t]:null;
 var td=sD[t];var actPos=null;
 if(td&&!iC){var allTeams=Object.entries(sD).map(function(e){return{n:e[0],p:e[1].a[e[1].a.length-1]||0,gd:e[1].gd||0};}).sort(function(a,b){return b.p!==a.p?b.p-a.p:b.gd-a.gd;});
