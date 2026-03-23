@@ -2,16 +2,20 @@
 
 ## 1. Daily updates (automatic)
 
-GitHub Actions runs `update.py` every day at 08:00 UTC.
+GitHub Actions runs `update.py` twice daily at 06:00 and 08:00 UTC (dual cron for reliability — GitHub may skip scheduled runs on free-tier repos).
 
 ### What it does
 1. Detects current season from date (Aug+ = new season, always advances)
 2. Loads wages from `all_wages.json` (missing teams filled from previous season; promoted teams get league minimum)
-3. Fetches fixture calendar from football-data.org API
-4. Downloads match results CSVs (6 leagues)
+3. Fetches fixture calendar + match results from football-data.org API (real-time, minutes after final whistle)
+4. Downloads match results CSVs from football-data.co.uk as fallback (1-2 day delay)
 5. Computes expected points, MC bands, budget forecast, position probabilities, narratives
 6. Runs diagnostic checks (budget line parallelism)
 7. Commits updated `data.json` and `fixtures.json`
+
+### Data source priority
+1. **football-data.org API** (primary): scores available minutes after matches. 6 API calls, well within free tier limit (10/min).
+2. **football-data.co.uk CSV** (fallback): updated Sunday/Wednesday nights. Used if API key missing or API fails.
 
 ### Budget forecast
 Both updated and budget p50 use deterministic expected value (`pw×3 + pd`). MC only for p10/p90 bands. Guarantees parallel projected lines.
@@ -115,3 +119,6 @@ p50 = deterministic, p10/p90 = MC percentile.
 | No wages for new season | `all_wages.json` not updated | Update file, commit |
 | 0 remaining fixtures | Name mapping mismatch | Add to NAME_MAP in update.py |
 | Tooltips stuck on iPad | Recharts pointer-events | Fixed: global touch handler |
+| Results not updating | API key missing or expired | Check `FOOTBALL_DATA_API_KEY` secret in repo |
+| GW X -> X (no new matches) | Source not updated yet | API: minutes; CSV: Sun/Wed night |
+| "Using CSV (API unavailable)" | API failed or no key | Check Action logs for API error |
