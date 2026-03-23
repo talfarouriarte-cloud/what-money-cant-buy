@@ -12,7 +12,7 @@ Interactive bilingual (English/Spanish) dashboard analysing football team perfor
 
 A club's annual wage bill is the single best publicly available predictor of league performance. The ordered logistic regression model takes the log₂ ratio of two teams' wages and produces match-level win/draw/loss probabilities. These drive expected points, Monte Carlo projections, run significance testing, and multi-season overperformance tracking.
 
-The app updates automatically every day at 08:00 UTC via GitHub Actions. Season rollover is fully automatic — the app advances to the new season every August and uses previous-season wages until new ones are uploaded. The only annual manual step is updating `all_wages.json` with new salary data (typically September).
+The app updates automatically twice daily (06:00 + 08:00 UTC) via GitHub Actions, with dual cron for reliability. Season rollover is fully automatic — the app advances to the new season every August and uses previous-season wages until new ones are uploaded. The only annual manual step is updating `all_wages.json` with new salary data (typically September).
 
 ## Features
 

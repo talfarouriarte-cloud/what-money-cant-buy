@@ -295,10 +295,20 @@ def fetch_fixtures_from_api():
                 is_played = status == 'FINISHED'
                 utc_date = m.get('utcDate', '')
                 
+                # Extract scores for played matches
+                score = m.get('score', {})
+                ft = score.get('fullTime', {}) or {}
+                h_goals = ft.get('home')
+                a_goals = ft.get('away')
+                ftr = ''
+                if is_played and h_goals is not None and a_goals is not None:
+                    ftr = 'H' if h_goals > a_goals else 'A' if a_goals > h_goals else 'D'
+                
                 gw_matches[md].append({
                     'home': h_name, 'away': a_name,
                     'played': is_played, 'date': utc_date,
-                    'status': status
+                    'status': status,
+                    'FTHG': h_goals, 'FTAG': a_goals, 'FTR': ftr
                 })
             
             # Build calendar
@@ -323,6 +333,22 @@ def fetch_fixtures_from_api():
             if lg not in fixtures:
                 fixtures[lg] = {}
             fixtures[lg][CURRENT_SEASON] = {'calendar': calendar}
+            
+            # Build results DataFrame from played matches
+            rows = []
+            for gw, gw_list in gw_matches.items():
+                for m in gw_list:
+                    if m['played'] and m['FTR']:
+                        rows.append({
+                            'HomeTeam': m['home'], 'AwayTeam': m['away'],
+                            'FTHG': m['FTHG'], 'FTAG': m['FTAG'], 'FTR': m['FTR'],
+                            'Date': m['date'][:10] if m['date'] else '',
+                            'GW': gw
+                        })
+            if rows:
+                api_df = pd.DataFrame(rows).sort_values(['GW', 'Date']).reset_index(drop=True)
+                fixtures[lg]['_results'] = api_df
+                print(f"    Results from API: {len(rows)} played matches")
             
         except Exception as e:
             print(f"    API FAILED: {e}")
@@ -350,10 +376,15 @@ def download_current_season():
             results[lg] = None
     return results
 
-def process_season(filepath, wages, beta, t1, t2, fixtures_calendar=None, lg=None):
-    df = pd.read_csv(filepath, encoding='utf-8', on_bad_lines='skip', low_memory=False)
+def process_season(filepath_or_df, wages, beta, t1, t2, fixtures_calendar=None, lg=None):
+    if isinstance(filepath_or_df, pd.DataFrame):
+        df = filepath_or_df.copy()
+        print(f"    API data: {len(df)} matches, columns: {list(df.columns[:6])}")
+    else:
+        df = pd.read_csv(filepath_or_df, encoding='utf-8', on_bad_lines='skip', low_memory=False)
+        print(f"    CSV columns: {list(df.columns[:10])}")
     has_goals = 'FTHG' in df.columns and 'FTAG' in df.columns
-    print(f"    CSV columns: {list(df.columns[:10])}... has_goals={has_goals}")
+    print(f"    has_goals={has_goals}")
     df = df.dropna(subset=['HomeTeam','AwayTeam','FTR'])
     if has_goals:
         df['FTHG'] = pd.to_numeric(df['FTHG'], errors='coerce').fillna(0).astype(int)
@@ -938,6 +969,7 @@ def update():
     
     # Update fixture calendar from football-data.org API
     api_fixtures = fetch_fixtures_from_api()
+    api_results = {}  # Store API results DataFrames separately
     if api_fixtures:
         if fixtures_cal is None:
             fixtures_cal = {}
@@ -945,18 +977,18 @@ def update():
             if lg_key not in fixtures_cal:
                 fixtures_cal[lg_key] = {}
             fixtures_cal[lg_key][CURRENT_SEASON] = api_fixtures[lg_key][CURRENT_SEASON]
-        # Save updated fixtures.json
+            # Extract results DataFrame before saving
+            if '_results' in api_fixtures[lg_key]:
+                api_results[lg_key] = api_fixtures[lg_key]['_results']
+        # Save updated fixtures.json (without _results DataFrames)
         with open(FIXTURES_FILE, 'w') as f:
             json.dump(fixtures_cal, f)
         print("  Updated fixtures.json from API")
     
+    # Download CSVs as fallback
     files = download_current_season()
     
     for lg in PARAMS:
-        if not files[lg]:
-            print(f"  Skipping {lg}: download failed")
-            continue
-        
         existing = data['seasons'][lg].get(CURRENT_SEASON, {})
         wages = load_wages(lg, CURRENT_SEASON)
         
@@ -968,7 +1000,17 @@ def update():
         print(f"  {lg}: {len(wages)-1} wages (from all_wages.json), min={wages['_min']}M")
         
         p = PARAMS[lg]
-        result = process_season(files[lg], wages, p['beta'], p['theta1'], p['theta2'], fixtures_cal, lg)
+        
+        # Prefer API results (real-time) over CSV (1-2 day delay)
+        if lg in api_results and len(api_results[lg]) > 0:
+            print(f"  Using football-data.org API results ({len(api_results[lg])} matches)")
+            result = process_season(api_results[lg], wages, p['beta'], p['theta1'], p['theta2'], fixtures_cal, lg)
+        elif files[lg]:
+            print(f"  Using football-data.co.uk CSV (API unavailable)")
+            result = process_season(files[lg], wages, p['beta'], p['theta1'], p['theta2'], fixtures_cal, lg)
+        else:
+            print(f"  Skipping {lg}: no data source available")
+            continue
         
         # Fix names
         for old, new in NAME_MAP.items():
