@@ -346,7 +346,7 @@ def fetch_fixtures_from_api():
                             'GW': gw
                         })
             if rows:
-                api_df = pd.DataFrame(rows).sort_values(['GW', 'Date']).reset_index(drop=True)
+                api_df = pd.DataFrame(rows).sort_values(['Date', 'GW']).reset_index(drop=True)
                 fixtures[lg]['_results'] = api_df
                 print(f"    Results from API: {len(rows)} played matches")
             
