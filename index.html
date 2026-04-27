@@ -222,27 +222,20 @@ if(i<tNP){
   var tbl=_tableAt(sD,md,i);var rk=_rankIn(tbl,sel[jj]);r["act"+jj]=rk;
   // finalP50: from hist[i] if available
   if(iC&&posD&&posD.hist&&posD.hist[i]&&posD.hist[i].probs&&posD.hist[i].probs[sel[jj]]&&posD.hist[i].probs[sel[jj]].p50){r["fp50_"+jj]=posD.hist[i].probs[sel[jj]].p50;}
+  // On the LAST played GW, also seed proj with the same value so the projection line connects continuously to the actual line
+  if(i===tNP-1&&iC){r["proj"+jj]=rk;}
 }
 else if(iC&&D.bands&&D.bands[lg]){
-  // Future GW: projection. Connect actual current rank -> final p50 from cur.
-  // For the line itself we just need start (current GW) and end values.
-  // Use linear interpolation from current actual rank to cur.p50 of selected team.
+  // Future GW: projection from current actual rank -> p50 final
   var curP50=posD&&posD.cur&&posD.cur[sel[jj]]&&posD.cur[sel[jj]].p50?posD.cur[sel[jj]].p50:null;
   if(curP50){
     var startGW=tNP-1;var endGW=mG-1;
-    if(i===startGW){
-      // boundary: same as actual
-      var mdB=t.m[tNP-1]&&t.m[tNP-1].length>5?t.m[tNP-1][5]:null;
-      var tblB=_tableAt(sD,mdB,tNP-1);
-      r["proj"+jj]=_rankIn(tblB,sel[jj]);
-    } else if(i>startGW){
-      var startRank=null;
-      if(t.a&&tNP>0){var mdS=t.m[tNP-1]&&t.m[tNP-1].length>5?t.m[tNP-1][5]:null;var tblS=_tableAt(sD,mdS,tNP-1);startRank=_rankIn(tblS,sel[jj]);}
-      if(startRank!==null){
-        var frac=(i-startGW)/(endGW-startGW);
-        var interp=startRank+(curP50-startRank)*frac;
-        r["proj"+jj]=Math.round(interp*10)/10; // 1 decimal for smooth line
-      }
+    var startRank=null;
+    if(t.a&&tNP>0){var mdS=t.m[tNP-1]&&t.m[tNP-1].length>5?t.m[tNP-1][5]:null;var tblS=_tableAt(sD,mdS,tNP-1);startRank=_rankIn(tblS,sel[jj]);}
+    if(startRank!==null&&endGW>startGW){
+      var frac=(i-startGW)/(endGW-startGW);
+      var interp=startRank+(curP50-startRank)*frac;
+      r["proj"+jj]=Math.round(interp*10)/10;
     }
   } else {
     // Fallback when no cur data: budget bands p50
