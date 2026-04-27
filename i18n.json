@@ -1215,6 +1215,14 @@
     "probability evolution",
     "evolución de probabilidades"
   ],
+  "wage_evolution": [
+    "Wage evolution",
+    "Evolución del presupuesto"
+  ],
+  "wage_evolution_sub": [
+    "Annual wage bill by team across seasons (up to 3 teams)",
+    "Presupuesto anual por equipo a lo largo de las temporadas (hasta 3 equipos)"
+  ],
   "release_refresh": [
     "Release to refresh",
     "Suelta para refrescar"
