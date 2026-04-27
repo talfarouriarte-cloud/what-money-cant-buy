@@ -699,6 +699,100 @@ def simulate_current_positions(season_data, wages, beta, t1, t2, remaining_fixtu
     return simulate_position_probs(teams, current_pts, match_list, n_sims, lg=lg)
 
 
+def compute_position_history(season_data, wages, beta, t1, t2, fixtures_cal, lg, sn, n_sims=2000, gw_step=1):
+    """For each gameweek k, simulate position probabilities assuming all matches with gw <= k are settled
+    and matches with gw > k are simulated. Returns list of {gw, probs} snapshots.
+    Requires m entries to have gw at index 4 (current season format)."""
+    teams = list(season_data.keys())
+    n_teams = len(teams)
+    
+    # Detect max GW from m arrays
+    max_gw = 0
+    for team in teams:
+        for m in season_data[team]['m']:
+            if len(m) > 4 and m[4]:
+                max_gw = max(max_gw, m[4])
+    if max_gw == 0:
+        return []
+    
+    # Build a map of all matches per (h, a) key with their gw and home/away points
+    # Need to also get unplayed remaining fixtures from fixtures.json
+    all_match_records = {}  # key=(h,a) -> dict with ph, pd_, gw (None if no gw assigned), played_pts (None if not played)
+    
+    # From played matches (m arrays)
+    for ti, team in enumerate(teams):
+        for m in season_data[team]['m']:
+            if len(m) < 5:
+                continue
+            opp, ih, pts = m[0], m[1], m[2]
+            gw = m[4] if len(m) > 4 else None
+            if opp not in teams:
+                continue
+            o_idx = teams.index(opp)
+            h_idx = ti if ih else o_idx
+            a_idx = o_idx if ih else ti
+            key = (h_idx, a_idx)
+            if key in all_match_records:
+                continue
+            wh = wages.get(teams[h_idx], wages.get('_min', 20))
+            wa = wages.get(teams[a_idx], wages.get('_min', 20))
+            x = np.log2(wa / wh)
+            ph = 1 - expit(t2 + beta * x)
+            pd_ = expit(t2 + beta * x) - expit(t1 + beta * x)
+            # Reconstruct actual home/away pts
+            if ih:
+                h_pts = pts
+                a_pts = 3 if pts == 0 else (1 if pts == 1 else 0)
+            else:
+                a_pts = pts
+                h_pts = 3 if pts == 0 else (1 if pts == 1 else 0)
+            all_match_records[key] = {'ph': ph, 'pd_': pd_, 'gw': gw, 'h_pts': h_pts, 'a_pts': a_pts, 'played': True, 'h_idx': h_idx, 'a_idx': a_idx}
+    
+    # From unplayed fixtures (fixtures.json)
+    if sn == CURRENT_SEASON and fixtures_cal and lg in fixtures_cal and CURRENT_SEASON in fixtures_cal[lg]:
+        cal_data = fixtures_cal[lg][CURRENT_SEASON]
+        cal_list = cal_data.get('calendar', cal_data) if isinstance(cal_data, dict) else cal_data
+        for gw_data in cal_list:
+            gw_num = gw_data.get('gw', 0)
+            for pair in gw_data.get('matches', []):
+                h, a = fix_name(pair[0]), fix_name(pair[1])
+                if h not in teams or a not in teams:
+                    continue
+                h_idx = teams.index(h)
+                a_idx = teams.index(a)
+                key = (h_idx, a_idx)
+                if key in all_match_records:
+                    # Update gw if missing
+                    if all_match_records[key]['gw'] is None:
+                        all_match_records[key]['gw'] = gw_num
+                    continue
+                wh = wages.get(teams[h_idx], wages.get('_min', 20))
+                wa = wages.get(teams[a_idx], wages.get('_min', 20))
+                x = np.log2(wa / wh)
+                ph = 1 - expit(t2 + beta * x)
+                pd_ = expit(t2 + beta * x) - expit(t1 + beta * x)
+                all_match_records[key] = {'ph': ph, 'pd_': pd_, 'gw': gw_num, 'h_pts': None, 'a_pts': None, 'played': False, 'h_idx': h_idx, 'a_idx': a_idx}
+    
+    # For each snapshot GW k, compute current points (from matches with gw <= k that are played) and simulate the rest
+    snapshots = []
+    for k in range(gw_step, max_gw + 1, gw_step):
+        current_pts = np.zeros(n_teams)
+        match_list = []
+        for key, rec in all_match_records.items():
+            rec_gw = rec['gw'] if rec['gw'] is not None else max_gw + 1
+            if rec['played'] and rec_gw <= k:
+                # Lock in the result
+                current_pts[rec['h_idx']] += rec['h_pts']
+                current_pts[rec['a_idx']] += rec['a_pts']
+            else:
+                # Add to match list to simulate
+                match_list.append((rec['h_idx'], rec['a_idx'], rec['ph'], rec['pd_']))
+        probs = simulate_position_probs(teams, current_pts, match_list, n_sims, lg=lg)
+        snapshots.append({'gw': k, 'probs': probs})
+    
+    return snapshots
+
+
 def simulate_preseason_positions(wages, beta, t1, t2, fixture_calendar, n_sims=10000, lg=None):
     """Pre-season: simulate full season from scratch using fixture calendar."""
     teams = [t for t in wages.keys() if not t.startswith('_')]
@@ -934,6 +1028,11 @@ def compute_all_position_probs(data, fixtures_cal):
                 remaining = get_remaining_fixtures(sd, fixtures_cal, lg)
                 cur = simulate_current_positions(sd, wages, p['beta'], p['theta1'], p['theta2'], remaining, lg=lg)
                 pos[lg][sn]['cur'] = cur
+                # Position probability evolution by GW (Phase 2)
+                hist = compute_position_history(sd, wages, p['beta'], p['theta1'], p['theta2'], fixtures_cal, lg, sn, n_sims=2000, gw_step=1)
+                pos[lg][sn]['hist'] = hist
+                if hist:
+                    print(f"      hist: {len(hist)} GW snapshots")
             
             # Log top 3
             top = sorted(pre.items(), key=lambda x: -x[1]['1st'])[:3]
