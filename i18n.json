@@ -828,24 +828,24 @@
     "Nota: estos resultados aplican solo a competición de liga. Los torneos eliminatorios (Champions League, Copa del Rey, FA Cup) siguen dinámicas diferentes no capturadas por este modelo."
   ],
   "info_tracker": [
-    "Each team’s annual wage bill is fed into an ordered logistic regression to predict match-by-match win/draw/loss probabilities. These are summed across all 38 matchdays to produce expected points (Budget forecast). As the season progresses, played results are locked in and only the remaining fixtures are simulated 10,000 times (Updated forecast). ",
-    "La masa salarial anual de cada equipo se introduce en una regresión logística ordenada para predecir probabilidades de victoria/empate/derrota partido a partido. Estas se suman en las 38 jornadas para producir puntos esperados (Previsión presupuesto). A medida que avanza la temporada, los resultados jugados se bloquean y solo los partidos restantes se simulan 10.000 veces (Previsión actualizada). "
+    "Each team’s annual wage bill is fed into an ordered logistic regression to predict match-by-match win/draw/loss probabilities. These are summed across all matchdays to produce expected points (Budget forecast). As the season progresses, played results are locked in and only the remaining fixtures are simulated 10,000 times (Updated forecast). The Points / Position toggle switches between two views.",
+    "La masa salarial anual de cada equipo se introduce en una regresión logística ordenada para predecir probabilidades de victoria/empate/derrota partido a partido. Estas se suman en todas las jornadas para producir puntos esperados (Previsión presupuesto). A medida que avanza la temporada, los resultados jugados se bloquean y solo los partidos restantes se simulan 10.000 veces (Previsión actualizada). El interruptor Puntos / Posición alterna entre dos vistas."
   ],
   "info_tracker_single_title": [
     "Single team view:",
     "Vista de un equipo:"
   ],
   "info_tracker_single": [
-    " solid line = actual points; dashed line = median projection (p50); shaded band = p10–p90 range (80% of simulations fall within this corridor). Orange = budget forecast (pre-season, from wages only). Blue = updated forecast (actual results + remaining simulations).",
-    " línea sólida = puntos reales; línea discontinua = proyección mediana (p50); banda sombreada = rango p10–p90 (el 80% de las simulaciones caen dentro de este corredor). Naranja = previsión presupuesto (pre-temporada, solo salarios). Azul = previsión actualizada (resultados reales + simulaciones restantes)."
+    " in Points view, the solid line shows actual cumulative points; the dashed line is the median projection (p50); the shaded band is the p10–p90 range (80% of simulations fall within this corridor). Orange = budget forecast (pre-season, from wages only). Blue = updated forecast (actual results + remaining simulations). In Position view, the line shows the team’s actual league rank week by week (computed by date, not by official gameweek), and the projected median rank from there to the end. Background zones colour the table by Champions League / Europa / Conference / relegation cut-offs (specific to each league).",
+    " en la vista Puntos, la línea sólida muestra los puntos acumulados reales; la línea discontinua es la proyección mediana (p50); la banda sombreada es el rango p10–p90 (el 80% de las simulaciones caen dentro de este corredor). Naranja = previsión presupuesto (pre-temporada, solo salarios). Azul = previsión actualizada (resultados reales + simulaciones restantes). En la vista Posición, la línea muestra el puesto real del equipo jornada a jornada (calculado por fecha, no por jornada oficial), y el puesto mediano proyectado desde ahí hasta el final. Las bandas de fondo colorean la tabla según los cortes de Champions / Europa / Conference / descenso (específicos de cada liga)."
   ],
   "info_tracker_multi_title": [
     "Multi-team view (up to 3):",
     "Vista multi-equipo (hasta 3):"
   ],
   "info_tracker_multi": [
-    " compare actual trajectories side by side, each with its own updated median and p10–p90 band. The faint dashed line shows the budget forecast median for reference.",
-    " compara trayectorias reales uno contra otro, cada una con su propia mediana actualizada y banda p10–p90. La línea discontinua tenue muestra la mediana de previsión presupuestaria como referencia."
+    " compare actual trajectories side by side, each with its own updated median and p10–p90 band in Points view, or one line per team in Position view. The faint dashed line in Points view shows the budget forecast median for reference.",
+    " compara trayectorias reales uno contra otro, cada una con su propia mediana actualizada y banda p10–p90 en la vista Puntos, o una línea por equipo en la vista Posición. La línea discontinua tenue en la vista Puntos muestra la mediana de previsión presupuestaria como referencia."
   ],
   "view_points": [
     "Points",
@@ -856,8 +856,8 @@
     "Posición"
   ],
   "info_predictions": [
-    "Position probabilities come from 10,000 joint league simulations: all 20 teams play each fixture simultaneously in every iteration, producing a full league table. The fraction of iterations where a team finishes in each zone (1st, top 4, 5th–6th, 7th, 8th–17th, 18th–20th) gives the probability. Budget forecast simulates the full season using only wage data. Updated forecast locks in actual results and simulates remaining fixtures. Rank is derived from projected final points.",
-    "Las probabilidades de posición provienen de 10.000 simulaciones conjuntas de liga: los 20 equipos juegan cada partido simultáneamente en cada iteración, produciendo una tabla de clasificación completa. La fracción de iteraciones en las que un equipo termina en cada zona (1º, top 4, 5º–6º, 7º, 8º–17º, 18º–20º) da la probabilidad. La previsión presupuestaria simula la temporada completa usando solo datos salariales. La previsión actualizada bloquea resultados reales y simula los partidos restantes. La posición se deriva de los puntos finales proyectados."
+    "Position probabilities come from 10,000 joint league simulations: all teams play each fixture simultaneously in every iteration, producing a full league table. The fraction of iterations where a team finishes in each zone (1st, Champions League, Europa League, Conference, mid-table, relegation) gives the probability. Budget forecast simulates the full season using only wage data. Updated forecast locks in actual results and simulates remaining fixtures. Rank is derived from projected final points. Click the ▶ arrow next to any team to expand its probability evolution chart: a stacked area showing how each zone’s likelihood has shifted week by week as results come in (lighter version with 2,000 simulations per gameweek).",
+    "Las probabilidades de posición provienen de 10.000 simulaciones conjuntas de liga: todos los equipos juegan cada partido simultáneamente en cada iteración, produciendo una tabla completa. La fracción de iteraciones en las que un equipo termina en cada zona (1º, Champions, Europa, Conference, mitad de tabla, descenso) da la probabilidad. La previsión presupuestaria simula la temporada completa usando solo datos salariales. La previsión actualizada bloquea resultados reales y simula los partidos restantes. La posición se deriva de los puntos finales proyectados. Pulsa la flecha ▶ junto a un equipo para desplegar su gráfico de evolución de probabilidades: un área apilada que muestra cómo se ha movido la probabilidad de cada zona jornada a jornada según iban llegando los resultados (versión ligera con 2.000 simulaciones por jornada)."
   ],
   "info_badrun": [
     "Evaluate whether a run of results is statistically unusual given the team’s wage bill. The expected line (dashed) shows what the budget predicts. ",
@@ -1222,6 +1222,14 @@
   "wage_evolution_sub": [
     "Annual wage bill by team across seasons (up to 3 teams)",
     "Presupuesto anual por equipo a lo largo de las temporadas (hasta 3 equipos)"
+  ],
+  "wage_stale_title": [
+    "Wages may not be up to date",
+    "Los salarios pueden estar desactualizados"
+  ],
+  "wage_stale_msg": [
+    "Salary data for this season appears nearly identical to the previous one — values may not reflect current figures and predictions could be affected.",
+    "Los datos salariales de esta temporada son casi idénticos a los de la anterior — los valores pueden no reflejar las cifras actuales y las predicciones podrían verse afectadas."
   ],
   "release_refresh": [
     "Release to refresh",

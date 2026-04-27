@@ -955,6 +955,8 @@ var _wl=React.useState("ll"),wLg=_wl[0],setWLg=_wl[1];
 var _ws=React.useState(""),wSn=_ws[0],setWSn=_ws[1];
 var wSeasons=React.useMemo(function(){return Object.keys(D.seasons[wLg]).sort().reverse();},[wLg]);
 var activeSn=wSn||wSeasons[0]||"";
+var wageStatus=function(lg,sn){return D.meta&&D.meta.wage_status&&D.meta.wage_status[lg]&&D.meta.wage_status[lg][sn]==="stale";};
+var isStale=wageStatus(wLg,activeSn);
 var wTeams=React.useMemo(function(){var sd=D.seasons[wLg][activeSn]||{};var arr=[];Object.keys(sd).forEach(function(t){var w=sd[t].w;if(w>0)arr.push({t:t,w:w});});arr.sort(function(a,b){return b.w-a.w;});return arr;},[wLg,activeSn]);
 var cur=_cur(wLg);
 // Wage evolution: all teams that have ever been in this league with wage data
@@ -978,6 +980,7 @@ h("p",{className:"text-xs text-gray-600 mb-4"},_t("data_coverage_text"))),
 h("div",{className:"flex gap-2 mb-3 flex-wrap items-center"},
 h("select",{value:wLg,onChange:function(ev){setWLg(ev.target.value);setWSn("");},className:"px-3 py-1.5 rounded-lg text-sm font-semibold border border-gray-200",style:{minWidth:160}},
 LG_ORDER.map(function(k){return h("option",{key:k,value:k},LEAGUES[k].flag+" "+LEAGUES[k].name);}))),
+isStale?h("div",{className:"mb-4 p-3 rounded-lg",style:{background:"#FEF3C7",border:"1px solid #F59E0B",fontSize:12,color:"#78350F"}},h("b",null,"⚠ "+(_t("wage_stale_title")||"Wages may not be up to date")),h("p",{style:{marginTop:4}},_t("wage_stale_msg")||"Salary data for "+activeSn+" appears nearly identical to the previous season — values may not reflect current figures and predictions could be affected.")):null,
 h("div",{className:"mb-6"},h("h3",{className:"font-bold text-sm mb-2",style:{color:N}},_t("wage_evolution")||"Wage evolution"),
 h("p",{className:"text-xs text-gray-500 mb-3"},_t("wage_evolution_sub")||"Annual wage bill by team across seasons (up to 3 teams)"),
 h("div",{className:"flex gap-1 mb-2 flex-wrap items-center",style:{position:"relative"}},

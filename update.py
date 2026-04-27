@@ -41,7 +41,34 @@ WAGES_FILE = os.path.join(os.path.dirname(__file__) or '.', 'all_wages.json')
 WAGES_LG_MAP = {'ll': 'la_liga', 'pl': 'premier_league', 'sa': 'serie_a',
                 'bl': 'bundesliga', 'l1': 'ligue_1', 'ed': 'eredivisie'}
 
-def load_wages(lg, season, _cache={}):
+def detect_wage_status(lg, season, _cache={}):
+    """Detect if wages for a season look 'stale' (too similar to previous season).
+    Returns 'stale' if >=80% of common teams have identical wages to previous season,
+    'fresh' otherwise. Returns 'fresh' if no previous season data exists."""
+    if not _cache:
+        try:
+            with open(WAGES_FILE, 'r') as f:
+                _cache['data'] = json.load(f)
+        except FileNotFoundError:
+            return 'fresh'
+    lg_key = WAGES_LG_MAP.get(lg, lg)
+    cur_wages = _cache['data'].get(lg_key, {}).get(season, {})
+    if not cur_wages:
+        return 'fresh'
+    prev_y = int(season[:2]) - 1
+    prev_sn = f'{prev_y:02d}/{prev_y+1:02d}'
+    prev_wages = _cache['data'].get(lg_key, {}).get(prev_sn, {})
+    if not prev_wages:
+        return 'fresh'
+    common = set(cur_wages.keys()) & set(prev_wages.keys())
+    if len(common) < 5:
+        return 'fresh'
+    same = sum(1 for t in common if cur_wages[t] == prev_wages[t])
+    pct_same = same / len(common)
+    return 'stale' if pct_same >= 0.8 else 'fresh'
+
+
+
     """Load wages from all_wages.json. Falls back to previous season for missing teams."""
     if not _cache:
         try:
@@ -1222,6 +1249,19 @@ def update():
             c[1] = nS
             c[2] = round((cumOP / nS) / avgExp * 100, 1) if avgExp > 0 else 0
     
+    # Detect stale wages (>=80% identical to previous season)
+    print("  Checking wage freshness...")
+    if 'meta' not in data:
+        data['meta'] = {}
+    data['meta']['wage_status'] = {}
+    for lg in PARAMS:
+        data['meta']['wage_status'][lg] = {}
+        for sn in data['seasons'][lg].keys():
+            status = detect_wage_status(lg, sn)
+            if status == 'stale':
+                data['meta']['wage_status'][lg][sn] = 'stale'
+                print(f"    ⚠️  {lg} {sn}: wages appear stale (>=80% identical to previous season)")
+
     # Save
     out = json.dumps(data, separators=(',',':'), ensure_ascii=False)
     # Only apply safe global replacements (no substring conflicts)
