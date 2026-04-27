@@ -42,6 +42,7 @@ The app updates automatically twice daily (06:00 + 08:00 UTC) via GitHub Actions
 
 ## Version history
 
+- **v3.4.1** (Apr 2026): Bug fixes. (1) Predictions evolution arrow button: now in flex layout with the team name, right-aligned in the team cell, no longer wraps to a second line on narrow mobile. (2) BadRun and H2H tabs were going blank when the Tracker had multiple teams selected (the comma-separated `sel` hash param was being used directly as a team key); now it correctly takes only the first team. SW v72.
 - **v3.4** (Apr 2026): Wage evolution chart in Data tab. Multi-team selector (1-3 teams, like Tracker). Shows annual wage bill across all seasons of the selected league in absolute M€/M£. Lines break when a team is not in the league. League selector promoted to the top of the tab to be shared between chart and table sections. SW v71.
 - **v3.3.3** (Apr 2026): Replaced unreadable in-chart labels with a compact horizontal color-coded legend above each evolution chart (1st / UCL / UEL / Conf / Mid / Rel with color swatches in stack order). SW v70.
 - **v3.3.2** (Apr 2026): Predictions evolution chart label refinement: white pill background with band-color text (instead of white text + outline). Min height threshold (14px segment) hides labels in too-thin bands. Edge-nudging avoids clipping at first/last GW. SW v69.

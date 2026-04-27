@@ -419,7 +419,7 @@ function BadRun(){
 var hh=getHash();
 var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
 var _2=React.useState(hh.sn||CUR_SN),sn=_2[0],sSn0=_2[1];
-var _3=React.useState(hh.br||hh.sel||"Barcelona"),sel=_3[0],sSel0=_3[1];
+var _3=React.useState(hh.br||(hh.sel?hh.sel.split(",")[0]:"Barcelona")),sel=_3[0],sSel0=_3[1];
 var _4=React.useState(hh.rf?Number(hh.rf):0),gwFrom=_4[0],setFrom0=_4[1];
 var _5=React.useState(hh.rt?Number(hh.rt):0),gwTo=_5[0],setTo0=_5[1];
 var _6=React.useState(hh.rq||"10"),qSel=_6[0],setQSel0=_6[1];
@@ -543,8 +543,8 @@ h("tbody",null,lW.map(function(m,i){var d=m[2]-m[3];return h("tr",{key:i,classNa
 function H2H(){
 var hh=getHash();
 var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
-var _2=React.useState(hh.h2a||hh.sel||"Real Madrid"),tA=_2[0],sTA0=_2[1];
-var _h2bDef=hh.h2b||(function(){var st=hh.h2a||hh.sel;if(st){var sdd=D.seasons[lg][CUR_SN];if(sdd&&sdd[st]&&sdd[st].r&&sdd[st].r[0])return sdd[st].r[0][0];}return lg==="ll"?"At Madrid":lg==="pl"?"Man United":lg==="sa"?"Juventus":lg==="bl"?"Borussia Dortmund":lg==="l1"?"Marseille":"PSV";}());
+var _2=React.useState(hh.h2a||(hh.sel?hh.sel.split(",")[0]:"Real Madrid")),tA=_2[0],sTA0=_2[1];
+var _h2bDef=hh.h2b||(function(){var st=hh.h2a||(hh.sel?hh.sel.split(",")[0]:null);if(st){var sdd=D.seasons[lg][CUR_SN];if(sdd&&sdd[st]&&sdd[st].r&&sdd[st].r[0])return sdd[st].r[0][0];}return lg==="ll"?"At Madrid":lg==="pl"?"Man United":lg==="sa"?"Juventus":lg==="bl"?"Borussia Dortmund":lg==="l1"?"Marseille":"PSV";}());
 var _3=React.useState(_h2bDef),tB=_3[0],sTB0=_3[1];
 var _h2w=React.useState("all"),h2win=_h2w[0],setH2Win=_h2w[1];
 function sLg(v){sLg0(v);setHash("lg",v);}
@@ -848,7 +848,7 @@ e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#95A5A6",fontSize:9}
 e(TH,{sty:{className:"text-right px-1 py-0.5",style:{color:"#E74C3C",fontSize:9}},label:_t("col_rel"),tip:_t("tip_prel")}))),
 h("tbody",null,tableData.map(function(r,ri){
 var mainRow=h("tr",{key:r.t,style:{background:r.t===homeTeam?"#EBF2FF":ri%2===0?"white":"#fafbfc",borderBottom:"1px solid #f0f0f0",boxShadow:r.t===homeTeam?"inset 3px 0 0 #1A3A6B":"none"}},
-h("td",{className:"px-2 py-0.5",style:{fontWeight:600,fontSize:11,borderRight:"1px solid #f0f0f0",position:"sticky",left:0,zIndex:1,background:r.t===homeTeam?"#EBF2FF":ri%2===0?"white":"#fafbfc"}},Cr(r.t,14)," ",r.t,hasHist&&histByTeam[r.t]?h("button",{onClick:function(){toggleExp(r.t);},style:{marginLeft:6,padding:"0 4px",fontSize:9,border:"1px solid #ddd",borderRadius:3,background:expanded[r.t]?B:"#f9fafb",color:expanded[r.t]?"white":"#666",cursor:"pointer",lineHeight:"14px",verticalAlign:"middle"},title:_t("show_evolution")||"Show evolution"},expanded[r.t]?"▼":"▶"):null),
+h("td",{className:"px-2 py-0.5",style:{fontWeight:600,fontSize:11,borderRight:"1px solid #f0f0f0",position:"sticky",left:0,zIndex:1,background:r.t===homeTeam?"#EBF2FF":ri%2===0?"white":"#fafbfc"}},h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:6,minWidth:0}},h("span",{style:{display:"inline-flex",alignItems:"center",gap:4,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},Cr(r.t,14),h("span",{style:{overflow:"hidden",textOverflow:"ellipsis"}},r.t)),hasHist&&histByTeam[r.t]?h("button",{onClick:function(){toggleExp(r.t);},style:{flexShrink:0,padding:"1px 5px",fontSize:9,border:"1px solid #ddd",borderRadius:3,background:expanded[r.t]?B:"#f9fafb",color:expanded[r.t]?"white":"#666",cursor:"pointer",lineHeight:"14px"},title:_t("show_evolution")||"Show evolution"},expanded[r.t]?"▼":"▶"):null)),
 iC?h("td",{className:"px-1 py-0.5 text-right",style:{fontWeight:600,fontSize:10,borderRight:"1px solid #f0f0f0"}},ri+1):null,
 iC?h("td",{className:"px-1 py-0.5 text-right",style:{fontSize:10,color:"#666",borderRight:"1px solid #f0f0f0"}},r.played):null,
 h("td",{className:"px-1 py-0.5 text-right",style:{fontWeight:600,borderRight:"1px solid #f0f0f0"}},r.pts),
