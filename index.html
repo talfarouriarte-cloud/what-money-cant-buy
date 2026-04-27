@@ -542,7 +542,7 @@ var qBtn=function(label,val){return h("button",{onClick:function(){quickSet(val,
 className:"text-xs px-2.5 py-1 rounded font-medium "+(qSel===val?"text-white":"text-gray-600 bg-gray-100"),
 style:qSel===val?{background:N}:{}},label);};
 return h("div",null,
-e(Info,null,_t("info_badrun"),h("b",null,_t("info_badrun_over_title")),_t("info_badrun_over"),h("b",null,_t("info_badrun_under_title")),_t("info_badrun_under")),
+e(Info,null,_t("info_badrun"),h("b",null,_t("info_badrun_over_title")),_t("info_badrun_over"),h("b",null,_t("info_badrun_under_title")),_t("info_badrun_under"),h("br"),h("br"),h("b",null,_t("info_badrun_ranking_title")),_t("info_badrun_ranking")),
 h("div",{className:"flex flex-wrap gap-3 items-end mb-4"},e(LP,{lg:lg,set:function(v){sLg(v);sSn(Object.keys(D.seasons[v]).sort().reverse()[0]);sSel(_defT(v));}}),
 SN(sn,sSn,sL,false)),
 h("div",{className:"flex flex-wrap gap-4 mb-3"},
@@ -1147,7 +1147,7 @@ next10.sort(function(a,b){return Math.abs(a.pW-a.pL)-Math.abs(b.pW-b.pL);});
 return{matches:next10};
 },[sd25]);
 return h("div",null,
-e(Info,null,_t("info_home"),h("br"),h("br"),h("b",null,_t("info_home_q1_title")),_t("info_home_q1"),h("b",null,_t("info_home_q2_title")),_t("info_home_q2"),h("b",null,_t("info_home_q3_title")),_t("info_home_q3"),h("b",null,_t("info_home_q4_title")),_t("info_home_q4"),h("b",null,_t("card_mgmt")),_t("info_home_q5"),h("br"),h("br"),_t("info_home_disclaimer")),
+e(Info,null,_t("info_home"),h("br"),h("br"),h("b",null,_t("info_home_q1_title")),_t("info_home_q1"),h("b",null,_t("info_home_qmatches_title")),_t("info_home_qmatches"),h("b",null,_t("info_home_q2_title")),_t("info_home_q2"),h("b",null,_t("info_home_q3_title")),_t("info_home_q3"),h("b",null,_t("info_home_q4_title")),_t("info_home_q4"),h("b",null,_t("card_mgmt")),_t("info_home_q5"),h("br"),h("br"),_t("info_home_disclaimer")),
 h("div",{className:"flex flex-wrap gap-3 items-center mb-6"},
 e(LP,{lg:lg,set:sLg}),
 h("select",{value:team,onChange:function(ev){setTeam(ev.target.value);},className:"border rounded px-2 py-1.5 text-sm font-semibold",style:{minWidth:140}},teamList.map(function(tt){return h("option",{key:tt.n,value:tt.n},tt.n);})),

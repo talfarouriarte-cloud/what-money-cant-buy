@@ -819,6 +819,22 @@
     " — Win/draw/loss probabilities for the upcoming fixture based on both teams’ wage bills. ",
     " — Probabilidades de victoria/empate/derrota para el próximo partido basadas en las masas salariales de ambos equipos. "
   ],
+  "info_home_qmatches_title": [
+    "Next matchday",
+    "Próxima jornada"
+  ],
+  "info_home_qmatches": [
+    " — Closest fixtures (where both teams have similar wage bills, so the outcome is most uncertain) and the most uneven match (largest wage gap) of the upcoming league round, with win/draw/loss probabilities. ",
+    " — Partidos más igualados (donde ambos equipos tienen presupuestos parecidos y el resultado es más incierto) y partido más desigual (mayor diferencia salarial) de la próxima jornada de liga, con probabilidades de victoria/empate/derrota. "
+  ],
+  "info_badrun_ranking_title": [
+    "Match-by-match table:",
+    "Tabla partido a partido:"
+  ],
+  "info_badrun_ranking": [
+    " below the chart, every match in the selected range is listed with its actual points, expected points, and the +/- difference. The list is ordered by gameweek (chronological), so you can spot which specific games drove the over- or underperformance.",
+    " bajo el gráfico se lista cada partido del rango seleccionado con sus puntos reales, puntos esperados y la diferencia +/-. La lista está ordenada por jornada (cronológica), de modo que puedes identificar qué partidos concretos impulsaron el sobre o bajo rendimiento."
+  ],
   "info_home_q5": [
     " — How well or poorly a team has been managed across multiple seasons relative to its spending.",
     " — Qué tan bien o mal se ha gestionado un equipo a lo largo de varias temporadas en relación con su gasto."
@@ -836,16 +852,16 @@
     "Vista de un equipo:"
   ],
   "info_tracker_single": [
-    " in Points view, the solid line shows actual cumulative points; the dashed line is the median projection (p50); the shaded band is the p10–p90 range (80% of simulations fall within this corridor). Orange = budget forecast (pre-season, from wages only). Blue = updated forecast (actual results + remaining simulations). In Position view, the line shows the team’s actual league rank week by week (computed by date, not by official gameweek), and the projected median rank from there to the end. Background zones colour the table by Champions League / Europa / Conference / relegation cut-offs (specific to each league).",
-    " en la vista Puntos, la línea sólida muestra los puntos acumulados reales; la línea discontinua es la proyección mediana (p50); la banda sombreada es el rango p10–p90 (el 80% de las simulaciones caen dentro de este corredor). Naranja = previsión presupuesto (pre-temporada, solo salarios). Azul = previsión actualizada (resultados reales + simulaciones restantes). En la vista Posición, la línea muestra el puesto real del equipo jornada a jornada (calculado por fecha, no por jornada oficial), y el puesto mediano proyectado desde ahí hasta el final. Las bandas de fondo colorean la tabla según los cortes de Champions / Europa / Conference / descenso (específicos de cada liga)."
+    " in Points view, the solid line shows actual cumulative points; the dashed line is the median projection (p50); the shaded band is the p10–p90 range (80% of simulations fall within this corridor). Orange = budget forecast (pre-season, from wages only). Blue = updated forecast (actual results + remaining simulations). In Position view, three lines are shown: a solid blue line = actual league rank week by week (computed by date, not by official gameweek); a lighter blue line = p50 projection from now to the end of the season (drawn as a smooth path connecting today's rank to the projected final-season median); and an orange dashed line = how the predicted final rank itself shifted week by week as results came in (e.g. starts at 8th in GW1, drops to 4th by GW20 if the team overperforms). Background zones colour the table by Champions League / Europa / Conference / relegation cut-offs (specific to each league).",
+    " en la vista Puntos, la línea sólida muestra los puntos acumulados reales; la línea discontinua es la proyección mediana (p50); la banda sombreada es el rango p10–p90 (el 80% de las simulaciones caen dentro de este corredor). Naranja = previsión presupuesto (pre-temporada, solo salarios). Azul = previsión actualizada (resultados reales + simulaciones restantes). En la vista Posición se muestran tres líneas: una línea azul sólida = puesto real jornada a jornada (calculado por fecha, no por jornada oficial); una línea azul más clara = proyección p50 desde el momento actual hasta final de temporada (un trazo que conecta el puesto actual con la mediana del puesto final proyectado); y una línea naranja discontinua = cómo se ha ido moviendo la predicción del puesto final jornada a jornada según iban llegando los resultados (ej.: empieza en 8º en J1, baja a 4º en J20 si el equipo sobrerinde). Las bandas de fondo colorean la tabla según los cortes de Champions / Europa / Conference / descenso (específicos de cada liga)."
   ],
   "info_tracker_multi_title": [
     "Multi-team view (up to 3):",
     "Vista multi-equipo (hasta 3):"
   ],
   "info_tracker_multi": [
-    " compare actual trajectories side by side, each with its own updated median and p10–p90 band in Points view, or one line per team in Position view. The faint dashed line in Points view shows the budget forecast median for reference.",
-    " compara trayectorias reales uno contra otro, cada una con su propia mediana actualizada y banda p10–p90 en la vista Puntos, o una línea por equipo en la vista Posición. La línea discontinua tenue en la vista Puntos muestra la mediana de previsión presupuestaria como referencia."
+    " compare trajectories side by side. In Points view, each team has its own updated median and p10–p90 band; the faint dashed line shows the budget forecast median for reference. In Position view, each team has two lines in its colour: a solid line = actual rank week by week, and a lighter line of the same hue = p50 projection from now to the end. The final-rank evolution line (orange dashed) is hidden in multi-team mode to keep the chart readable.",
+    " compara trayectorias uno contra otro. En la vista Puntos, cada equipo tiene su propia mediana actualizada y banda p10–p90; la línea discontinua tenue muestra la mediana de previsión presupuestaria como referencia. En la vista Posición, cada equipo tiene dos líneas en su color: una línea sólida = puesto real jornada a jornada, y una línea más clara del mismo tono = proyección p50 desde ahora hasta el final. La línea de evolución del puesto final (naranja discontinua) se oculta en modo multi-equipo para mantener el gráfico legible."
   ],
   "view_points": [
     "Points",
