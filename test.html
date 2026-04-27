@@ -863,6 +863,8 @@ cats.map(function(c){var v=r.pre[c.k];if(c.k==="ucl")v=Math.max(0,v-r.pre["1st"]
 if(hasHist&&expanded[r.t]&&histByTeam[r.t]){
 var hData=histByTeam[r.t];
 var histTip=function(props){if(!props.active||!props.payload||!props.payload.length)return null;var d=props.payload[0].payload;var rows=[h("div",{key:"h",className:"font-bold mb-1"},_t("col_gw")+d.gw)];cats.forEach(function(c,ci){var k=ci===0?"p1":ci===1?"pucl":ci===2?"puel":ci===3?"pconf":ci===4?"pmid":"prel";var v=d[k];if(v>0)rows.push(h("div",{key:k,style:{color:c.c,fontSize:11}},c.l+": "+Math.round(v)+"%"));});return h("div",{style:{background:"white",border:"1px solid #e5e7eb",borderRadius:6,padding:8,fontSize:SCR.fs(10,12,14,15),boxShadow:"0 2px 8px rgba(0,0,0,0.1)"}},rows);};
+// Inline label: render only at the GW where the band is widest, hide if always too thin
+var mkLabel=function(catKey,catLabel){var maxIdx=-1,maxVal=0;for(var ix=0;ix<hData.length;ix++){if(hData[ix][catKey]>maxVal){maxVal=hData[ix][catKey];maxIdx=ix;}}return function(props){if(props.index!==maxIdx)return null;if(maxVal<10)return null;var midY=props.y+(props.height||0)/2;return h("text",{x:props.x,y:midY,fill:"white",fontSize:9,fontWeight:700,textAnchor:"middle",dominantBaseline:"middle",stroke:"rgba(0,0,0,0.45)",strokeWidth:0.6,paintOrder:"stroke",style:{pointerEvents:"none"}},catLabel);};};
 var chartEl=h("div",{style:{padding:"8px 12px",background:"#fafbfc",borderTop:"1px dashed #e5e7eb",borderBottom:"1px solid #f0f0f0"}},
 h("div",{style:{fontSize:10,color:"#666",marginBottom:4,fontWeight:600}},Cr(r.t,12)," "+r.t+": "+(_t("evolution_title")||"probability evolution")),
 h("div",{style:{height:160}},e(RC.ResponsiveContainer,null,e(RC.AreaChart,{data:hData,margin:{left:0,right:8,top:4,bottom:4},stackOffset:"expand"},
@@ -870,12 +872,12 @@ e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#eee"}),
 e(RC.XAxis,{dataKey:"gw",tick:{fontSize:9}}),
 e(RC.YAxis,{tick:{fontSize:9},tickFormatter:function(v){return Math.round(v*100)+"%";}}),
 e(RC.Tooltip,{content:histTip}),
-e(RC.Area,{dataKey:"p1",stackId:"x",stroke:"none",fill:"#FFD700",fillOpacity:0.85,isAnimationActive:false}),
-e(RC.Area,{dataKey:"pucl",stackId:"x",stroke:"none",fill:"#1A56DB",fillOpacity:0.7,isAnimationActive:false}),
-e(RC.Area,{dataKey:"puel",stackId:"x",stroke:"none",fill:"#E67E22",fillOpacity:0.7,isAnimationActive:false}),
-e(RC.Area,{dataKey:"pconf",stackId:"x",stroke:"none",fill:"#27AE60",fillOpacity:0.7,isAnimationActive:false}),
-e(RC.Area,{dataKey:"pmid",stackId:"x",stroke:"none",fill:"#95A5A6",fillOpacity:0.5,isAnimationActive:false}),
-e(RC.Area,{dataKey:"prel",stackId:"x",stroke:"none",fill:"#E74C3C",fillOpacity:0.7,isAnimationActive:false})))));
+e(RC.Area,{dataKey:"prel",stackId:"x",stroke:"none",fill:"#E74C3C",fillOpacity:0.75,isAnimationActive:false},e(RC.LabelList,{dataKey:"prel",content:mkLabel("prel",_t("col_rel")||"Rel")})),
+e(RC.Area,{dataKey:"pmid",stackId:"x",stroke:"none",fill:"#95A5A6",fillOpacity:0.55,isAnimationActive:false},e(RC.LabelList,{dataKey:"pmid",content:mkLabel("pmid",_t("col_mid")||"Mid")})),
+e(RC.Area,{dataKey:"pconf",stackId:"x",stroke:"none",fill:"#27AE60",fillOpacity:0.75,isAnimationActive:false},e(RC.LabelList,{dataKey:"pconf",content:mkLabel("pconf",_t("col_conf")||"Conf")})),
+e(RC.Area,{dataKey:"puel",stackId:"x",stroke:"none",fill:"#E67E22",fillOpacity:0.75,isAnimationActive:false},e(RC.LabelList,{dataKey:"puel",content:mkLabel("puel",_t("col_uel")||"UEL")})),
+e(RC.Area,{dataKey:"pucl",stackId:"x",stroke:"none",fill:"#1A56DB",fillOpacity:0.75,isAnimationActive:false},e(RC.LabelList,{dataKey:"pucl",content:mkLabel("pucl",_t("col_ucl")||"UCL")})),
+e(RC.Area,{dataKey:"p1",stackId:"x",stroke:"none",fill:"#FFD700",fillOpacity:0.9,isAnimationActive:false},e(RC.LabelList,{dataKey:"p1",content:mkLabel("p1",_t("champion")||"1st")}))))));
 return[mainRow,h("tr",{key:r.t+"-h",style:{borderBottom:"1px solid #f0f0f0"}},h("td",{colSpan:99,style:{padding:0}},chartEl))];
 }
 return mainRow;
