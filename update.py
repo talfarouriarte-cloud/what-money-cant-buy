@@ -68,7 +68,7 @@ def detect_wage_status(lg, season, _cache={}):
     return 'stale' if pct_same >= 0.8 else 'fresh'
 
 
-
+def load_wages(lg, season, _cache={}):
     """Load wages from all_wages.json. Falls back to previous season for missing teams."""
     if not _cache:
         try:
