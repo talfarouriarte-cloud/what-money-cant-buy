@@ -42,6 +42,10 @@ The app updates automatically twice daily (06:00 + 08:00 UTC) via GitHub Actions
 
 ## Version history
 
+- **v3.4** (Apr 2026): Wage evolution chart in Data tab. Multi-team selector (1-3 teams, like Tracker). Shows annual wage bill across all seasons of the selected league in absolute M€/M£. Lines break when a team is not in the league. League selector promoted to the top of the tab to be shared between chart and table sections. SW v71.
+- **v3.3.3** (Apr 2026): Replaced unreadable in-chart labels with a compact horizontal color-coded legend above each evolution chart (1st / UCL / UEL / Conf / Mid / Rel with color swatches in stack order). SW v70.
+- **v3.3.2** (Apr 2026): Predictions evolution chart label refinement: white pill background with band-color text (instead of white text + outline). Min height threshold (14px segment) hides labels in too-thin bands. Edge-nudging avoids clipping at first/last GW. SW v69.
+- **v3.3.1** (Apr 2026): Predictions evolution chart polish: stack order inverted (Champion at top, Relegation at bottom), inline labels on each band replace the legend (rendered at the GW where each band is widest, hidden if always thin). SW v68.
 - **v3.3** (Apr 2026): Probability evolution chart in Predictions (per-team expandable rows). Backend: `pos[lg][sn].hist` array with per-GW probability snapshots (n_sims=2000, gw_step=1). Frontend: stacked-area chart at 100% under each row when expanded. SW v67.
 - **v3.2** (Apr 2026): Tracker view toggle (Points / Position). Position view shows team rank trajectory with league-specific zone backgrounds (Champion/UCL/UEL/Conference/relegation). Single-team and multi-team modes. SW v66.
 - **v3.1.1** (Apr 2026): Chronological ordering of played matches in Tracker and Run Evaluator (was sorted by official GW, now by actual date). PJ column in Predictions. SW v65.

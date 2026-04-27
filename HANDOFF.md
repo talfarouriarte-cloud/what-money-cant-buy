@@ -4,7 +4,7 @@
 Web app at **footballbeyondmoney.uk** — payroll-adjusted football analytics for 6 European leagues.
 Repo: `github.com/talfarouriarte-cloud/what-money-cant-buy`. Single-file React 18.2.0 + Recharts 2.12.7 (`index.html`), no build step, GitHub Pages.
 
-## Current state: v3.3, SW v67, 324 i18n keys, ~155KB
+## Current state: v3.4, SW v71, 326 i18n keys, ~155KB
 
 ### Season management — fully automatic
 - `update.py`: `CURRENT_SEASON` always derived from date (Aug+ = new season). Season always advances.
