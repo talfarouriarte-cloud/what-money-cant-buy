@@ -1231,6 +1231,22 @@
     "Salary data for this season appears nearly identical to the previous one — values may not reflect current figures and predictions could be affected.",
     "Los datos salariales de esta temporada son casi idénticos a los de la anterior — los valores pueden no reflejar las cifras actuales y las predicciones podrían verse afectadas."
   ],
+  "actual_position": [
+    "Actual position",
+    "Posición real"
+  ],
+  "proj_p50": [
+    "p50 projection",
+    "Proyección p50"
+  ],
+  "final_p50": [
+    "Final-rank p50 (per GW)",
+    "p50 final por jornada"
+  ],
+  "position": [
+    "Position",
+    "Posición"
+  ],
   "release_refresh": [
     "Release to refresh",
     "Suelta para refrescar"
