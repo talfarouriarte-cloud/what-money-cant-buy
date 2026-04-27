@@ -855,26 +855,6 @@
     "Position",
     "Posición"
   ],
-  "zone_champion": [
-    "Champion",
-    "Campeón"
-  ],
-  "zone_ucl": [
-    "Champions",
-    "Champions"
-  ],
-  "zone_uel": [
-    "Europa",
-    "Europa"
-  ],
-  "zone_conf": [
-    "Conference",
-    "Conference"
-  ],
-  "zone_rel": [
-    "Relegation",
-    "Descenso"
-  ],
   "info_predictions": [
     "Position probabilities come from 10,000 joint league simulations: all 20 teams play each fixture simultaneously in every iteration, producing a full league table. The fraction of iterations where a team finishes in each zone (1st, top 4, 5th–6th, 7th, 8th–17th, 18th–20th) gives the probability. Budget forecast simulates the full season using only wage data. Updated forecast locks in actual results and simulates remaining fixtures. Rank is derived from projected final points.",
     "Las probabilidades de posición provienen de 10.000 simulaciones conjuntas de liga: los 20 equipos juegan cada partido simultáneamente en cada iteración, produciendo una tabla de clasificación completa. La fracción de iteraciones en las que un equipo termina en cada zona (1º, top 4, 5º–6º, 7º, 8º–17º, 18º–20º) da la probabilidad. La previsión presupuestaria simula la temporada completa usando solo datos salariales. La previsión actualizada bloquea resultados reales y simula los partidos restantes. La posición se deriva de los puntos finales proyectados."
@@ -1226,6 +1206,14 @@
   "zone_rel": [
     "Relegation",
     "Descenso"
+  ],
+  "show_evolution": [
+    "Show evolution",
+    "Ver evolución"
+  ],
+  "evolution_title": [
+    "probability evolution",
+    "evolución de probabilidades"
   ],
   "release_refresh": [
     "Release to refresh",

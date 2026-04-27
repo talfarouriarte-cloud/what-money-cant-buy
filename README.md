@@ -42,6 +42,7 @@ The app updates automatically twice daily (06:00 + 08:00 UTC) via GitHub Actions
 
 ## Version history
 
+- **v3.3** (Apr 2026): Probability evolution chart in Predictions (per-team expandable rows). Backend: `pos[lg][sn].hist` array with per-GW probability snapshots (n_sims=2000, gw_step=1). Frontend: stacked-area chart at 100% under each row when expanded. SW v67.
 - **v3.2** (Apr 2026): Tracker view toggle (Points / Position). Position view shows team rank trajectory with league-specific zone backgrounds (Champion/UCL/UEL/Conference/relegation). Single-team and multi-team modes. SW v66.
 - **v3.1.1** (Apr 2026): Chronological ordering of played matches in Tracker and Run Evaluator (was sorted by official GW, now by actual date). PJ column in Predictions. SW v65.
 - **v3.1** (Mar 2026): H2H pill-table, narrative Home cards, Explorer-style Tracker selector, match grid auto-highlight, GD tiebreaker, budget p50 fix, touch fixes, auto season rollover, wages from `all_wages.json`. SW v60.
