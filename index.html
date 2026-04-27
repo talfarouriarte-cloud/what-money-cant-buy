@@ -957,6 +957,15 @@ var wSeasons=React.useMemo(function(){return Object.keys(D.seasons[wLg]).sort().
 var activeSn=wSn||wSeasons[0]||"";
 var wTeams=React.useMemo(function(){var sd=D.seasons[wLg][activeSn]||{};var arr=[];Object.keys(sd).forEach(function(t){var w=sd[t].w;if(w>0)arr.push({t:t,w:w});});arr.sort(function(a,b){return b.w-a.w;});return arr;},[wLg,activeSn]);
 var cur=_cur(wLg);
+// Wage evolution: all teams that have ever been in this league with wage data
+var allTeamsInLg=React.useMemo(function(){var s={};Object.keys(D.seasons[wLg]).forEach(function(sn){Object.keys(D.seasons[wLg][sn]).forEach(function(t){var w=D.seasons[wLg][sn][t].w;if(w>0){if(!s[t])s[t]={t:t,maxW:0,seasons:0};s[t].seasons++;if(w>s[t].maxW)s[t].maxW=w;}});});return Object.values(s).sort(function(a,b){return b.maxW-a.maxW;});},[wLg]);
+var defEvolT=React.useMemo(function(){return allTeamsInLg[0]?allTeamsInLg[0].t:null;},[allTeamsInLg]);
+var _ev=React.useState([]),evolSel=_ev[0],setEvolSel=_ev[1];
+var _ep=React.useState(false),evolPick=_ep[0],setEvolPick=_ep[1];
+React.useEffect(function(){var avail={};allTeamsInLg.forEach(function(x){avail[x.t]=true;});var kept=evolSel.filter(function(t){return avail[t];});if(kept.length===0&&defEvolT){setEvolSel([defEvolT]);}else if(kept.length!==evolSel.length){setEvolSel(kept);}},[wLg,allTeamsInLg]);
+function togEvol(t){setEvolSel(function(p){if(p.indexOf(t)>=0){if(p.length<=1)return p;return p.filter(function(x){return x!==t;});}if(p.length>=3)return[p[1],p[2],t];return p.concat([t]);});setEvolPick(false);}
+// Chart data: chronological seasons, one column per selected team
+var evolData=React.useMemo(function(){var sns=Object.keys(D.seasons[wLg]).sort();return sns.map(function(sn){var row={sn:sn};evolSel.forEach(function(t){var td=D.seasons[wLg][sn][t];row[t]=td&&td.w>0?td.w:null;});return row;});},[wLg,evolSel]);
 var Src=function(props){return h("div",{className:"p-3 rounded-lg mb-3",style:{background:"#f8f9fa",border:"1px solid #e9ecef"}},h("div",{className:"flex items-center gap-2 mb-1"},h("span",{className:"text-sm font-bold",style:{color:N}},props.name),h("a",{href:props.url,target:"_blank",style:{color:B,fontSize:12,textDecoration:"underline"}},props.host)),h("p",{className:"text-xs text-gray-600"},props.desc));};
 return h("div",{style:{maxWidth:700,margin:"0 auto"},className:"text-sm text-gray-700 leading-relaxed"},
 h("h2",{className:"text-lg font-bold mb-4",style:{color:N,fontFamily:"Georgia,serif"}},_t("data_title")),
@@ -966,13 +975,25 @@ e(Src,{name:_t("wage_data"),url:"https://www.capology.com",host:"Capology / FBre
 e(Src,{name:"API",url:"https://www.football-data.org",host:"football-data.org",desc:_t("data_api_source")})),
 h("div",{className:"mb-6"},h("h3",{className:"font-bold text-sm mb-1",style:{color:N}},_t("data_coverage_title")),
 h("p",{className:"text-xs text-gray-600 mb-4"},_t("data_coverage_text"))),
+h("div",{className:"flex gap-2 mb-3 flex-wrap items-center"},
+h("select",{value:wLg,onChange:function(ev){setWLg(ev.target.value);setWSn("");},className:"px-3 py-1.5 rounded-lg text-sm font-semibold border border-gray-200",style:{minWidth:160}},
+LG_ORDER.map(function(k){return h("option",{key:k,value:k},LEAGUES[k].flag+" "+LEAGUES[k].name);}))),
+h("div",{className:"mb-6"},h("h3",{className:"font-bold text-sm mb-2",style:{color:N}},_t("wage_evolution")||"Wage evolution"),
+h("p",{className:"text-xs text-gray-500 mb-3"},_t("wage_evolution_sub")||"Annual wage bill by team across seasons (up to 3 teams)"),
+h("div",{className:"flex gap-1 mb-2 flex-wrap items-center",style:{position:"relative"}},
+evolSel.map(function(t,i){return h("span",{key:t,onClick:function(){if(evolSel.length>1)togEvol(t);},className:"text-xs px-2 py-0.5 rounded-full font-semibold "+(evolSel.length>1?"cursor-pointer":""),style:{background:T[i]+"20",color:T[i],border:"1px solid "+T[i]+"40"}},Cr(t,12)," ",t,evolSel.length>1?" \u00d7":"");}),
+evolSel.length<3?h("button",{onClick:function(){setEvolPick(!evolPick);},className:"text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600"},evolPick?(_t("hide_teams")||"Hide"):"+ "+(_t("compare_add")||"Compare with...")):null,
+evolPick?h("div",{style:{position:"absolute",top:"100%",left:0,marginTop:4,maxHeight:240,overflowY:"auto",zIndex:30,background:"white",border:"1px solid #e5e7eb",borderRadius:8,boxShadow:"0 4px 12px rgba(0,0,0,0.15)",padding:4,minWidth:200}},allTeamsInLg.filter(function(x){return evolSel.indexOf(x.t)<0;}).map(function(x){return h("div",{key:x.t,onClick:function(){togEvol(x.t);},className:"cursor-pointer px-2 py-1 rounded text-xs flex justify-between hover:bg-gray-100"},h("span",{className:"flex items-center gap-1"},Cr(x.t,12),x.t),h("span",{className:"text-gray-400"},x.seasons+"s"));})):null),
+h("div",{style:{height:240},className:"chart-wrap"},e(RC.ResponsiveContainer,null,e(RC.LineChart,{data:evolData,margin:{left:0,right:8,top:8,bottom:4}},
+e(RC.CartesianGrid,{strokeDasharray:"3 3",stroke:"#f0f0f0"}),
+e(RC.XAxis,{dataKey:"sn",tick:{fontSize:10}}),
+e(RC.YAxis,{tick:{fontSize:10},tickFormatter:function(v){return cur+v+"M";}}),
+e(RC.Tooltip,{content:function(tp){if(!tp.active||!tp.payload||!tp.payload.length)return null;var d=tp.payload[0].payload;var rows=[h("div",{key:"h",className:"font-bold mb-1"},d.sn)];evolSel.forEach(function(t,i){var v=d[t];rows.push(h("div",{key:t,style:{color:T[i],fontSize:11}},h("b",null,t),": ",v!==null&&v!==undefined?cur+v+"M":h("span",{className:"text-gray-400"},_t("not_in_league")||"not in league")));});return h("div",{style:{background:"white",border:"1px solid #e5e7eb",borderRadius:6,padding:8,fontSize:SCR.fs(10,12,14,15),boxShadow:"0 2px 8px rgba(0,0,0,0.1)"}},rows);}}),
+evolSel.map(function(t,i){return e(RC.Line,{key:t,type:"monotone",dataKey:t,stroke:T[i],strokeWidth:2,dot:{r:3,fill:T[i],strokeWidth:0},connectNulls:false,isAnimationActive:true,animationDuration:600});})))),
+h("div",{className:"flex flex-wrap gap-3 mt-2 text-xs"},evolSel.map(function(t,i){return h("span",{key:t,className:"flex items-center gap-1"},h("span",{style:{width:10,height:2,background:T[i],display:"inline-block"}}),h("b",{style:{color:T[i]}},t));}))),
 h("div",{className:"mb-6"},h("h3",{className:"font-bold text-sm mb-2",style:{color:N}},_t("data_wages_title")),
 h("p",{className:"text-xs text-gray-500 mb-3"},_t("data_wages_subtitle")),
 h("div",{className:"flex gap-2 mb-3 flex-wrap items-center"},
-h("div",{className:"flex gap-1"},
-h("select",{value:wLg,onChange:function(ev){setWLg(ev.target.value);setWSn("");},
-className:"px-3 py-1.5 rounded-lg text-sm font-semibold border border-gray-200",style:{minWidth:160}},
-LG_ORDER.map(function(k){return h("option",{key:k,value:k},LEAGUES[k].flag+" "+LEAGUES[k].name);}))),
 h("select",{value:activeSn,onChange:function(ev){setWSn(ev.target.value);},className:"text-xs border rounded px-2 py-1"},wSeasons.map(function(s){return h("option",{key:s,value:s},s);}))),
 h("div",{className:"overflow-x-auto"},h("table",{className:"w-full text-xs",style:{borderCollapse:"collapse"}},
 h("thead",null,h("tr",{style:{borderBottom:"2px solid #ddd",background:"#f9fafb"}},
