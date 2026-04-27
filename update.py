@@ -684,13 +684,23 @@ def simulate_position_probs(teams, current_pts, match_list, n_sims=10000, lg=Non
     result = {}
     for i, team in enumerate(teams):
         counts = pos_counts[i]
+        # p50 rank: median of the rank distribution. Cumulative sum until reaching n_sims/2.
+        cum = 0
+        half = n_sims / 2.0
+        p50_rank = n_teams  # fallback
+        for r in range(n_teams):
+            cum += counts[r]
+            if cum >= half:
+                p50_rank = r + 1  # 1-indexed rank
+                break
         result[team] = {
             "1st": round(float(counts[0] / n_sims), 4),
             "ucl": round(float(counts[:n_ucl].sum() / n_sims), 4),
             "uel": round(float(counts[n_ucl:n_ucl+n_uel].sum() / n_sims), 4),
             "ucol": round(float(counts[n_ucl+n_uel:n_euro].sum() / n_sims), 4),
             "mid": round(float(counts[n_euro:n_teams-n_rel].sum() / n_sims), 4),
-            "rel": round(float(counts[n_teams-n_rel:].sum() / n_sims), 4)
+            "rel": round(float(counts[n_teams-n_rel:].sum() / n_sims), 4),
+            "p50": p50_rank
         }
     return result
 
