@@ -114,6 +114,10 @@ function Cr(name,sz){if(!CR[name])return null;return h("img",{src:CR[name],alt:"
 var Sg=function(z){return 1/(1+Math.exp(-z));};
 function expPos(p,lg){if(!p)return 20;var L=LEAGUES[lg]||LEAGUES.ll;var nu=L.ucl,ne=L.uel,nc=L.ucol,nr=L.rel,n=L.n;var mU=(1+nu)/2,mE=nu+(1+ne)/2,mC=nu+ne+(1+nc)/2,mM=(nu+ne+nc+1+n-nr)/2,mR=(n-nr+1+n)/2;return mU*p.ucl+mE*p.uel+mC*p.ucol+mM*p.mid+mR*p.rel;}
 function rankByPts(teamsObj,gdObj){var arr=Object.entries(teamsObj).sort(function(a,b){if(b[1]!==a[1])return b[1]-a[1];var ga=gdObj&&gdObj[a[0]]?gdObj[a[0]]:0,gb=gdObj&&gdObj[b[0]]?gdObj[b[0]]:0;return gb-ga;});var r={};arr.forEach(function(x,i){r[x[0]]=i+1;});return r;}
+// ADR-005: ranking oficial de la clasificación REAL. Consume el campo `rank`
+// emitido por update.py en data.json; si falta (caché vieja del SW sin rank)
+// cae al orden pts->gd. Las proyecciones NO usan esto (mantienen pts->gd).
+function officialRanks(sD){var teams=Object.keys(sD||{});var hasRank=teams.length>0&&teams.every(function(t){return sD[t]&&typeof sD[t].rank==="number";});if(hasRank){var r={};teams.forEach(function(t){r[t]=sD[t].rank;});return r;}var pts={},gd={};teams.forEach(function(t){var td=sD[t];pts[t]=td&&td.a&&td.a.length?td.a[td.a.length-1]||0:0;gd[t]=td&&td.gd||0;});return rankByPts(pts,gd);}
 function gdLookup(sd){var g={};Object.keys(sd).forEach(function(t){g[t]=sd[t].gd||0;});return g;}
 var _thOpen=null,_thSet=null;
 function useTHState(){var s=React.useState(null);_thOpen=s[0];_thSet=s[1];}
@@ -147,9 +151,9 @@ function sLg(v){sLg0(v);setHash("lg",v);}
 function sSn(v){sSn0(v);setHash("sn",v);}
 var sL=React.useMemo(function(){return Object.keys(D.seasons[lg]).sort().reverse();},[lg]);
 var sD=D.seasons[lg][sn]||{},multi=sel.length>1;
-var st=React.useMemo(function(){return Object.entries(sD).map(function(x){
+var st=React.useMemo(function(){var _rk=officialRanks(sD);return Object.entries(sD).map(function(x){
 var n=x[0],d=x[1];return{n:n,p:d.a[d.a.length-1]||0,o:Math.round((d.a[d.a.length-1]||0)-(d.e[d.e.length-1]||0)),gd:d.gd||0};
-}).sort(function(a,b){return b.p!==a.p?b.p-a.p:b.gd-a.gd;});},[sD]);
+}).sort(function(a,b){return(_rk[a.n]||99)-(_rk[b.n]||99);});},[sD]);
 React.useEffect(function(){var t=Object.keys(sD);if(t.length>0){
 t.sort(function(a,b){return(sD[b].a[sD[b].a.length-1]||0)-(sD[a].a[sD[a].a.length-1]||0);});
 var kept=sel.filter(function(s){return sD[s];});
@@ -444,8 +448,7 @@ var preRk=trkPreRks[n]||null;
 var curRk=trkCurRks[n]||null;
 var prePts=trkPrePts[n]||null;
 // Actual rank for past seasons
-var actRk=null;if(!iC){var allT2=Object.entries(sD).map(function(e2){return{n:e2[0],p:e2[1].a[e2[1].a.length-1]||0,gd:e2[1].gd||0};}).sort(function(a,b){return b.p!==a.p?b.p-a.p:b.gd-a.gd;});
-for(var k2=0;k2<allT2.length;k2++){if(allT2[k2].n===n){actRk=k2+1;break;}}}
+var actRk=null;if(!iC){actRk=officialRanks(sD)[n]||null;}
 return h("tr",{key:n,style:{background:i%2===0?"white":"#fafbfc",borderBottom:"1px solid #f0f0f0"}},
 h("td",{className:"px-2 py-0.5",style:{fontWeight:600,color:multi?T[i]:B,borderRight:"1px solid #f0f0f0"}},n),
 h("td",{className:"px-1 py-0.5 text-right"},t.a.length),
@@ -831,15 +834,15 @@ var curRks=React.useMemo(function(){if(!posD||!posD.cur)return{};
 var pts={};Object.keys(posD.cur).forEach(function(t){
 if(D.bands&&D.bands[lg]&&D.bands[lg][t]){var b=D.bands[lg][t];pts[t]=b.p50[b.p50.length-1];}});return rankByPts(pts,predGd);},[posD,lg,predGd]);
 var tableData=React.useMemo(function(){if(!posD||!posD.pre)return[];
+var _oRk=officialRanks(sD);
 var teams=Object.keys(posD.pre).filter(function(t){return t.charAt(0)!=='_';});var rows=teams.map(function(t){
 var pre=posD.pre[t];var cur=posD.cur?posD.cur[t]:null;
 var td=sD[t];var actPos=null;
-if(td&&!iC){var allTeams=Object.entries(sD).map(function(e){return{n:e[0],p:e[1].a[e[1].a.length-1]||0,gd:e[1].gd||0};}).sort(function(a,b){return b.p!==a.p?b.p-a.p:b.gd-a.gd;});
-for(var k=0;k<allTeams.length;k++){if(allTeams[k].n===t){actPos=k+1;break;}}}
+if(td&&!iC){actPos=_oRk[t]||null;}
 var prePts=0;if(iC&&D.pre&&D.pre[lg]&&D.pre[lg][t]){prePts=D.pre[lg][t].p50[D.pre[lg][t].p50.length-1];}else if(td&&td.e&&td.e.length>0){prePts=Math.round(td.e[td.e.length-1]);}
 var curPts=null;if(iC&&D.bands&&D.bands[lg]&&D.bands[lg][t]){var b=D.bands[lg][t];curPts=b.p50[b.p50.length-1];}
 return{t:t,pre:pre,cur:cur,actPos:actPos,pts:td?td.a[td.a.length-1]||0:0,gd:td?td.gd||0:0,preRk:preRks[t]||20,curRk:curRks[t]||null,prePts:prePts,curPts:curPts,played:td&&td.a?td.a.length:0};});
-rows.sort(function(a,b){if(!iC){return(a.actPos||20)-(b.actPos||20);}return a.pts!==b.pts?b.pts-a.pts:(b.gd||0)-(a.gd||0);});
+rows.sort(function(a,b){return(_oRk[a.t]||20)-(_oRk[b.t]||20);});
 return rows;},[posD,sD,iC,preRks,curRks,lg]);
 // Fase 2: state for expanded prob history rows
 var _xp=React.useState({}),expanded=_xp[0],setExpanded=_xp[1];
@@ -971,6 +974,15 @@ h("p",null,_t("match_results"),": ",h("a",{href:"https://www.football-data.co.uk
 
 
 
+e(Sec,{title:_t("meth_tiebreak")},
+h("p",null,_t("meth_tiebreak_p1")),
+h("div",{className:"overflow-x-auto"},h("table",{className:"text-xs w-full mt-2",style:{borderCollapse:"collapse"}},
+h("thead",null,h("tr",{style:{borderBottom:"2px solid #ddd",background:"#f9fafb"}},h("th",{className:"text-left pr-4 py-1.5"},_t("league")),h("th",{className:"text-left px-3"},_t("meth_tb_col")))),
+h("tbody",null,[["la_liga","meth_tb_ll"],["premier_league","meth_tb_pl"],["serie_a","meth_tb_sa"],["bundesliga","meth_tb_bl"],["ligue_1","meth_tb_l1"],["eredivisie","meth_tb_ed"]].map(function(row,ri){return h("tr",{key:row[0],style:{borderBottom:ri<5?"1px solid #eee":"none"}},h("td",{className:"py-1.5 pr-4",style:{fontWeight:600}},_t(row[0])),h("td",{className:"px-3"},_t(row[1])));})))),
+h("p",{className:"mt-3"},_t("meth_tiebreak_scope")),
+h("p",{className:"mt-2"},_t("meth_tiebreak_bound")),
+h("p",{className:"mt-2 text-gray-400"},_t("meth_tiebreak_hist"))),
+
 e(Sec,{title:_t("meth_budget_forecast")},
 h("p",null,_t("meth_budget_p1"))),
 
@@ -1061,7 +1073,8 @@ var hh=getHash();
 var _1=React.useState(hh.lg||"ll"),lg=_1[0],sLg0=_1[1];
 var lgK=lg;
 var sd25=D.seasons[lg][CUR_SN]||{};
-var teamList=React.useMemo(function(){return Object.entries(sd25).filter(function(e){return e[1].w>0;}).map(function(e){return{n:e[0],w:e[1].w,pts:e[1].a[e[1].a.length-1]||0,gd:e[1].gd||0};}).sort(function(a,b){return b.pts!==a.pts?b.pts-a.pts:b.gd-a.gd;});},[lg]);
+var teamRanks=React.useMemo(function(){return officialRanks(sd25);},[lg]);
+var teamList=React.useMemo(function(){return Object.entries(sd25).filter(function(e){return e[1].w>0;}).map(function(e){return{n:e[0],w:e[1].w,pts:e[1].a[e[1].a.length-1]||0,gd:e[1].gd||0};}).sort(function(a,b){return(teamRanks[a.n]||99)-(teamRanks[b.n]||99);});},[lg,teamRanks]);
 var initTeam=(function(){var ht=hh.sel?hh.sel.split(",")[0]:null;if(ht&&sd25[ht])return ht;return _defT(lg);})();
 var _2=React.useState(initTeam),team=_2[0],setTeam0=_2[1];
 function sLg(v){sLg0(v);setHash("lg",v);var defT=_defT(v);setTeam(defT);}
@@ -1124,8 +1137,7 @@ var ms=cum?(function(){var co=cum[0],nm=cum[1]*38;if(nm<=0||co===0)return 0;var 
 // Projected final
 var projFin=bd?bd.p50[bd.p50.length-1]:Math.round(ep/nP*38);
 var projRk=null;
-var actRk=null;
-for(var ai=0;ai<teamList.length;ai++){if(teamList[ai].n===team){actRk=ai+1;break;}}
+var actRk=teamRanks[team]||null;
 var budgetRk=null;
 if(D.pre&&D.pre[lg]){var bpts={};Object.keys(D.pre[lg]).forEach(function(tt){bpts[tt]=D.pre[lg][tt].p50[D.pre[lg][tt].p50.length-1];});var bsorted=Object.entries(bpts).sort(function(a,b){return b[1]-a[1];});for(var bi=0;bi<bsorted.length;bi++){if(bsorted[bi][0]===team){budgetRk=bi+1;break;}}}
 if(D.pos&&D.pos[lg]&&D.pos[lg][CUR_SN]&&D.pos[lg][CUR_SN].cur){
