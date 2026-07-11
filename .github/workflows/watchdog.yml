@@ -18,6 +18,7 @@ permissions:
   pull-requests: write
   actions: write
   id-token: write
+  statuses: write
 concurrency:
   group: watchdog
   cancel-in-progress: false
