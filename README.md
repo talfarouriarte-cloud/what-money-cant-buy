@@ -68,3 +68,5 @@ See [OPERATIONS.md](OPERATIONS.md) for daily updates, season setup, wage collect
 ## Contact
 
 whatmoneycantbuyfootball@gmail.com
+
+<!-- smoke F4 -->
