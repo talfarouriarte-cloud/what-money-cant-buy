@@ -7,6 +7,7 @@
 - [ADR-002](#adr-002-2026-07-11--estructura-de-ramas-developmain) — Estructura de ramas develop/main
 - [ADR-003](#adr-003-2026-07-11--ci-qué-materializa-ci-verde) — CI: qué materializa `ci-verde`
 - [ADR-004](#adr-004-2026-07-11--coexistencia-de-workflows-de-producto-y-de-pipeline) — Coexistencia de workflows de producto y de pipeline
+- [ADR-005](#adr-005-2026-07-11--criterios-de-desempate-de-la-clasificación-real) — Criterios de desempate de la clasificación real
 
 ## ADR-001 (2026-07-11) — Fundación: proyecto existente entra en desarrollo agéntico
 
@@ -110,3 +111,41 @@ Listar `update.yml` en `extra_pipeline_workflows` para que el watchdog avise de 
 ### Coste de revertir
 
 Trivial: añadir el nombre a un input de stub.
+
+## ADR-005 (2026-07-11) — Criterios de desempate de la clasificación real
+
+### Contexto
+
+La clasificación real usa un desempate uniforme "puntos → diferencia general" en todo el producto. Los reglamentos reales difieren por liga e incluyen el enfrentamiento particular. Origen, decisión del propietario, verbatim:
+
+> la clasificación real (final de temporada) no está bien, porque no tiene en cuenta de forma fina la diferencia de goles participar y la general. Podemos corregir eso.
+
+### Decisión
+
+El desempate fino aplica **solo a la clasificación real** (partidos jugados); las proyecciones siguen con puntos→diferencia general (no hay modelo de goles). Se calcula en el **backend** (`update.py`), que emite el ranking oficial resuelto en `data.json`; el frontend lo consume sin ordenar. **Backfill total**: las 13 temporadas × 6 ligas se recalculan con las reglas **vigentes** de cada liga aplicadas uniformemente al histórico. Cadena tras puntos, cerrada por el propietario:
+
+| Liga | Desempate tras puntos |
+|---|---|
+| La Liga | particular puntos → particular GD → general GD → goles marcados |
+| Serie A | particular puntos → particular GD → general GD → goles marcados |
+| Premier League | general GD → goles marcados → particular puntos → particular goles fuera |
+| Bundesliga | general GD → goles marcados → particular (agregado) → particular goles fuera → goles fuera general |
+| Ligue 1 | general GD → particular puntos → particular GD → goles marcados → victorias → victorias fuera |
+| Eredivisie | general GD → goles marcados → particular |
+
+Reglas de contorno: (a) los criterios particulares solo aplican si los empatados han completado sus enfrentamientos reglamentarios; si no, la cadena salta a los criterios generales; (b) colas inmodelables (playoff de Serie A desde 2022/23, disciplina, sorteo) mantienen el orden estable previo; (c) todo lo anterior se documenta en Methodology (EN/ES), incluido el descargo del histórico recalculado con reglas vigentes.
+
+**Ubicación y mantenimiento.** La tabla es normativa **en este ADR**; su única implementación es una constante `TIEBREAKERS` por liga en `update.py`, con comentario que ancla a ADR-005 (zona de rigor spec §3.1 — el Creator no la modifica sin mandato). La explicación pública vive en la pestaña Methodology vía claves de `i18n.json`. Cuando una liga cambie su reglamento: decisión del propietario → ADR que rectifica este → actualización de `TIEBREAKERS`, Methodology (EN/ES) y recálculo del histórico **en el mismo cambio** — las tres copias (ADR, constante, Methodology) nunca divergen porque solo se tocan juntas.
+
+### Razón
+
+Fact-based (spec §2.1): la tabla mostrada debe coincidir con la oficial. Backend porque los marcadores partido a partido viven ahí y la lógica es una y testeable.
+
+### Alternativas descartadas
+
+- Regla vigente **por temporada**: coste de arqueología reglamentaria alto, fuentes flojas en años viejos, beneficio marginal para un dashboard divulgativo (§2.2).
+- Cálculo en frontend: exigiría meter todos los cruces en `data.json` y duplicar lógica en ~6 puntos de ordenación.
+
+### Coste de revertir
+
+Medio: revertir la emisión de `rank` en `data.json` y devolver los sorts al frontend es medio día; el compromiso real es el contrato de datos (`rank` oficial en `data.json`) que el frontend pasará a asumir.
