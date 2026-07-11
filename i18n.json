@@ -743,6 +743,54 @@
     "joint",
     "conjunta"
   ],
+  "meth_tiebreak": [
+    "Tie-breaking (real classification)",
+    "Desempates (clasificación real)"
+  ],
+  "meth_tiebreak_p1": [
+    "The real classification (matches played) is not sorted by a single uniform rule: each league resolves teams level on points using its own current regulations. This official ranking is computed in the backend and consumed by the app as-is. The tie-break chain applied after points, per league, is:",
+    "La clasificación real (partidos jugados) no se ordena con una regla uniforme única: cada liga resuelve los equipos empatados a puntos con su propio reglamento vigente. Este ranking oficial se calcula en el backend y la app lo consume tal cual. La cadena de desempate aplicada tras los puntos es, por liga:"
+  ],
+  "meth_tb_col": [
+    "Tie-break chain after points",
+    "Cadena de desempate tras puntos"
+  ],
+  "meth_tb_ll": [
+    "head-to-head points → head-to-head goal difference → overall goal difference → goals scored",
+    "puntos particulares → diferencia de goles particular → diferencia de goles general → goles marcados"
+  ],
+  "meth_tb_pl": [
+    "overall goal difference → goals scored → head-to-head points → head-to-head away goals",
+    "diferencia de goles general → goles marcados → puntos particulares → goles a domicilio particulares"
+  ],
+  "meth_tb_sa": [
+    "head-to-head points → head-to-head goal difference → overall goal difference → goals scored",
+    "puntos particulares → diferencia de goles particular → diferencia de goles general → goles marcados"
+  ],
+  "meth_tb_bl": [
+    "overall goal difference → goals scored → head-to-head (aggregate) → head-to-head away goals → overall away goals",
+    "diferencia de goles general → goles marcados → particular (agregado) → goles a domicilio particulares → goles a domicilio general"
+  ],
+  "meth_tb_l1": [
+    "overall goal difference → head-to-head points → head-to-head goal difference → goals scored → wins → away wins",
+    "diferencia de goles general → puntos particulares → diferencia de goles particular → goles marcados → victorias → victorias a domicilio"
+  ],
+  "meth_tb_ed": [
+    "overall goal difference → goals scored → head-to-head",
+    "diferencia de goles general → goles marcados → particular"
+  ],
+  "meth_tiebreak_scope": [
+    "Fine tie-breaking applies only to the real classification. Projections (p50, Monte-Carlo bands, position probabilities) keep the simpler points → overall goal-difference ordering, since there is no goals model.",
+    "El desempate fino se aplica solo a la clasificación real. Las proyecciones (p50, bandas de Monte-Carlo, probabilidades de posición) mantienen el orden más simple de puntos → diferencia de goles general, al no existir un modelo de goles."
+  ],
+  "meth_tiebreak_bound": [
+    "Boundary rules: (a) head-to-head criteria apply only once the tied teams have completed their scheduled meetings; otherwise the chain skips to the overall criteria. (b) Un-modellable tails (Serie A play-off since 2022/23, disciplinary points, drawing of lots) keep the previous stable order.",
+    "Reglas de contorno: (a) los criterios de enfrentamiento directo solo aplican cuando los equipos empatados han completado sus enfrentamientos reglamentarios; si no, la cadena salta a los criterios generales. (b) Las colas inmodelables (playoff de Serie A desde 2022/23, puntos de disciplina, sorteo) mantienen el orden estable previo."
+  ],
+  "meth_tiebreak_hist": [
+    "Historical disclaimer: all seasons are backfilled with each league's current tie-breaking rules applied uniformly, so a past table may differ slightly from the one published at the time if the regulations have since changed.",
+    "Descargo del histórico: todas las temporadas se recalculan con las reglas de desempate vigentes de cada liga aplicadas de forma uniforme, por lo que una tabla pasada puede diferir ligeramente de la publicada en su momento si el reglamento ha cambiado desde entonces."
+  ],
   "meth_overperf_intro": [
     "The difference between actual and expected points — {overperf} — isolates what the wage bill cannot explain: coaching, recruitment strategy, culture, luck. Three metrics quantify this:",
     "La diferencia entre puntos reales y esperados — {overperf} — aísla lo que la masa salarial no puede explicar: entrenamiento, estrategia de fichajes, cultura, suerte. Tres métricas lo cuantifican:"
