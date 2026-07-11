@@ -149,3 +149,37 @@ Fact-based (spec §2.1): la tabla mostrada debe coincidir con la oficial. Backen
 ### Coste de revertir
 
 Medio: revertir la emisión de `rank` en `data.json` y devolver los sorts al frontend es medio día; el compromiso real es el contrato de datos (`rank` oficial en `data.json`) que el frontend pasará a asumir.
+
+## ADR-006 (2026-07-11) — Desempate del forecast: puntos simulados → rank oficial actual
+
+### Contexto
+
+El forecast (MC de `simulate_position_probs`) resuelve empates a puntos con dos reglas incorrectas: en simulación, ruido aleatorio (`+noise*0.001` — moneda al aire, ajeno a las reglas de la liga); con temporada completa (`n_matches == 0`), `argsort(-pts)` estable — el orden de índice del array decide, determinista y arbitrario, con certeza 100%. Artefacto visible: Osasuna 25/26 con `Rel 100%` en la previsión de última jornada pese a salvarse (triple empate a 42 resuelto por índice en todas las ramas). ADR-005 acaba de construir `compute_league_ranks` (cadena oficial de desempate por liga sobre datos reales con goles).
+
+### Decisión
+
+Bloque de decisión del propietario (verbatim, sesión 2026-07-11):
+
+> Habría que cambiar el forecast (la parte mecánica) para que desempate con goles…mira la previsión de última jornada de Osasuna. eso es un bug
+
+> No hace falta simular marcadores. Basta con la posición actual en cada momento en desempate
+
+Regla única para todo el forecast: **orden por (puntos simulados desc, rank oficial actual asc)**. El «rank oficial actual» es la salida de `compute_league_ranks` sobre el estado REAL en el instante de referencia de la simulación (en `compute_position_history`, el estado real hasta la jornada g). La rama de temporada completa es el caso degenerado de la misma regla (0 partidos pendientes ⇒ puntos = finales, rank actual = rank oficial) y sustituye al `argsort`. Se elimina el ruido.
+
+Caso frontera cerrado: **pretemporada** (0 partidos jugados) no tiene rank oficial — el desempate secundario permanece aleatorio (ruido actual), que es insesgado y refleja la ignorancia real.
+
+Sin umbral: el propietario planteó activar el desempate con diferenciales < 0,5 puntos; descartado tras discusión («Ok convencido»). Razón: el sort ocurre dentro de cada simulación con puntos ENTEROS (los empates exactos son frecuentes; el Rk mostrado es la mediana de ranks simulados, no un orden de esperanzas fraccionales), y la igualdad-por-umbral no es transitiva (los grupos de empate no quedan bien definidos) además de sesgar hacia el statu quo dentro de la banda de ruido.
+
+### Razón
+
+La posición oficial actual condensa GD y particulares de lo ya jugado: es el proxy natural del desempate final sin simular marcadores ni tocar el modelo probabilístico (que emite solo 1X2). Elimina los `100%` falsos por desempate arbitrario y unifica las dos ramas en una regla.
+
+### Alternativas descartadas
+
+- **Simular marcadores** (Poisson condicionado a `ph/pd`): correcto en el límite pero toca el modelo probabilístico entero; coste desproporcionado para el sesgo que corrige.
+- **Umbral de medio punto sobre esperanzas fraccionales**: no transitivo; y el punto de aplicación real (sort intra-simulación) opera sobre enteros donde el problema no existe.
+- **Mantener ruido y arreglar solo la rama de temporada completa**: corrige el artefacto visible pero deja el desempate simulado fuera de las reglas; el coste de la regla unificada es el mismo.
+
+### Coste de revertir
+
+Trivial (una clave de sort y un precómputo); el test de regresión de Osasuna quedará como guardia del comportamiento.
