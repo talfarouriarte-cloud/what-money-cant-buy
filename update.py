@@ -13,13 +13,26 @@ Requirements: pip install pandas numpy scipy requests
 """
 import json, os, sys
 from datetime import datetime
+# Import resiliente por dependencia: permite importar los helpers puros
+# (TIEBREAKERS, compute_league_ranks) sin las deps pesadas, y ejecutar el
+# forecast (simulate_position_probs) con solo numpy — sin pandas/requests —
+# para tests standalone (ADR-006, test_forecast_tiebreak.py).
+try:
+    import numpy as np
+except ImportError:
+    np = None
 try:
     import pandas as pd
-    import numpy as np
+except ImportError:
+    pd = None
+try:
     from scipy.special import expit
+except ImportError:
+    expit = None
+try:
     import requests
-except ImportError:  # permite importar los helpers puros (TIEBREAKERS, compute_league_ranks) sin las deps pesadas (tests)
-    pd = np = expit = requests = None
+except ImportError:
+    requests = None
 
 # ============================================================
 # SEASON — auto-derived from current date with safety check
