@@ -1,0 +1,97 @@
+# CI de what-money-cant-buy — ADR-003. Human-execute como todo yml.
+# Cinco checks, todos ley de spec; en verde materializa `ci-verde` en el PR.
+name: CI
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+concurrency:
+  group: ci-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: JSONs de raiz validos (spec §3)
+        run: |
+          set -e
+          for f in *.json; do
+            python3 -c "import json,sys; json.load(open('$f'))" || { echo "JSON invalido: $f"; exit 1; }
+            echo "OK $f"
+          done
+
+      - name: Sintaxis Python (py_compile)
+        run: |
+          set -e
+          for f in update.py setup_season.py build_crests.py test_season_transition.py; do
+            python3 -m py_compile "$f" && echo "OK $f"
+          done
+
+      - name: Completitud i18n — par [en, es] no vacio (spec §2.5 / §3bis.6)
+        run: |
+          python3 - << 'EOF'
+          import json, sys
+          d = json.load(open('i18n.json'))
+          bad = [k for k, v in d.items()
+                 if not (isinstance(v, list) and len(v) == 2
+                         and all(isinstance(x, str) and x.strip() for x in v))]
+          if bad:
+              print("Claves i18n incompletas:", bad[:20]); sys.exit(1)
+          print(f"OK {len(d)} claves con par [en, es] completo")
+          EOF
+
+      - name: Sintaxis JS de index.html (node --check, spec §3bis.7)
+        run: |
+          python3 - << 'EOF'
+          import re, subprocess, sys
+          html = open('index.html').read()
+          scripts = re.findall(r'<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>', html, re.S)
+          inline = [s for s in scripts if s.strip()]
+          if not inline:
+              print("Sin <script> inline que chequear"); sys.exit(0)
+          for i, s in enumerate(inline):
+              open(f'/tmp/inline_{i}.js', 'w').write(s)
+              r = subprocess.run(['node', '--check', f'/tmp/inline_{i}.js'],
+                                 capture_output=True, text=True)
+              if r.returncode != 0:
+                  print(f"Sintaxis JS invalida en script inline #{i}:\n{r.stderr}")
+                  sys.exit(1)
+          print(f"OK {len(inline)} scripts inline")
+          EOF
+
+      - name: Guardia de SW — bump obligatorio si cambia index.html (spec §3bis.1, solo PRs)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -e
+          CHANGED=$(git diff --name-only "$BASE" "$HEAD")
+          if echo "$CHANGED" | grep -qx 'index.html'; then
+            if git diff "$BASE" "$HEAD" -- sw.js | grep -q 'CACHE_NAME'; then
+              echo "OK: index.html cambia y CACHE_NAME tambien"
+            else
+              echo "BLOQUEADO: el PR toca index.html sin bump de CACHE_NAME en sw.js (spec §3bis.1)"
+              exit 1
+            fi
+          else
+            echo "index.html sin cambios; guardia no aplica"
+          fi
+
+      - name: Materializar ci-verde (solo PRs)
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --add-label ci-verde
+          echo "ci-verde materializado en PR #$PR"
