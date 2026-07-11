@@ -11,11 +11,15 @@ Usage: python update.py
        FOOTBALL_DATA_API_KEY=xxx python update.py  (to update fixtures from API)
 Requirements: pip install pandas numpy scipy requests
 """
-import pandas as pd
-import numpy as np
-from scipy.special import expit
-import json, os, requests, sys
+import json, os, sys
 from datetime import datetime
+try:
+    import pandas as pd
+    import numpy as np
+    from scipy.special import expit
+    import requests
+except ImportError:  # permite importar los helpers puros (TIEBREAKERS, compute_league_ranks) sin las deps pesadas (tests)
+    pd = np = expit = requests = None
 
 # ============================================================
 # SEASON — auto-derived from current date with safety check
@@ -33,6 +37,40 @@ PARAMS = {
     'l1': {'beta': 0.4237, 'theta1': -0.8941, 'theta2': 0.2411},
     'ed': {'beta': 0.61,   'theta1': -0.9014, 'theta2': 0.2038},
 }
+
+# ============================================================
+# ADR-005 — NO modificar sin mandato explícito (zona de rigor spec §3.1)
+# Cadena de desempate de la clasificación real por liga, aplicada TRAS los
+# puntos. Fuente normativa: decisions.md ADR-005 §Decisión (tabla verbatim).
+# Las claves de liga son las internas (ll, pl, sa, bl, l1, ed).
+# Semántica cerrada de cada criterio (ver compute_league_ranks):
+#   h2h_pts     particular: puntos en la mini-liga de TODOS los empatados
+#   h2h_gd      particular: diferencia de goles en esa mini-liga  (= "particular (agregado)")
+#   h2h_gf      particular: goles marcados en esa mini-liga
+#   h2h_gf_away particular: goles marcados fuera en esa mini-liga
+#   gen_gd      general:    diferencia de goles de la temporada
+#   gen_gf      general:    goles marcados en la temporada
+#   gen_gf_away general:    goles marcados fuera en la temporada
+#   wins        general:    victorias en la temporada
+#   wins_away   general:    victorias fuera en la temporada
+# Mapeo verbatim ADR-005 -> claves:
+#   La Liga / Serie A:  particular puntos -> particular GD -> general GD -> goles marcados
+#   Premier:            general GD -> goles marcados -> particular puntos -> particular goles fuera
+#   Bundesliga:         general GD -> goles marcados -> particular (agregado=GD) -> particular goles fuera -> goles fuera general
+#   Ligue 1:            general GD -> particular puntos -> particular GD -> goles marcados -> victorias -> victorias fuera
+#   Eredivisie:         general GD -> goles marcados -> particular (mini-liga: puntos -> GD -> goles marcados)
+# ============================================================
+TIEBREAKERS = {
+    'll': ['h2h_pts', 'h2h_gd', 'gen_gd', 'gen_gf'],
+    'sa': ['h2h_pts', 'h2h_gd', 'gen_gd', 'gen_gf'],
+    'pl': ['gen_gd', 'gen_gf', 'h2h_pts', 'h2h_gf_away'],
+    'bl': ['gen_gd', 'gen_gf', 'h2h_gd', 'h2h_gf_away', 'gen_gf_away'],
+    'l1': ['gen_gd', 'h2h_pts', 'h2h_gd', 'gen_gf', 'wins', 'wins_away'],
+    'ed': ['gen_gd', 'gen_gf', 'h2h_pts', 'h2h_gd', 'h2h_gf'],
+}
+
+_PARTICULAR_CRITERIA = frozenset({'h2h_pts', 'h2h_gd', 'h2h_gf', 'h2h_gf_away'})
+
 _CSV_YEAR = CURRENT_SEASON.replace('/', '')  # 'YY/NN' -> 'YYNN'
 _CSV_BASE = f'https://www.football-data.co.uk/mmz4281/{_CSV_YEAR}'
 
@@ -436,7 +474,8 @@ def process_season(filepath_or_df, wages, beta, t1, t2, fixtures_calendar=None, 
     
     td = {}
     for t in sorted(set(df['HomeTeam']) | set(df['AwayTeam'])):
-        td[t] = {'pts':[],'exp':[],'m':[],'cp':0,'ce':0.0,'gf':0,'ga':0}
+        td[t] = {'pts':[],'exp':[],'m':[],'cp':0,'ce':0.0,'gf':0,'ga':0,'gf_away':0,'wins':0,'wins_away':0}
+    season_matches = []  # (home, away, home_goals, away_goals) para desempates ADR-005
     for _, r in df.iterrows():
         h, a = r['HomeTeam'], r['AwayTeam']
         wh, wa = wages.get(h, wages.get(fix_name(h), wages.get('_min', 20))), wages.get(a, wages.get(fix_name(a), wages.get('_min', 20)))
@@ -455,12 +494,130 @@ def process_season(filepath_or_df, wages, beta, t1, t2, fixtures_calendar=None, 
         ag = int(r['FTAG']) if has_goals else 0
         td[h]['gf'] += hg; td[h]['ga'] += ag
         td[a]['gf'] += ag; td[a]['ga'] += hg
+        # Extra season aggregates for ADR-005 tiebreakers (no alteran los campos emitidos)
+        td[a]['gf_away'] += ag
+        if r['FTR'] == 'H': td[h]['wins'] += 1
+        elif r['FTR'] == 'A': td[a]['wins'] += 1; td[a]['wins_away'] += 1
+        season_matches.append((h, a, hg, ag))
         for team, pts, exp, opp, ih in [(h,hp,eh,a,1),(a,ap,ea,h,0)]:
             td[team]['cp'] += pts; td[team]['ce'] += exp
             td[team]['pts'].append(td[team]['cp'])
             td[team]['exp'].append(round(td[team]['ce'], 1))
             td[team]['m'].append([opp, ih, pts, round(exp, 2), official_gw, mdate])
-    return {t: {'a':d['pts'],'e':d['exp'],'m':d['m'],'w':round(wages.get(t, wages.get(fix_name(t), 0))),'gd':d['gf']-d['ga']} for t,d in td.items()}
+    result = {t: {'a':d['pts'],'e':d['exp'],'m':d['m'],'w':round(wages.get(t, wages.get(fix_name(t), 0))),'gd':d['gf']-d['ga']} for t,d in td.items()}
+    stats = {t: {'pts': d['cp'], 'gd': d['gf']-d['ga'], 'gf': d['gf'],
+                 'gf_away': d['gf_away'], 'wins': d['wins'], 'wins_away': d['wins_away']}
+             for t, d in td.items()}
+    return attach_ranks(result, stats, season_matches, lg)
+
+
+# ============================================================
+# ADR-005 — clasificación real con desempate fino por liga.
+# Implementación única de la tabla normativa TIEBREAKERS (zona de rigor
+# spec §3.1). No modificar la semántica sin mandato explícito del issue.
+# ============================================================
+def _h2h_table(subset, matches):
+    """Mini-liga: agrega SOLO los partidos entre equipos del subset (N>=2).
+    Devuelve {team: {pts, gd, gf, gf_away}} sobre esos enfrentamientos."""
+    s = set(subset)
+    tab = {t: {'pts': 0, 'gd': 0, 'gf': 0, 'gf_away': 0} for t in subset}
+    for (h, a, hg, ag) in matches:
+        if h in s and a in s:
+            tab[h]['gf'] += hg; tab[h]['gd'] += hg - ag
+            tab[a]['gf'] += ag; tab[a]['gd'] += ag - hg
+            tab[a]['gf_away'] += ag
+            if hg > ag: tab[h]['pts'] += 3
+            elif ag > hg: tab[a]['pts'] += 3
+            else: tab[h]['pts'] += 1; tab[a]['pts'] += 1
+    return tab
+
+
+def _pairs_complete(subset, matches):
+    """Contorno (a) ADR-005: True solo si TODO par del subset ha completado
+    sus 2 enfrentamientos reglamentarios (ida y vuelta, un partido en cada campo)."""
+    s = set(subset)
+    seen = {}
+    for (h, a, hg, ag) in matches:
+        if h in s and a in s:
+            seen[(h, a)] = seen.get((h, a), 0) + 1
+    for i in subset:
+        for j in subset:
+            if i < j and (seen.get((i, j), 0) < 1 or seen.get((j, i), 0) < 1):
+                return False
+    return True
+
+
+def _stable_order(subset, stats):
+    """Contorno (b) ADR-005: cadena agotada -> orden estable previo del
+    producto (puntos -> GD general), con el nombre como último desempate
+    determinista para garantizar una permutación total."""
+    return sorted(subset, key=lambda t: (-stats[t]['pts'], -stats[t]['gd'], t))
+
+
+def _resolve(subset, criteria, matches, stats):
+    """Ordena `subset` (empatados en el paso anterior) aplicando la cadena
+    `criteria`. Si un criterio no separa a un subconjunto, el siguiente se
+    aplica SOLO dentro de ese subconjunto (recursión con la cola)."""
+    if len(subset) <= 1 or not criteria:
+        return _stable_order(subset, stats)
+    crit, rest = criteria[0], criteria[1:]
+    if crit in _PARTICULAR_CRITERIA and not _pairs_complete(subset, matches):
+        # Contorno (a): enfrentamientos incompletos -> se saltan TODOS los
+        # criterios particulares del subconjunto y se sigue con los generales.
+        generals = [c for c in criteria if c not in _PARTICULAR_CRITERIA]
+        return _resolve(subset, generals, matches, stats)
+
+    if crit in _PARTICULAR_CRITERIA:
+        tab = _h2h_table(subset, matches)  # mini-liga de TODOS los del subset
+        key = {'h2h_pts': 'pts', 'h2h_gd': 'gd', 'h2h_gf': 'gf', 'h2h_gf_away': 'gf_away'}[crit]
+        val = lambda t: tab[t][key]
+    else:
+        key = {'gen_gd': 'gd', 'gen_gf': 'gf', 'gen_gf_away': 'gf_away',
+               'wins': 'wins', 'wins_away': 'wins_away'}[crit]
+        val = lambda t: stats[t][key]
+
+    ordered = sorted(subset, key=lambda t: -val(t))
+    out, i = [], 0
+    while i < len(ordered):
+        j = i
+        while j < len(ordered) and val(ordered[j]) == val(ordered[i]):
+            j += 1
+        group = ordered[i:j]
+        out.extend(group if len(group) == 1 else _resolve(group, rest, matches, stats))
+        i = j
+    return out
+
+
+def compute_league_ranks(stats, matches, lg):
+    """Ranking oficial ADR-005: aplica puntos y luego la cadena TIEBREAKERS[lg].
+    stats:   {team: {pts, gd, gf, gf_away, wins, wins_away}} — totales de la temporada.
+    matches: iterable de (home, away, home_goals, away_goals) — partidos jugados.
+    Devuelve {team: rank} con rank entero en 1..N (permutación completa)."""
+    chain = TIEBREAKERS[lg]
+    matches = list(matches)
+    teams = sorted(stats.keys())  # nombre como base determinista antes de puntos
+    by_pts = sorted(teams, key=lambda t: -stats[t]['pts'])
+    order, i = [], 0
+    while i < len(by_pts):
+        j = i
+        while j < len(by_pts) and stats[by_pts[j]]['pts'] == stats[by_pts[i]]['pts']:
+            j += 1
+        group = by_pts[i:j]
+        order.extend(group if len(group) == 1 else _resolve(group, chain, matches, stats))
+        i = j
+    return {t: r + 1 for r, t in enumerate(order)}
+
+
+def attach_ranks(season, stats, matches, lg):
+    """Añade el campo `rank` (ADR-005) a cada equipo del dict de temporada SIN
+    tocar los campos existentes (a, e, m, w, gd). Devuelve el mismo dict.
+    No-op si `lg` no está en TIEBREAKERS (no hay cadena definida)."""
+    if lg not in TIEBREAKERS:
+        return season
+    ranks = compute_league_ranks(stats, matches, lg)
+    for t in season:
+        season[t]['rank'] = ranks.get(t)
+    return season
 
 
 def recalculate_budget_bands(fixtures_cal, wages, beta, t1, t2, lg, season_data, remaining_fixtures, n_sims=10000):
