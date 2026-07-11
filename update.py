@@ -787,10 +787,39 @@ def run_mc_simulation(season_data, wages, beta, t1, t2, remaining_fixtures, n_si
     return bands
 
 
-def simulate_position_probs(teams, current_pts, match_list, n_sims=10000, lg=None):
-    """Core joint simulation. Returns {team: {cat: probability}} for position categories."""
+def _current_ranks_from_season(season_data, teams):
+    """ADR-006: rank oficial actual {team: int} para la clave secundaria de
+    desempate del forecast. Reutiliza el campo 'rank' que process_season ya
+    calculó vía compute_league_ranks (ADR-005) sobre los partidos REALES con
+    goles — data.json NO persiste goles por partido, así que recomputarlo aquí
+    es imposible y este rank es el resultado idéntico. Devuelve None si algún
+    equipo carece de rank (liga sin cadena de desempate) ⇒ el motor conserva el
+    ruido aleatorio previo (comportamiento sin cambios)."""
+    ranks = {}
+    for t in teams:
+        r = season_data[t].get('rank')
+        if not r:
+            return None
+        ranks[t] = r
+    return ranks
+
+
+def simulate_position_probs(teams, current_pts, match_list, n_sims=10000, lg=None, current_ranks=None):
+    """Core joint simulation. Returns {team: {cat: probability}} for position categories.
+
+    Desempate (ADR-006): el orden dentro de cada rama es
+    (puntos simulados desc, rank oficial actual asc). `current_ranks` es un
+    dict {team: int} con el rank oficial (salida de compute_league_ranks sobre
+    el estado REAL en el instante de referencia). Si es None (pretemporada,
+    0 jugados) se conserva el ruido aleatorio insesgado (ADR-006, caso frontera)."""
     n_teams = len(teams)
     n_matches = len(match_list)
+
+    # Precómputo del vector de rank oficial alineado a `teams` (ADR-006).
+    # Clave secundaria de desempate; sustituye al ruido cuando está presente.
+    rank_arr = None
+    if current_ranks is not None:
+        rank_arr = np.array([current_ranks[t] for t in teams])
     
     # European/relegation spots per league (0-indexed positions)
     # UCL = Champions League, UEL = Europa League, UCOL = Conference League
@@ -811,8 +840,13 @@ def simulate_position_probs(teams, current_pts, match_list, n_sims=10000, lg=Non
     n_mid = n_teams - n_euro - n_rel
     
     if n_matches == 0:
-        # Season complete — use actual final standings
-        order = np.argsort(-current_pts)
+        # Season complete — use actual final standings.
+        # ADR-006: con rank oficial disponible, el orden ES ese rank (los puntos
+        # ya están contenidos en él); sustituye al argsort(-current_pts) arbitrario.
+        if rank_arr is not None:
+            order = np.argsort(rank_arr)  # rank asc = orden oficial (permutación 1..N)
+        else:
+            order = np.argsort(-current_pts)
         pos_counts = np.zeros((n_teams, n_teams), dtype=int)
         for rank, idx in enumerate(order):
             pos_counts[idx, rank] = n_sims
@@ -831,9 +865,13 @@ def simulate_position_probs(teams, current_pts, match_list, n_sims=10000, lg=Non
                     pts[a_idx] += 1
                 else:
                     pts[a_idx] += 3
-            # Rank teams (randomize ties)
-            noise = np.random.random(n_teams) * 0.001
-            order = np.argsort(-(pts + noise))
+            # Rank teams. ADR-006: desempate por rank oficial actual (asc);
+            # solo si no hay rank (pretemporada) se recurre al ruido aleatorio.
+            if rank_arr is not None:
+                order = np.lexsort((rank_arr, -pts))  # primario -pts, secundario rank
+            else:
+                noise = np.random.random(n_teams) * 0.001
+                order = np.argsort(-(pts + noise))
             for rank, idx in enumerate(order):
                 pos_counts[idx, rank] += 1
     
@@ -890,7 +928,13 @@ def simulate_current_positions(season_data, wages, beta, t1, t2, remaining_fixtu
     teams = list(season_data.keys())
     current_pts = np.array([season_data[t]['a'][-1] if season_data[t]['a'] else 0 for t in teams])
     match_list = build_match_list(teams, wages, remaining_fixtures, beta, t1, t2)
-    return simulate_position_probs(teams, current_pts, match_list, n_sims, lg=lg)
+    # ADR-006: rank oficial actual como clave secundaria de desempate. El campo
+    # 'rank' de season_data es la salida de compute_league_ranks (ADR-005) sobre
+    # los partidos REALES jugados hasta ahora; los goles no se persisten en
+    # data.json, así que se reutiliza ese rank ya calculado (idéntico resultado).
+    current_ranks = _current_ranks_from_season(season_data, teams)
+    return simulate_position_probs(teams, current_pts, match_list, n_sims, lg=lg,
+                                   current_ranks=current_ranks)
 
 
 def compute_position_history(season_data, wages, beta, t1, t2, fixtures_cal, lg, sn, n_sims=2000, gw_step=1):
@@ -967,6 +1011,12 @@ def compute_position_history(season_data, wages, beta, t1, t2, fixtures_cal, lg,
                 pd_ = expit(t2 + beta * x) - expit(t1 + beta * x)
                 all_match_records[key] = {'ph': ph, 'pd_': pd_, 'gw': gw_num, 'h_pts': None, 'a_pts': None, 'played': False, 'h_idx': h_idx, 'a_idx': a_idx}
     
+    # ADR-006: rank oficial actual como clave secundaria de desempate (asc).
+    # Los goles por jornada no se persisten en data.json, así que se usa el rank
+    # oficial de temporada (ADR-005) como proxy determinista del desempate; en el
+    # motor solo actúa como clave secundaria (los puntos simulados son primarios).
+    current_ranks = _current_ranks_from_season(season_data, teams)
+
     # For each snapshot GW k, compute current points (from matches with gw <= k that are played) and simulate the rest
     snapshots = []
     for k in range(gw_step, max_gw + 1, gw_step):
@@ -981,7 +1031,8 @@ def compute_position_history(season_data, wages, beta, t1, t2, fixtures_cal, lg,
             else:
                 # Add to match list to simulate
                 match_list.append((rec['h_idx'], rec['a_idx'], rec['ph'], rec['pd_']))
-        probs = simulate_position_probs(teams, current_pts, match_list, n_sims, lg=lg)
+        probs = simulate_position_probs(teams, current_pts, match_list, n_sims, lg=lg,
+                                        current_ranks=current_ranks)
         snapshots.append({'gw': k, 'probs': probs})
     
     return snapshots
