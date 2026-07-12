@@ -197,118 +197,15 @@ NAME_MAP = {
 DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(DATA_DIR, 'data.json')
 FIXTURES_FILE = os.path.join(DATA_DIR, 'fixtures.json')
+NAME_MAP_FILE = os.path.join(DATA_DIR, 'name_map.json')
 
 # football-data.org API → our internal name mapping
 # API uses 'shortName'; most match directly, these are the exceptions
-API_NAME_MAP = {
-    # La Liga
-    "Alavés": "Alaves", "Atlético de Madrid": "At Madrid", "Atlético Madrid": "At Madrid",
-    "Atl. Madrid": "At Madrid", "Athletic Club": "Ath Bilbao", "Athletic": "Ath Bilbao",
-    "Club Atlético de Madrid": "At Madrid", "FC Barcelona": "Barcelona",
-    "Real Betis": "Betis", "Celta de Vigo": "Celta", "Celta Vigo": "Celta",
-    "Elche CF": "Elche", "RCD Espanyol": "Espanol", "Espanyol": "Espanol",
-    "Getafe CF": "Getafe", "Girona FC": "Girona", "Levante UD": "Levante",
-    "RCD Mallorca": "Mallorca", "CA Osasuna": "Osasuna", "Real Oviedo": "Oviedo",
-    "Real Sociedad": "Sociedad", "Rayo Vallecano": "Vallecano", "Villarreal CF": "Villarreal",
-    "Deportivo Alavés": "Alaves", "RC Celta de Vigo": "Celta",
-    "RCD Espanyol de Barcelona": "Espanol",
-    "Real Madrid CF": "Real Madrid", "Sevilla FC": "Sevilla", "Valencia CF": "Valencia",
-    # Premier League
-    "Manchester City": "Man City", "Man City": "Man City",
-    "Manchester United": "Man United", "Man United": "Man United",
-    "Nottm Forest": "Nottm Forest", "Nott'm Forest": "Nottm Forest",
-    "Nottingham Forest": "Nottm Forest", "Nottingham Forest FC": "Nottm Forest",
-    "Newcastle United": "Newcastle", "Newcastle": "Newcastle",
-    "Wolverhampton": "Wolves", "Wolves": "Wolves",
-    "Wolverhampton Wanderers": "Wolves", "Wolverhampton Wanderers FC": "Wolves",
-    "AFC Sunderland": "Sunderland", "Sunderland AFC": "Sunderland",
-    "West Ham United": "West Ham", "West Ham": "West Ham",
-    "Aston Villa": "Aston Villa", "Crystal Palace": "Crystal Palace",
-    "AFC Bournemouth": "Bournemouth",
-    "Brighton & Hove Albion": "Brighton", "Brighton Hove": "Brighton",
-    "Leeds United": "Leeds", "Leeds": "Leeds",
-    "Burnley FC": "Burnley", "Burnley": "Burnley",
-    "Brentford FC": "Brentford", "Brentford": "Brentford",
-    "Arsenal FC": "Arsenal", "Chelsea FC": "Chelsea",
-    "Everton FC": "Everton", "Fulham FC": "Fulham",
-    "Liverpool FC": "Liverpool",
-    "Tottenham Hotspur": "Tottenham", "Tottenham Hotspur FC": "Tottenham",
-    # Serie A (football-data.org API names)
-    "FC Internazionale Milano": "Inter Milan", "Inter Milano": "Inter Milan",
-    "AC Milan": "AC Milan", "AS Roma": "Roma", "SSC Napoli": "Napoli",
-    "SS Lazio": "Lazio", "Juventus FC": "Juventus",
-    "ACF Fiorentina": "Fiorentina", "Atalanta BC": "Atalanta",
-    "Torino FC": "Torino", "US Sassuolo Calcio": "Sassuolo",
-    "Genoa CFC": "Genoa", "US Salernitana 1919": "Salernitana",
-    "US Lecce": "Lecce", "Empoli FC": "Empoli",
-    "Udinese Calcio": "Udinese", "Bologna FC 1909": "Bologna",
-    "Cagliari Calcio": "Cagliari", "Hellas Verona FC": "Hellas Verona",
-    "Parma Calcio 1913": "Parma", "Venezia FC": "Venezia",
-    "Como 1907": "Como", "Spezia Calcio": "Spezia",
-    "Benevento Calcio": "Benevento", "AC Monza": "Monza",
-    "US Cremonese": "Cremonese", "US Sampdoria": "Sampdoria",
-    "Frosinone Calcio": "Frosinone", "FC Crotone": "Crotone",
-    "Brescia Calcio": "Brescia", "Pisa SC": "Pisa",
-    # Bundesliga
-    "FC Bayern München": "Bayern Munich",
-    "BV Borussia 09 Dortmund": "Borussia Dortmund",
-    "RB Leipzig": "Leipzig", "Bayer 04 Leverkusen": "Bayer Leverkusen",
-    "VfL Wolfsburg": "Wolfsburg", "VfB Stuttgart": "Stuttgart",
-    "Borussia Mönchengladbach": "Monchengladbach",
-    "SC Freiburg": "Freiburg", "TSG 1899 Hoffenheim": "Hoffenheim",
-    "1. FC Union Berlin": "Union Berlin",
-    "SV Werder Bremen": "Werder Bremen",
-    "1. FSV Mainz 05": "Mainz", "FC Augsburg": "Augsburg",
-    "1. FC Köln": "Koln", "1. FC Heidenheim 1846": "Heidenheim",
-    "FC St. Pauli 1910": "St Pauli", "Holstein Kiel": "Holstein Kiel",
-    "VfL Bochum 1848": "Bochum", "Hertha BSC": "Hertha Berlin",
-    "FC Schalke 04": "Schalke 04", "Hannover 96": "Hannover",
-    "Hamburger SV": "Hamburg", "SV Darmstadt 98": "Darmstadt",
-    "Fortuna Düsseldorf": "Dusseldorf", "SC Paderborn 07": "Paderborn",
-    "SpVgg Greuther Fürth": "Furth",
-    "DSC Arminia Bielefeld": "Arminia Bielefeld",
-    "1. FC Nürnberg": "Nurnberg", "FC Ingolstadt 04": "Ingolstadt",
-    "Eintracht Braunschweig": "Braunschweiger",
-    # Ligue 1
-    "Paris Saint-Germain FC": "PSG",
-    "Olympique de Marseille": "Marseille",
-    "Olympique Lyonnais": "Lyon", "AS Monaco FC": "Monaco",
-    "OGC Nice": "Nice", "Stade Rennais FC 1901": "Rennes",
-    "LOSC Lille": "Lille", "Racing Club de Lens": "Lens",
-    "FC Nantes": "Nantes", "Stade Brestois 29": "Brest",
-    "RC Strasbourg Alsace": "Strasbourg",
-    "Montpellier Hérault SC": "Montpellier",
-    "Toulouse FC": "Toulouse", "Angers SCO": "Angers",
-    "Stade de Reims": "Reims", "Le Havre AC": "Le Havre",
-    "FC Lorient": "Lorient", "Clermont Foot 63": "Clermont",
-    "AJ Auxerre": "Auxerre", "FC Metz": "Metz",
-    "AS Saint-Étienne": "St-Etienne",
-    "FC Girondins de Bordeaux": "Bordeaux",
-    "Paris FC": "Paris FC",
-    # Eredivisie
-    "AFC Ajax": "Ajax", "PSV": "PSV",
-    "Feyenoord Rotterdam": "Feyenoord",
-    "AZ": "AZ Alkmaar", "FC Utrecht": "Utrecht",
-    "FC Twente": "Twente", "SC Heerenveen": "Heerenveen",
-    "FC Groningen": "Groningen", "N.E.C.": "NEC Nijmegen",
-    "Sparta Rotterdam": "Sparta Rotterdam",
-    "Fortuna Sittard": "Fortuna Sittard",
-    "Go Ahead Eagles": "Go Ahead Eagles",
-    "Heracles Almelo": "Heracles", "RKC Waalwijk": "RKC Waalwijk",
-    "PEC Zwolle": "PEC Zwolle", "FC Volendam": "Volendam",
-    "Willem II": "Willem II", "NAC Breda": "NAC Breda",
-    "ADO Den Haag": "ADO Den Haag", "FC Emmen": "Emmen",
-    "Excelsior": "Excelsior", "Vitesse": "Vitesse",
-    "SC Cambuur": "Cambuur Leeuwarden",
-    "VVV-Venlo": "VVV-Venlo", "Almere City FC": "Almere",
-    # API fixture names that differ from CSV/internal names
-    "AC Pisa 1909": "Pisa",
-    "Lille OSC": "Lille", "LOSC": "Lille",
-    "FC Twente '65": "Twente",
-    "NEC": "NEC Nijmegen",
-    "SBV Excelsior": "Excelsior",
-    "Telstar 1963": "Telstar",
-}
+# API name → internal name. Fuente única en name_map.json (sección
+# api_to_internal), compartida con build_crests.py (ADR-009). Zona de
+# rigor spec §3.3: no editar este mapa aquí, editar name_map.json.
+with open(NAME_MAP_FILE, encoding='utf-8') as _nm_f:
+    API_NAME_MAP = json.load(_nm_f)['api_to_internal']
 COMPETITION_CODES = {'ll': 'PD', 'pl': 'PL', 'sa': 'SA', 'bl': 'BL1', 'l1': 'FL1', 'ed': 'DED'}
 
 def api_name_to_internal(name):
