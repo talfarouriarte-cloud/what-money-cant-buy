@@ -35,12 +35,31 @@ except ImportError:
     requests = None
 
 # ============================================================
-# SEASON — auto-derived from current date with safety check
-# Aug onwards = new season. Wage fallback handled by load_wages().
+# SEASON — reloj único de temporada (ADR-007, ADR-008).
+# La FECHA es el único reloj del sistema; la API no impone el suyo.
+# Umbral de cambio: (month, day) >= (7, 15) = temporada nueva.
+# Wage fallback handled by load_wages().
 # ============================================================
-_now = datetime.now()
-_y = _now.year % 100
-CURRENT_SEASON = f'{_y}/{_y+1:02d}' if _now.month >= 8 else f'{_y-1:02d}/{_y:02d}'
+def derive_season(now):
+    """Deriva la clave de temporada 'YY/YY+1' de una fecha.
+    ADR-008: umbral (month, day) >= (7, 15) inclusive => temporada nueva."""
+    y = now.year % 100
+    if (now.month, now.day) >= (7, 15):
+        return f'{y}/{y+1:02d}'
+    return f'{y-1:02d}/{y:02d}'
+
+def api_season_year(season_str):
+    """Año de inicio de temporada para el parámetro ?season de la API.
+    ADR-007: '25/26' -> 2025, '26/27' -> 2026."""
+    return 2000 + int(season_str.split('/')[0])
+
+def season_key_from_start(start_date):
+    """Deriva la clave de temporada de la fecha de inicio de un calendario.
+    ADR-007: '2025-08-15' -> '25/26', '2026-08-14' -> '26/27' (regla y % 100)."""
+    y = int(start_date[:4]) % 100
+    return f'{y:02d}/{y+1:02d}'
+
+CURRENT_SEASON = derive_season(datetime.now())
 
 PARAMS = {
     'll': {'beta': 0.4719, 'theta1': -1.0404, 'theta2': 0.2081},
@@ -325,7 +344,7 @@ def fetch_fixtures_from_api():
         url = f'{base_url}/{code}/matches'
         print(f"  Fetching {lg} fixtures from football-data.org ({code})...")
         try:
-            r = requests.get(url, headers=headers, timeout=30)
+            r = requests.get(url, headers=headers, params={'season': api_season_year(CURRENT_SEASON)}, timeout=30)
             r.raise_for_status()
             data = r.json()
             matches = data.get('matches', [])
@@ -333,7 +352,15 @@ def fetch_fixtures_from_api():
             
             if not matches:
                 continue
-            
+
+            # Guardia de coherencia (ADR-007): la clave derivada del payload
+            # debe coincidir con CURRENT_SEASON; si no, se descarta la liga
+            # (no se escribe fixtures[lg][CURRENT_SEASON] ni _results).
+            payload_key = season_key_from_start(matches[0]['season']['startDate'])
+            if payload_key != CURRENT_SEASON:
+                print(f"    ⚠️  Season mismatch for {lg}: payload={payload_key} vs CURRENT_SEASON={CURRENT_SEASON} — discarding league")
+                continue
+
             # Build name mapping from this response
             name_cache = {}
             for m in matches:

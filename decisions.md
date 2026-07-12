@@ -8,6 +8,9 @@
 - [ADR-003](#adr-003-2026-07-11--ci-qué-materializa-ci-verde) — CI: qué materializa `ci-verde`
 - [ADR-004](#adr-004-2026-07-11--coexistencia-de-workflows-de-producto-y-de-pipeline) — Coexistencia de workflows de producto y de pipeline
 - [ADR-005](#adr-005-2026-07-11--criterios-de-desempate-de-la-clasificación-real) — Criterios de desempate de la clasificación real
+- [ADR-006](#adr-006-2026-07-11--desempate-del-forecast-puntos-simulados--rank-oficial-actual) — Desempate del forecast: puntos simulados → rank oficial actual
+- [ADR-007](#adr-007-2026-07-12--reloj-único-de-temporada-fetch-de-calendario-por-temporada-explícita) — Reloj único de temporada: fetch de calendario por temporada explícita
+- [ADR-008](#adr-008-2026-07-12--cambio-de-temporada-el-15-de-julio) — Cambio de temporada el 15 de julio
 
 ## ADR-001 (2026-07-11) — Fundación: proyecto existente entra en desarrollo agéntico
 
@@ -183,3 +186,58 @@ La posición oficial actual condensa GD y particulares de lo ya jugado: es el pr
 ### Coste de revertir
 
 Trivial (una clave de sort y un precómputo); el test de regresión de Osasuna quedará como guardia del comportamiento.
+
+## ADR-007 (2026-07-12) — Reloj único de temporada: fetch de calendario por temporada explícita
+
+### Contexto
+
+`CURRENT_SEASON` se deriva de la fecha (`update.py:43`, agosto+ = temporada nueva; spec §3bis.5), pero `fetch_fixtures_from_api` pide `GET /competitions/{code}/matches` sin parámetro de temporada (`update.py:325`) y almacena la respuesta bajo `fixtures[lg][CURRENT_SEASON]`. La API de football-data.org cambia su temporada "actual" al publicarse los calendarios (julio), semanas antes que el reloj de fecha. Incidente verificado el 2026-07-12 en producción: el cron guardó el calendario 26/27 (380 fixtures, 0 jugados, con ascendidos sin mapear) bajo la clave `25/26`, inyectó fixtures fantasma como `r` en `data.json` y re-simuló el forecast de una temporada terminada (`pos.cur` de La Liga 25/26 degenerado).
+
+### Decisión
+
+Dos piezas, ambas en `fetch_fixtures_from_api`:
+
+1. **Petición explícita**: la llamada a `/matches` lleva `?season=<año>` donde el año se deriva de `CURRENT_SEASON` (p. ej. `25/26` → `2025`). La fecha sigue siendo el reloj único del sistema; la API deja de imponer el suyo.
+2. **Guardia de coherencia**: antes de escribir `fixtures[lg][CURRENT_SEASON]`, se deriva la clave de temporada del propio payload (`matches[0].season.startDate`) y se compara con `CURRENT_SEASON`; si no coinciden, se descarta el calendario de esa liga con warning en el log y no se escribe nada. La guardia protege contra cualquier comportamiento inesperado del parámetro (tier gratuito, temporadas no disponibles).
+
+Remediación del incidente: el propio cron autorrepara al promocionar el fix a `main` — la petición explícita de `25/26` devuelve el calendario real (todo jugado), reconstruye `fixtures.json` y recalcula `data.json`. Debe ocurrir antes del cambio de temporada (2026-07-15, ADR-008): a partir de ahí `25/26` deja de ser `CURRENT_SEASON` y el registro corrupto quedaría congelado como histórico. Si el tier gratuito rechazara la petición de la temporada saliente, la guardia evita re-corrupción y la restauración de `fixtures.json` es humana (git history de `main`).
+
+### Razón
+
+Mantiene un solo reloj (spec §3bis.5) con el cambio mínimo; autorrepara producción sin intervención manual (spec §2.3); la guardia convierte la clase de fallo "dos relojes" en imposible por construcción, no solo en improbable.
+
+### Alternativas descartadas
+
+- **Derivar la clave de almacenamiento de la respuesta de la API**: pre-carga el calendario nuevo antes de agosto (beneficio nulo — llegaría igual en el primer cron de agosto), no autorrepara la clave `25/26` corrupta sin re-fetch adicional, y rompe la unicidad del reloj.
+- **Solo guardia, sin parámetro**: evita re-corrupción pero no autorrepara ni entrega el calendario nuevo hasta que la fecha alcance a la API — pierde frescura en la ventana de julio sin ganar nada.
+
+### Coste de revertir
+
+Trivial (un parámetro de query y un bloque de guardia); el compromiso real es el contrato de que `fixtures[lg][sn]` contiene siempre la temporada `sn` — el frontend y `get_remaining_fixtures` ya lo asumen hoy.
+
+## ADR-008 (2026-07-12) — Cambio de temporada el 15 de julio
+
+### Contexto
+
+`CURRENT_SEASON` cambia el 1 de agosto (`update.py:43`, `month >= 8`; espejo en `test_season_transition.py:18` y spec §3bis.5). Los calendarios de las 6 ligas se publican a lo largo de junio/julio y la API los sirve desde entonces; con el umbral en agosto, la app muestra durante semanas una temporada terminada como actual y desaprovecha el calendario nuevo ya disponible (bandas de pretemporada, plantilla de ascensos).
+
+### Decisión
+
+Decisión del propietario, verbatim:
+
+> Vamos a acelerar el setup de la nueva temporada al 15 de julio (así también a futuro)
+
+La regla de derivación pasa a: temporada nueva desde el **15 de julio** inclusive (`(month, day) >= (7, 15)`), permanente, en los tres puntos: `update.py:43`, `test_season_transition.py:18` y el texto de spec §3bis.5 — las tres copias se tocan en el mismo cambio y nunca divergen. La derivación se extrae a función pura testeable. Entre el 15 de julio y el arranque real (~mediados de agosto) la temporada actual muestra 0 partidos jugados: calendario y bandas de pretemporada con salarios de fallback (cadena de spec §3bis.2) son el contenido. Si el calendario de alguna liga aún no está en la API, la guardia de ADR-007 lo descarta y esa liga queda sin calendario hasta que aparezca — el cron diario lo recoge solo.
+
+### Razón
+
+El producto gana un mes de contenido nuevo (calendario, pretemporada, ascendidos) en el periodo de mayor apetito informativo del aficionado; el coste es adelantar el archivado de la temporada terminada, cuyo registro queda intacto como histórico.
+
+### Alternativas descartadas
+
+- **Umbral variable "cuando la API cambie"**: devolvería el reloj a la API (la causa raíz del incidente de ADR-007) y haría el cambio no determinista y no testeable.
+- **Mantener agosto**: statu quo; desperdicia un mes de calendario disponible sin ganar robustez — la ventana de dos relojes ya la cierra ADR-007.
+
+### Coste de revertir
+
+Trivial: una tupla en la función de derivación y el texto de spec; ninguna estructura de datos depende del valor del umbral.

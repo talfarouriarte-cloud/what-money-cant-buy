@@ -9,13 +9,16 @@ Simulates what update.py would do at a given date:
 - What fallbacks kick in
 """
 import json, os, argparse
+from datetime import datetime
+from update import derive_season  # ADR-008: regla única de derivación de temporada
 
 WAGES_LG_MAP = {'ll': 'la_liga', 'pl': 'premier_league', 'sa': 'serie_a',
                 'bl': 'bundesliga', 'l1': 'ligue_1', 'ed': 'eredivisie'}
 
 def simulate(month, year, wages_file='all_wages.json'):
-    y = year % 100
-    season = f'{y}/{y+1:02d}' if month >= 8 else f'{y-1:02d}/{y:02d}'
+    # ADR-008: temporada derivada por la función pura única (umbral 15 jul).
+    # Este simulador es de granularidad mensual => day=1 como representante del mes.
+    season = derive_season(datetime(year, month, 1))
     prev_y = int(season[:2]) - 1
     prev_sn = f'{prev_y:02d}/{prev_y+1:02d}'
     csv_year = season.replace('/', '')
