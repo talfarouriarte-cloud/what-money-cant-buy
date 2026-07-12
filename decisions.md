@@ -12,6 +12,7 @@
 - [ADR-007](#adr-007-2026-07-12--reloj-único-de-temporada-fetch-de-calendario-por-temporada-explícita) — Reloj único de temporada: fetch de calendario por temporada explícita
 - [ADR-008](#adr-008-2026-07-12--cambio-de-temporada-el-15-de-julio) — Cambio de temporada el 15 de julio
 - [ADR-009](#adr-009-2026-07-12--mapa-de-nombres-único-con-capa-de-display) — Mapa de nombres único con capa de display
+- [ADR-010](#adr-010-2026-07-12--build-crests-encadenado-a-update-por-workflow_run) — build-crests encadenado a update por workflow_run
 
 ## ADR-001 (2026-07-11) — Fundación: proyecto existente entra en desarrollo agéntico
 
@@ -300,3 +301,27 @@ Una copia divergente de mapa es la misma enfermedad que las tres copias de ADR-0
 ### Coste de revertir
 
 Bajo: los dicts inline pueden restaurarse desde `name_map.json`; retirar `dn()` devuelve los internos a pantalla. El compromiso real es la zona de rigor extendida al fichero nuevo.
+
+## ADR-010 (2026-07-12) — build-crests encadenado a update por workflow_run
+
+### Contexto
+
+`build-crests.yml` es `workflow_dispatch` puro: recoge escudos solo cuando un humano lo lanza. Los escudos de equipos ascendidos solo pueden obtenerse una vez que el calendario de la temporada nueva existe en `fixtures.json`, lo que ocurre en el primer cron tras el cambio de temporada (15 de julio, ADR-008) — un instante no conocido de antemano (depende de cuándo publique cada liga). Verificado el 2026-07-12: un dispatch manual antes del cambio no puede completar los 4 escudos de los ascendidos 26/27 porque su calendario aún no existe. Depender de que alguien lance el workflow el día justo es intervención manual recurrente (spec §2.3).
+
+### Decisión
+
+`build-crests.yml` gana un disparador `on: workflow_run` sobre "Update match data" con `types: [completed]` y guard `if: github.event.workflow_run.conclusion == 'success'`. Se conserva `workflow_dispatch`. `update.yml` no se toca. El encadenado es **incondicional**: build-crests corre tras cada update exitoso, sin lógica de detección de equipos nuevos en `update.py`. Es seguro y barato porque `build_crests.py` es idempotente (solo añade los nombres de `needed` ausentes de `crests.json`; sin cambios ⇒ commit no-op) y su conjunto de necesidad ya incluye el calendario de la temporada actual (correctivo #25). Coste: ~90 s de runner por día en que update commitee, la mayoría sin cambio de escudos.
+
+### Razón
+
+Elimina el único paso manual que quedaba del rollover con la superficie mínima (un fichero de workflow, cero Python, cero fecha hardcodeada) y sin añadir estado nuevo. El invariante que sostiene la decisión — "build_crests es idempotente" — es más robusto y verificable que su alternativa ("update.py detecta correctamente los equipos nuevos"), que exigiría una señal de salida en zona 1 (spec §3) para ahorrar un run barato.
+
+### Alternativas descartadas
+
+- **Detección en `update.py` + disparo condicional**: mete una señal de "equipos nuevos" en el núcleo del pipeline (zona 1, más rigor) para ahorrar un run idempotente diario; más superficie, mismo resultado.
+- **`schedule` anual el 15 de julio en build-crests**: fecha hardcodeada y frágil (si una liga publica su calendario más tarde, ese día aún no existe y no hay reintento hasta el año siguiente); contradice "temporada derivada, nunca hardcodeada" (spec §3bis.5).
+- **`workflow_call` desde update.yml**: acopla ambos workflows, duplica el job de crests bajo el gate de secrets de update y obliga a editar `update.yml`; `workflow_run` desacopla sin tocarlo.
+
+### Coste de revertir
+
+Trivial: eliminar el bloque `workflow_run` devuelve build-crests a dispatch puro; ninguna otra pieza depende del encadenado.
