@@ -5,7 +5,9 @@ description: Schematic map of this repo's agent pipeline instance. Load at the s
 
 # Pipeline map — what-money-cant-buy
 
-**Synced:** 2026-07-11 (alta Fase C, Architect) · **Framework:** agent-pipeline@v1 (vendored@f100499+dc0161f)
+**Synced:** 2026-07-12 (Architect) · **Framework:** agent-pipeline@main (modo mono-operador — los 5 stubs pinean `@main`; la subida humana al central es el despliegue; tags v1…v1.4 = referencia inmutable)
+
+Cambios de framework 2026-07-12 (process-proposals del repo de origen, vía vendored sync + workflows @main): Reviewer jamás da LGTM sobre CI completado en rojo (#1269); Creator recupera literales must-copy del body RAW y publica huella `pre-reviewer:` en cada PR (#1278/#1259); Auditor aterriza el archivo de epic-context directamente en la rama por defecto (#1277); Watchdog con fast-path de CI rojo atribuible, marcador `watchdog-ci-attributable` (#1268); process-reviewer publica-antes-de-commitear con chequeo de integridad y señal determinista de fallo (#1258).
 
 ## Instance parameters
 
