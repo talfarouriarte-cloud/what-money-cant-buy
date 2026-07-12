@@ -11,6 +11,7 @@
 - [ADR-006](#adr-006-2026-07-11--desempate-del-forecast-puntos-simulados--rank-oficial-actual) — Desempate del forecast: puntos simulados → rank oficial actual
 - [ADR-007](#adr-007-2026-07-12--reloj-único-de-temporada-fetch-de-calendario-por-temporada-explícita) — Reloj único de temporada: fetch de calendario por temporada explícita
 - [ADR-008](#adr-008-2026-07-12--cambio-de-temporada-el-15-de-julio) — Cambio de temporada el 15 de julio
+- [ADR-009](#adr-009-2026-07-12--mapa-de-nombres-único-con-capa-de-display) — Mapa de nombres único con capa de display
 
 ## ADR-001 (2026-07-11) — Fundación: proyecto existente entra en desarrollo agéntico
 
@@ -241,3 +242,61 @@ El producto gana un mes de contenido nuevo (calendario, pretemporada, ascendidos
 ### Coste de revertir
 
 Trivial: una tupla en la función de derivación y el texto de spec; ninguna estructura de datos depende del valor del umbral.
+
+## ADR-009 (2026-07-12) — Mapa de nombres único con capa de display
+
+### Contexto
+
+El mapeo API→interno vive duplicado (`API_NAME_MAP` en `update.py`, 181 entradas, y en `build_crests.py`, 291; sin conflictos de valor pero con 138 entradas no compartidas). Además el nombre interno — clave de cruce entre CSV de football-data.co.uk, API y `all_wages.json` — se muestra tal cual en la UI, exhibiendo la convención ASCII/abreviada de la fuente de datos ("Espanol", "At Madrid", "Koln", "Nottm Forest"). Los 3 ascendidos de La Liga 26/27 y 8 más de otras ligas no tienen entrada API y aparecerían con nombre crudo el 15 de julio.
+
+### Decisión
+
+Un fichero `name_map.json` en raíz, fuente única con dos secciones:
+
+1. **`api_to_internal`**: unión de las dos copias existentes (si aparece una clave con valores distintos, se aborta y escala — hoy no hay ninguna) más las entradas de los ascendidos 26/27. `update.py` y `build_crests.py` cargan de aquí y sus dicts inline se eliminan. La lógica de `api_name_to_internal` no cambia.
+2. **`display`**: mapeo interno→nombre de presentación. El nombre interno queda como clave inmutable de datos (13 temporadas, salarios, escudos); el frontend aplica un helper `dn(n)` en todo texto visible de equipo. Las claves de objetos, el cruce de escudos y los joins de datos siguen en interno. El display es único para EN y ES (los nombres de club no se traducen). La tabla de display es normativa en este ADR; decisión del propietario, verbatim para España:
+
+> Todo. Para España atlético madrid, Athletic club, real sociedad, deportivo, racing
+
+| Interno | Display |
+|---|---|
+| Alaves | Alavés |
+| Almeria | Almería |
+| At Madrid | Atlético Madrid |
+| Ath Bilbao | Athletic Club |
+| Cadiz | Cádiz |
+| Cordoba | Córdoba |
+| Espanol | Espanyol |
+| La Coruna | Deportivo |
+| Leganes | Leganés |
+| Malaga | Málaga |
+| Sociedad | Real Sociedad |
+| Sp Gijon | Sporting Gijón |
+| Vallecano | Rayo Vallecano |
+| Santander | Racing |
+| Koln | Köln |
+| Monchengladbach | M'gladbach |
+| Dusseldorf | Düsseldorf |
+| Furth | Greuther Fürth |
+| Nurnberg | Nürnberg |
+| Braunschweiger | Braunschweig |
+| St Pauli | St. Pauli |
+| St-Etienne | Saint-Étienne |
+| Nimes | Nîmes |
+| Nottm Forest | Nottingham Forest |
+
+Los 177 nombres internos restantes se muestran sin cambio. La zona de rigor de spec §3.3 (mapeo de nombres) se extiende a `name_map.json`: prohibido el replace global; toda entrada nueva es mandato explícito de issue o edición humana.
+
+### Razón
+
+Una copia divergente de mapa es la misma enfermedad que las tres copias de ADR-005 evitan; y separar clave de presentación corrige la UI sin tocar 13 temporadas de claves de datos ni `all_wages.json` (legibilidad divulgativa, spec §2.2, con coste cero en el pipeline numérico).
+
+### Alternativas descartadas
+
+- **Renombrar los internos a los nombres de display**: rompe el cruce con el histórico, los CSV y los salarios; migración de 201 claves en cadena para un problema de presentación.
+- **Display por idioma (EN/ES separados)**: los nombres de club no se traducen; duplicaría 201 entradas sin valor.
+- **`build_crests.py` importando el mapa desde `update.py`**: acopla su workflow a pandas/numpy/scipy sin necesidad; el JSON compartido es el patrón del repo.
+
+### Coste de revertir
+
+Bajo: los dicts inline pueden restaurarse desde `name_map.json`; retirar `dn()` devuelve los internos a pantalla. El compromiso real es la zona de rigor extendida al fichero nuevo.
