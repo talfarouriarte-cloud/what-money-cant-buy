@@ -38,7 +38,7 @@ Qué NO es: no es una herramienta de apuestas; no hay análisis a nivel de jugad
 2. **Cadena de fallback de salarios**: salario de la temporada actual en `all_wages.json` → temporada anterior → mínimo de liga (`_min`). Equipos ascendidos entran con el mínimo.
 3. **Prioridad de fuentes**: API de football-data.org como primaria (resultados en minutos); CSV de football-data.co.uk como fallback (1–2 días de retraso).
 4. **p50 determinista**: tanto la línea actualizada como la de presupuesto usan valor esperado determinista (`pw×3 + pd`) para el p50; Monte Carlo solo para bandas p10/p90. Garantiza líneas de proyección paralelas.
-5. **Temporada derivada, nunca hardcodeada**: `CURRENT_SEASON` se deriva de la fecha (agosto+ = temporada nueva) en `update.py`; el frontend deriva `CUR_SN` de la última clave de `data.json`. Cero strings de temporada hardcodeados.
+5. **Temporada derivada, nunca hardcodeada**: `CURRENT_SEASON` se deriva de la fecha (15 de julio+ = temporada nueva, ADR-008) en `update.py`; el frontend deriva `CUR_SN` de la última clave de `data.json`. Cero strings de temporada hardcodeados.
 6. **Sin strings de UI hardcodeados**: todo texto visible pasa por clave de `i18n.json` (mecaniza el principio §2.5).
 7. **Sin transpilación**: la app es `React.createElement` puro dentro de `index.html`; queda prohibida sintaxis que exija JSX, build o transpilado.
 
