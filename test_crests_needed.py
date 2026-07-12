@@ -26,7 +26,25 @@ def build_needed(data_dir, season):
     return needed
 
 
+def check_season_boundary():
+    """Fija la copia local de la regla de temporada de build_crests al
+    umbral de ADR-008 (15-jul inclusive). Si la cuarta copia de
+    derive_season deja de reflejar los tres puntos canónicos
+    (update.py / test_season_transition.py / spec §3bis.5), este test
+    correctivo de la propia épica lo caza."""
+    assert build_crests.derive_season(datetime(2026, 7, 14)) == '25/26', \
+        "víspera del umbral debe dar temporada saliente"
+    assert build_crests.derive_season(datetime(2026, 7, 15)) == '26/27', \
+        "umbral 15-jul inclusive debe dar temporada nueva"
+    assert build_crests.derive_season(datetime(2026, 1, 1)) == '25/26', \
+        "antes del umbral (mismo año) => temporada saliente"
+    assert build_crests.derive_season(datetime(2026, 12, 31)) == '26/27', \
+        "tras el umbral => temporada nueva"
+
+
 def main():
+    check_season_boundary()
+
     season = build_crests.derive_season(datetime.now())
 
     with tempfile.TemporaryDirectory() as d:
