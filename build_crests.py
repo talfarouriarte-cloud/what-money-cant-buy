@@ -14,6 +14,7 @@ Usage:
 Output: crests.json  {"Barcelona": "https://crests.football-data.org/81.svg", ...}
 """
 import json, os, sys, time, unicodedata
+from datetime import datetime
 
 try:
     import requests
@@ -133,6 +134,42 @@ COMPETITIONS = {
 }
 
 
+# SEASON — reloj único de temporada (ADR-008). Regla duplicada de
+# update.py:derive_season (ANCLA: mantener en sync). Umbral de cambio:
+# (month, day) >= (7, 15) inclusive => temporada nueva.
+def derive_season(now):
+    """Deriva la clave de temporada 'YY/YY+1' de una fecha.
+    ADR-008: umbral (month, day) >= (7, 15) inclusive => temporada nueva."""
+    y = now.year % 100
+    if (now.month, now.day) >= (7, 15):
+        return f'{y}/{y+1:02d}'
+    return f'{y-1:02d}/{y:02d}'
+
+
+def fixtures_needed(data_dir, season):
+    """Nombres de equipo del calendario de `season` en fixtures.json.
+
+    Devuelve un set con todos los nombres (local y visitante) de
+    `calendar[gw]['matches']` de cada liga que tenga la clave `season`.
+    Si fixtures.json no existe o una liga no tiene la temporada, se
+    omite sin fallo (set vacío o parcial)."""
+    names = set()
+    fixtures_file = os.path.join(data_dir, 'fixtures.json')
+    if not os.path.exists(fixtures_file):
+        return names
+    with open(fixtures_file, encoding='utf-8') as f:
+        fixtures = json.load(f)
+    for lg in fixtures:
+        season_data = fixtures[lg].get(season)
+        if not season_data:
+            continue
+        for gw in season_data.get('calendar', []):
+            for match in gw.get('matches', []):
+                for team in match:
+                    names.add(team)
+    return names
+
+
 def api_name_to_internal(name):
     """Convert football-data.org team name to our internal name."""
     if name in API_NAME_MAP:
@@ -182,6 +219,12 @@ def main():
         for sn in data.get('seasons', {}).get(lg, {}):
             for team in data['seasons'][lg][sn]:
                 needed.add(team)
+
+    # Unión con el calendario de la temporada actual (ADR-008): los
+    # ascendidos sin partidos jugados no están en data.json pero sí en
+    # fixtures.json, y las bandas de pretemporada los muestran. Nombres
+    # del calendario ya vienen en interno (update.py los mapea).
+    needed |= fixtures_needed(DATA_DIR, derive_season(datetime.now()))
     print(f"Need crests for {len(needed)} unique team names")
 
     crests = {}
