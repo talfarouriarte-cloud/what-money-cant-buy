@@ -122,3 +122,31 @@ p50 = deterministic, p10/p90 = MC percentile.
 | Results not updating | API key missing or expired | Check `FOOTBALL_DATA_API_KEY` secret in repo |
 | GW X -> X (no new matches) | Source not updated yet | API: minutes; CSV: Sun/Wed night |
 | "Using CSV (API unavailable)" | API failed or no key | Check Action logs for API error |
+
+## 6. Staging / preview de develop (Vercel)
+
+**Qué es**: `main` la sirve GitHub Pages (producción). Para probar `develop` en un dispositivo real ANTES de promover, se despliega un snapshot a Vercel — dominio distinto, así el service worker de producción no interfiere con la prueba.
+
+- **Proyecto Vercel**: `wmcb-develop-preview` (id `prj_U84Z35xAWuzORYBAy50fGyzLHiAU`).
+- **URL estable de pruebas**: `https://wmcb-develop-preview.vercel.app`
+- **Token**: `VERCEL_TOKEN` en el fichero `Credenciales_` del proyecto de claude.ai (nunca en el repo).
+- **Sin vínculo git**: cada deploy es una subida directa de ficheros por API. La URL estable solo se actualiza si el deploy va con `"target": "production"`; sin ese campo se genera una URL efímera de preview.
+
+**Qué se sube**: los ficheros estáticos de la raíz de `develop` que consume el frontend (`index.html`, `sw.js`, `i18n.json`, `crests.json`, `manifest.json`, iconos, `header-bg.jpeg`). **`data.json` NO se sube**: el `index.html` tiene fallback a `https://footballbeyondmoney.uk/data.json` y carga datos reales de producción.
+
+**Deploy por API** (lo ejecuta el Architect desde sesión, con OK del humano):
+
+```bash
+# Para cada fichero: {"file": "<nombre>", "data": "<base64>", "encoding": "base64"}
+curl -s -X POST "https://api.vercel.com/v13/deployments" \
+  -H "Authorization: Bearer $VERCEL_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "wmcb-develop-preview",
+       "project": "wmcb-develop-preview",
+       "target": "production",
+       "files": [ ...ficheros en base64... ]}'
+```
+
+**Cómo probar en iPad**: abrir la URL estable en Safari. Si una versión anterior de la preview se queda cacheada por su propio SW, abrir en pestaña privada o borrar datos del sitio `vercel.app` — el SW de la preview tiene scope solo en ese dominio y no toca footballbeyondmoney.uk.
+
+**Verificación rápida de qué versión sirve la preview**: `curl -s https://wmcb-develop-preview.vercel.app/sw.js | head -1` → debe mostrar el `CACHE_NAME` del snapshot subido.
