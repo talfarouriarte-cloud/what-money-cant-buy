@@ -3,14 +3,19 @@ _Para continuar en un chat nuevo. Actualizado: 2026-07-13_
 
 6. ✅ HECHO (2026-07-13) Paridad final con original: (a) drag-scrub táctil en Matches (touchmove con preventDefault vía listener no-pasivo en wrap, tooltip sigue el dedo, lift fija; isTouchDev suprime handlers de mouse); (b) auto-highlight + pin del próximo partido del equipo seleccionado al montar Matches (outline ámbar, data-cell="h|a" para localizar celda); (c) StaleBanner (primitives.jsx, meta.wage_status) en Matches y Data; (d) THTip tap-tooltips (primitives.jsx, uno abierto a la vez) en cabeceras de Predictions y tabla de Tracker, claves tip_*; (e) GoatCounter en dev.html + build. Todo pendiente de prueba en despliegue real (dominio footballbeyondmoney.uk).
 
-## OJO — regenerar index.html tras editar src/
-`index.html` es un build (pre-transpilado). Tras cualquier edición en `src/*.jsx` / `styles.css` / `data.js`, REGENERAR con el run_script de build (Babel standalone, preset react, wrap IIFE + Object.assign(window, fns), inline styles+data). `dev.html` es la shell modular para desarrollo. `original-reference.html` = app original de GitHub (referencia, no tocar). CUIDADO: `github_copy_files` de `index.html` PISA el build (ya pasó una vez).
+## OJO — el repo publica UN solo artefacto: `index.html`
+En **este repo** el único artefacto vivo es `index.html`: un build ya pre-transpilado (~8.5k líneas, `React.createElement`, **sin Babel en runtime**). Las fuentes modulares (`src/*.jsx`, `styles.css`, `data.js`, `dev.html`) **NO se publican aquí** — viven fuera del repo (paquete `dev-src/` de desarrollo). Para tocar la app en producción tienes dos caminos:
+- **Editar directamente `index.html`** (el `React.createElement` transpilado + los bloques `<style>`/datos inline), o
+- editar las fuentes modulares donde vivan y **regenerar** `index.html` con el build (Babel standalone, preset react, wrap IIFE + `Object.assign(window, fns)`, inline styles+data), y publicar el resultado.
+
+`original-reference.html` = app original de GitHub (referencia, no tocar). CUIDADO: copiar `index.html` desde otra fuente PISA el build.
 
 ## Qué es esto
 Rediseño de la app real (repo `talfarouriarte-cloud/what-money-cant-buy`). Dirección visual aprobada: **Stadium Paper** (papel cálido, acento terracota `#C2492F`, display Bricolage Grotesque, mono JetBrains, UI system stack). Nav reagrupada en 5 destinos: **Club / Season / Form / Legacy / Model** con sub-vistas segmentadas. Mapea los `tab=` antiguos (incl. `explorer`→overperformance) para que los enlaces no rompan.
 
 ## Arquitectura de archivos
-- `index.html` — shell: carga React 18.3.1 + Recharts UMD + Babel, luego `data.js`, `styles.css`, y los `.jsx` en orden.
+- `index.html` (**artefacto publicado**) — un solo fichero pre-transpilado: carga React/ReactDOM **18.2.0** `production.min.js` (cdnjs, sin SRI) + Recharts UMD + `prop-types` `.min.js`, **sin Babel**, y lleva `data.js` + `styles.css` + los `.jsx` ya transpilados inline.
+- Las fuentes modulares siguientes (`data.js`, `src/*.jsx`) **no viven en este repo**; describen la estructura lógica del build, no ficheros publicados aquí.
 - `data.js` — capa de datos + i18n. **Hace fetch en runtime del data.json REAL** (`footballbeyondmoney.uk/data.json`, fallback GitHub raw). NO hay síntesis. Expone `window.__FBM.data`, `FBM_LEAGUES`, `FBM_ZONES`, `FBM_probs` (ordered-logit real), `FBM_I18N`, `_t`/`_tf`/`_lang`/`FBM_setLang`.
 - `src/app.jsx` — Header (pickers lg/team/sn + LangToggle), TabStrip/BottomBar (nav 5 grupos, `GROUPS`), routing por hash, Footer.
 - `src/primitives.jsx` — Crest (imágenes reales de crests.json + fallback monograma), LeagueSelector, SeasonStepper, FormDots, ZoneBar, InfoNote, **AboutTab** (acordeón "About this tab"), MatchScoreCell.
@@ -54,11 +59,11 @@ Rediseño de la app real (repo `talfarouriarte-cloud/what-money-cant-buy`). Dire
 4. ✅ HECHO (2026-07-13) Comportamientos globales, semántica copiada del original (index.html l.1638-1703 + sw.js):
    - Swipe entre sub-vistas del grupo activo (umbral |dx|≥120, dt≤400, |dy|≤0.35|dx|; ignora recharts-surface/chart-wrap/TABLE/SELECT/INPUT; anim slide-left/right + vibrate 15ms). En app.jsx.
    - Pull-to-refresh (damping 0.5, cap 60px, umbral 60 → location.reload(); `.ptr-bar` con pull_refresh/release_refresh). En app.jsx + styles.css.
-   - PWA: `sw.js` (adaptado del original: rutas relativas, network-first json/html/jsx/data.js, cache-first resto), registro en index.html, manifest.json saneado (start_url/scope `./`, solo iconos existentes 192/512, theme_color #C2492F), metas apple/theme-color.
+   - PWA: `sw.js` (adaptado del original: rutas relativas, network-first json/html/jsx/data.js, cache-first resto), registro en index.html, manifest.json saneado (start_url/scope `./`, iconos existentes 192/512 `any` + 512 `maskable`, theme_color #C2492F), metas apple/theme-color.
    - Install prompt: botón en Footer si !standalone && (beforeinstallprompt || iOS); iOS → alert(ios_install_alert); claves install_app.
    - Hash params br/ex/h2a/h2b/om/ow: ya estaban cubiertos (verificado). console.log de debug en Overperformance eliminados.
    NOTA: sw/manifest no comprobables en el preview (iframe); probar en despliegue real.
-5. ✅ HECHO (2026-07-13) Consolidación final: `index.html` ahora es un solo archivo pre-transpilado (sin Babel runtime): styles.css + data.js + los 6 .jsx transpilados inline (Babel standalone en build, preset react). `test.html` descartado por decisión del usuario. La shell modular vive en `dev.html` (carga src/*.jsx con Babel) — **editar siempre src/*.jsx / styles.css / data.js y regenerar index.html** (transpilar con Babel preset react e inline, ver run_script del 2026-07-13). Funciones muertas (ProjectedTable/ProbPill/MatchRow) borradas de tabs.jsx. sw.js → fbm-v2, ASSETS sin los archivos ya inlined.
+5. ✅ HECHO (2026-07-13) Consolidación final: `index.html` ahora es un solo archivo pre-transpilado (sin Babel runtime): styles.css + data.js + los 6 .jsx transpilados inline (Babel standalone en build, preset react). `test.html` descartado por decisión del usuario. La shell modular (`dev.html`, `src/*.jsx`) NO se publica en este repo; se edita fuera y se regenera `index.html`, o se edita `index.html` directamente (ver "OJO" arriba). Funciones muertas (ProjectedTable/ProbPill/MatchRow) borradas de tabs.jsx. `sw.js` publicado en **`fbm-v81`** (bump de `CACHE_NAME` de la corrección de contrato #31), ASSETS sin los archivos ya inlined.
 
 ## Reglas del proyecto (del usuario/arquitecto)
 - NO tocar principios de diseño del original que no se pidió cambiar (sombras por probabilidad + dot en Matches, tooltips de inspección, etc.).
