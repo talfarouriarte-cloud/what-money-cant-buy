@@ -595,6 +595,10 @@
     "Hide info",
     "Ocultar info"
   ],
+  "about_this_tab": [
+    "About this tab",
+    "Sobre esta pestaña"
+  ],
   "run_verdict_short": [
     "A {n}-game run with this level of {dir} {qual} appears in {pct} of seasons",
     "Una racha de {n} partidos con este nivel de {dir} {qual} aparece en el {pct} de las temporadas"
