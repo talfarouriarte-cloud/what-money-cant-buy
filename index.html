@@ -2146,33 +2146,6 @@ function Home({
   const t = seasonData[team];
   const L = window.FBM_LEAGUES[lg];
   const cur = L.cur;
-  if (!t) {
-    return /*#__PURE__*/React.createElement("div", {
-      className: "card",
-      style: {
-        padding: 40,
-        textAlign: "center"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-mut"
-    }, _t("select_team")));
-  }
-  const nP = t.m.length;
-  const totalRounds = (L.n - 1) * 2;
-  const ap = t.a[nP - 1] || 0;
-  const ep = t.e[nP - 1] || 0;
-  const df = ap - ep;
-  const rank = 1 + standings.findIndex(s => s.n === team);
-  const proj = Math.round(ap + (totalRounds - nP) * (ap / Math.max(1, nP)));
-  const budgetRank = [...standings].sort((a, b) => b.w - a.w).findIndex(s => s.n === team) + 1;
-  const last5 = t.m.slice(-5);
-  const formPts = last5.reduce((s, m) => s + m[2], 0);
-  const next = (t.r || [])[0];
-
-  // Recent run vs expected (last 5 / last 10)
-  const runDiff = n => t.m.slice(-n).reduce((s, m) => s + (m[2] - m[3]), 0);
-  const d5 = runDiff(5),
-    d10 = runDiff(10);
 
   // Closest upcoming league fixture (across all teams)
   const allUpcoming = useMemo(() => {
@@ -2237,6 +2210,35 @@ function Home({
     }];
     return items.filter(z => z.v >= 0.05);
   }, [lg, sn, team]);
+
+  if (!t) {
+    return /*#__PURE__*/React.createElement("div", {
+      className: "card",
+      style: {
+        padding: 40,
+        textAlign: "center"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-mut"
+    }, _t("select_team")));
+  }
+  const nP = t.m.length;
+  const totalRounds = (L.n - 1) * 2;
+  const ap = t.a[nP - 1] || 0;
+  const ep = t.e[nP - 1] || 0;
+  const df = ap - ep;
+  const rank = 1 + standings.findIndex(s => s.n === team);
+  const proj = Math.round(ap + (totalRounds - nP) * (ap / Math.max(1, nP)));
+  const budgetRank = [...standings].sort((a, b) => b.w - a.w).findIndex(s => s.n === team) + 1;
+  const last5 = t.m.slice(-5);
+  const formPts = last5.reduce((s, m) => s + m[2], 0);
+  const next = (t.r || [])[0];
+
+  // Recent run vs expected (last 5 / last 10)
+  const runDiff = n => t.m.slice(-n).reduce((s, m) => s + (m[2] - m[3]), 0);
+  const d5 = runDiff(5),
+    d10 = runDiff(10);
+
   const teamColor = "var(--accent)";
   return /*#__PURE__*/React.createElement("div", {
     className: "col gap-4"
