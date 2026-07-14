@@ -442,7 +442,10 @@ select.field {
      fila con el título (selectores, presets) permanecen. */
   .sh-title { display: none; }
   .section-head { margin: 4px 0 12px; }
-  .section-head:empty { margin: 0; }
+  /* NB: el colapso del margen en vistas "title-only" (section-head sin control
+     hermano visible) queda para el encaje visual §2. No sirve ":empty": .sh-title
+     sigue en el DOM (display:none, no eliminado), así que el nodo cuenta como hijo
+     y ":empty" nunca dispararía — se retira para no dejar intención engañosa. */
   /* "About this tab" bajo demanda: se oculta el toggle in-view, va al ⓘ de la fila de tabs */
   .abouttab { display: none; }
 }
@@ -2694,6 +2697,10 @@ function Tracker({
     onClick: () => {
       if (compare.length > 1) setCompare(compare.filter(x => x !== n));
     },
+    "aria-disabled": compare.length === 1 ? "true" : undefined,
+    style: compare.length === 1 ? {
+      cursor: "default"
+    } : undefined,
     className: "chip is-active"
   }, /*#__PURE__*/React.createElement(Crest, {
     name: n,
