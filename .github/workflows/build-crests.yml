@@ -2,10 +2,14 @@ name: Build crests
 
 on:
   workflow_dispatch:  # Manual trigger from GitHub Actions tab
+  workflow_run:
+    workflows: ["Update match data"]
+    types: [completed]
 
 jobs:
   build-crests:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: write
     steps:
