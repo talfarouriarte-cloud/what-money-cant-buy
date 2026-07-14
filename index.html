@@ -448,6 +448,18 @@ select.field {
      y ":empty" nunca dispararía — se retira para no dejar intención engañosa. */
   /* "About this tab" bajo demanda: se oculta el toggle in-view, va al ⓘ de la fila de tabs */
   .abouttab { display: none; }
+  /* §2: gráficos responsivos al viewport. Cada wrapper lleva su máximo razonable
+     en --chart-h; en desktop la altura pasa a min(máximo, altura-disponible) para
+     que el aterrizaje quepa sin scroll vertical. Override del height inline (que
+     sigue siendo el valor fijo en móvil, <1024px, intacto). */
+  .chartbox {
+    height: min(var(--chart-h, 320px), calc(100dvh - 210px)) !important;
+    min-height: 180px;
+  }
+  /* §2 Team/Home: el aterrizaje arranca arriba y las tarjetas caben — billboard
+     compacto (menos padding, H1 acotado) para no consumir el viewport. */
+  .billboard { padding: 22px 26px; gap: 22px; }
+  .billboard h1 { font-size: clamp(30px, 3.4vw, 44px); margin-top: 10px; }
 }
 
 /* --- Crest --- */
@@ -2806,9 +2818,11 @@ function Tracker({
       fontWeight: 600
     }
   }, n)))))), /*#__PURE__*/React.createElement("div", {
+    className: "chartbox",
     style: {
       width: "100%",
-      height: 380
+      height: 380,
+      "--chart-h": "380px"
     }
   }, view === "pos" ? /*#__PURE__*/React.createElement(Recharts.ResponsiveContainer, null, /*#__PURE__*/React.createElement(Recharts.ComposedChart, {
     data: posData,
@@ -3511,9 +3525,11 @@ function EvolutionChart({
       marginBottom: 10
     }
   }, team, " \xB7 ", _t("evolution_title")), /*#__PURE__*/React.createElement("div", {
+    className: "chartbox",
     style: {
       width: "100%",
-      height: 180
+      height: 180,
+      "--chart-h": "180px"
     }
   }, /*#__PURE__*/React.createElement(Recharts.ResponsiveContainer, null, /*#__PURE__*/React.createElement(Recharts.AreaChart, {
     data: rows,
@@ -4911,9 +4927,11 @@ function H2H({
       marginBottom: 12
     }
   }, _t("cumulative_points")), /*#__PURE__*/React.createElement("div", {
+    className: "chartbox",
     style: {
       width: "100%",
-      height: 280
+      height: 280,
+      "--chart-h": "280px"
     }
   }, /*#__PURE__*/React.createElement(Recharts.ResponsiveContainer, null, /*#__PURE__*/React.createElement(Recharts.LineChart, {
     data: cumD,
@@ -5392,9 +5410,11 @@ function BadRun({
       marginBottom: 12
     }
   }, _t("actual"), " ", _t("vs"), " ", _t("expected")), /*#__PURE__*/React.createElement("div", {
+    className: "chartbox",
     style: {
       width: "100%",
-      height: 320
+      height: 320,
+      "--chart-h": "320px"
     }
   }, /*#__PURE__*/React.createElement(Recharts.ResponsiveContainer, null, /*#__PURE__*/React.createElement(Recharts.ComposedChart, {
     data: funnel,
@@ -5924,9 +5944,11 @@ function Overperformance({
       marginBottom: 12
     }
   }, _t("season_by_season")), /*#__PURE__*/React.createElement("div", {
+    className: "chartbox",
     style: {
       width: "100%",
-      height: 240
+      height: 240,
+      "--chart-h": "240px"
     }
   }, /*#__PURE__*/React.createElement(Recharts.ResponsiveContainer, null, /*#__PURE__*/React.createElement(Recharts.BarChart, {
     data: seasonChart,
@@ -5984,9 +6006,11 @@ function Overperformance({
   }, _tf("trailing_nyr", {
     n: winN
   }), " \xB7 ", mode === "ms" ? _t("man_score") : mode === "norm" ? _t("normalized") : _t("cumulative")), /*#__PURE__*/React.createElement("div", {
+    className: "chartbox",
     style: {
       width: "100%",
-      height: 240
+      height: 240,
+      "--chart-h": "240px"
     }
   }, /*#__PURE__*/React.createElement(Recharts.ResponsiveContainer, null, /*#__PURE__*/React.createElement(Recharts.LineChart, {
     data: cumChart,
@@ -6658,9 +6682,11 @@ function WageEvolution({
     name: t,
     size: 14
   }), " ", t, " ", sel.length > 1 ? "×" : ""))), /*#__PURE__*/React.createElement("div", {
+    className: "chartbox",
     style: {
       width: "100%",
-      height: 260
+      height: 260,
+      "--chart-h": "260px"
     }
   }, /*#__PURE__*/React.createElement(Recharts.ResponsiveContainer, null, /*#__PURE__*/React.createElement(Recharts.LineChart, {
     data: rows,
@@ -6937,9 +6963,11 @@ function History({
       marginBottom: 12
     }
   }, _t("matches"), " \xB7 ", venue === "all" ? _t("all") : venue === "home" ? _t("home_lbl") : _t("away_lbl"), " \xB7 ", period === "all" ? _t("all") : _t("last_n_seasons") + (period === "5y" ? " 5" : " 3")), /*#__PURE__*/React.createElement("div", {
+    className: "chartbox",
     style: {
       width: "100%",
-      height: 260
+      height: 260,
+      "--chart-h": "260px"
     }
   }, /*#__PURE__*/React.createElement(Recharts.ResponsiveContainer, null, /*#__PURE__*/React.createElement(Recharts.BarChart, {
     data: chartData,
