@@ -68,6 +68,41 @@ jobs:
           print(f"OK {len(inline)} scripts inline")
           EOF
 
+      - name: Smoke test de render — boot sin excepción y #root con hijos (wmcb#42, puerta de #39)
+        # Cierra la clase «CI verde con app rota en runtime» (fuga PR #36:
+        # ReferenceError que node --check no ve — solo caza sintaxis). Es el
+        # test EXACTO que cazó el bug en #39, corrido en verde dos veces.
+        # data.json/fixtures llegan de producción (el PR jamás los toca).
+        run: |
+          npm install --no-save jsdom >/dev/null 2>&1
+          node - << 'EOF'
+          const { JSDOM } = require("jsdom");
+          const html = require("fs").readFileSync("index.html", "utf8");
+          const dom = new JSDOM(html, {
+            url: "https://footballbeyondmoney.uk/",
+            runScripts: "dangerously", resources: "usable", pretendToBeVisual: true,
+            beforeParse(w) {
+              w.fetch = (u, o) => fetch(new URL(u, "https://footballbeyondmoney.uk/").href, o);
+              w.matchMedia = w.matchMedia || (() => ({matches:false,addListener(){},removeListener(){},addEventListener(){},removeEventListener(){}}));
+              w.IntersectionObserver = w.IntersectionObserver || class {observe(){}unobserve(){}disconnect(){}};
+              w.ResizeObserver = w.ResizeObserver || class {observe(){}unobserve(){}disconnect(){}};
+              if (w.navigator && !w.navigator.serviceWorker) Object.defineProperty(w.navigator,'serviceWorker',{value:{register:()=>Promise.resolve()}});
+            }
+          });
+          const errs = [];
+          dom.window.addEventListener("error", e => errs.push(String(e.message)));
+          setTimeout(() => {
+            const root = dom.window.document.getElementById("root");
+            const kids = root ? root.children.length : 0;
+            console.log("errores:", errs);
+            console.log("root children:", kids);
+            if (errs.length > 0) { console.error("SMOKE ROJO: excepción en boot"); process.exit(1); }
+            if (kids === 0) { console.error("SMOKE ROJO: #root vacío — la app no montó"); process.exit(1); }
+            console.log("SMOKE VERDE: boot sin excepción, app montada");
+            process.exit(0);
+          }, 8000);
+          EOF
+
       - name: Guardia de SW — bump obligatorio si cambia index.html (spec §3bis.1, solo PRs)
         if: github.event_name == 'pull_request'
         env:
@@ -95,3 +130,4 @@ jobs:
         run: |
           gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --add-label ci-verde
           echo "ci-verde materializado en PR #$PR"
+
