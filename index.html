@@ -1630,6 +1630,14 @@ function Crest({
   useEffect(() => {
     setBroken(false);
   }, [name]);
+  // Deterministic color from name — hook computado ANTES de cualquier return
+  // condicional (rules-of-hooks): un equipo con/sin crest no debe alterar el nº
+  // de hooks ejecutados (evita React #300 al cambiar de liga/equipo).
+  const hue = useMemo(() => {
+    let h = 0;
+    for (let i = 0; i < (name || "").length; i++) h = h * 31 + name.charCodeAt(i) >>> 0;
+    return h % 360;
+  }, [name]);
   if (url && !broken) {
     return /*#__PURE__*/React.createElement("img", {
       className: "crest-img " + className,
@@ -1648,12 +1656,6 @@ function Crest({
       }
     });
   }
-  // Deterministic color from name
-  const hue = useMemo(() => {
-    let h = 0;
-    for (let i = 0; i < (name || "").length; i++) h = h * 31 + name.charCodeAt(i) >>> 0;
-    return h % 360;
-  }, [name]);
   const initials = (name || "?").replace(/^(FC|AC|AS|SS|RC|US|SC|SD|CD|SK|SV|TSV|VfL|VfB|RB)\s+/i, "").split(/\s+/).filter(Boolean).map(s => s[0]).slice(0, 3).join("").toUpperCase();
   const dim = size + "px";
   const fs = Math.max(8, Math.floor(size * (initials.length > 2 ? 0.30 : 0.42)));
