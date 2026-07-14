@@ -1630,6 +1630,14 @@ function Crest({
   useEffect(() => {
     setBroken(false);
   }, [name]);
+  // Deterministic color from name — hook computado ANTES de cualquier return
+  // condicional (rules-of-hooks): un equipo con/sin crest no debe alterar el nº
+  // de hooks ejecutados (evita React #300 al cambiar de liga/equipo).
+  const hue = useMemo(() => {
+    let h = 0;
+    for (let i = 0; i < (name || "").length; i++) h = h * 31 + name.charCodeAt(i) >>> 0;
+    return h % 360;
+  }, [name]);
   if (url && !broken) {
     return /*#__PURE__*/React.createElement("img", {
       className: "crest-img " + className,
@@ -1648,12 +1656,6 @@ function Crest({
       }
     });
   }
-  // Deterministic color from name
-  const hue = useMemo(() => {
-    let h = 0;
-    for (let i = 0; i < (name || "").length; i++) h = h * 31 + name.charCodeAt(i) >>> 0;
-    return h % 360;
-  }, [name]);
   const initials = (name || "?").replace(/^(FC|AC|AS|SS|RC|US|SC|SD|CD|SK|SV|TSV|VfL|VfB|RB)\s+/i, "").split(/\s+/).filter(Boolean).map(s => s[0]).slice(0, 3).join("").toUpperCase();
   const dim = size + "px";
   const fs = Math.max(8, Math.floor(size * (initials.length > 2 ? 0.30 : 0.42)));
@@ -2165,7 +2167,7 @@ function Home({
   const budgetRank = [...standings].sort((a, b) => b.w - a.w).findIndex(s => s.n === team) + 1;
   const last5 = t.m.slice(-5);
   const formPts = last5.reduce((s, m) => s + m[2], 0);
-  const next = t.r[0];
+  const next = (t.r || [])[0];
 
   // Recent run vs expected (last 5 / last 10)
   const runDiff = n => t.m.slice(-n).reduce((s, m) => s + (m[2] - m[3]), 0);
@@ -2176,7 +2178,7 @@ function Home({
   const allUpcoming = useMemo(() => {
     const arr = [];
     Object.entries(seasonData).forEach(([n, d]) => {
-      d.r.forEach(r => {
+      (d.r || []).forEach(r => {
         if (r[1] === 1) arr.push({
           home: n,
           away: r[0],
@@ -4254,7 +4256,7 @@ function Matches({
   // next matchday = earliest unplayed GW
   const nextGw = useMemo(() => {
     let g = Infinity;
-    Object.values(sd).forEach(d => d.r.forEach(r => {
+    Object.values(sd).forEach(d => (d.r || []).forEach(r => {
       if (r[5] < g) g = r[5];
     }));
     return g;
@@ -4265,7 +4267,7 @@ function Matches({
     teams.forEach(h => {
       const d = sd[h];
       p += d.m.filter(m => m[1] === 1).length;
-      tot += d.m.filter(m => m[1] === 1).length + d.r.filter(r => r[1] === 1).length;
+      tot += d.m.filter(m => m[1] === 1).length + (d.r || []).filter(r => r[1] === 1).length;
     });
     return {
       p,
@@ -4425,7 +4427,7 @@ function Matches({
     if (match) return {
       match
     };
-    const up = hd && hd.r.find(r => r[0] === a && r[1] === 1);
+    const up = hd && (hd.r || []).find(r => r[0] === a && r[1] === 1);
     if (up) return {
       up
     };
@@ -4995,7 +4997,6 @@ function H2H({
     if (!sd[b]) setB(initialB);
   }, [lg, sn, team]);
   const a = team;
-  if (!sd[a] || !sd[b]) return null;
 
   // All meetings across seasons (window-filtered), newest first
   const meetings = useMemo(() => {
@@ -5118,6 +5119,9 @@ function H2H({
       };
     });
   }, [meetings, a]);
+  // Guard AFTER all hooks (React rules-of-hooks): una pareja inválida (p. ej. al
+  // cambiar de liga desde el Header) no debe alterar el número de hooks ejecutados.
+  if (!sd[a] || !sd[b]) return null;
   const wagesA = sd[a].w,
     wagesB = sd[b].w;
   const model = D.model[lg];
@@ -5707,10 +5711,6 @@ function BadRun({
     setFrom(Math.max(1, nP - 4));
     setTo(nP);
   }, [team, lg, sn, nP]);
-  if (!t || nP === 0) return /*#__PURE__*/React.createElement(EmptyState, {
-    L: L,
-    sn: sn
-  });
   const lo = Math.max(1, Math.min(from, to));
   const hi = Math.min(nP, Math.max(from, to));
   const preset = n => {
@@ -5778,6 +5778,12 @@ function BadRun({
       oneIn
     };
   }, [df, nGames, totalRounds]);
+  // Guard AFTER all hooks (React rules-of-hooks): un equipo inválido (p. ej. al
+  // cambiar de liga desde el Header) no debe alterar el número de hooks ejecutados.
+  if (!t || nP === 0) return /*#__PURE__*/React.createElement(EmptyState, {
+    L: L,
+    sn: sn
+  });
   const RES = {
     3: "#1F8A5B",
     1: "#D8A03D",
@@ -8040,14 +8046,17 @@ function App() {
     });
   }, []);
 
-  // Keep team in sync when league changes
+  // Keep team in sync when league changes: si el equipo actual no existe en la
+  // liga/temporada nueva, resetear al default con el MISMO patrón que Welcome.
   useEffect(() => {
     if (!data) return;
     const sd = data.seasons[lg]?.[sn] || data.seasons[lg]?.[data.currentSeason];
     if (!sd) return;
     if (!sd[team]) {
       const def = window.FBM_LEAGUES[lg].def;
-      setTeam(sd[def] ? def : Object.keys(sd)[0]);
+      const _rk = officialRanks(sd); // ADR-005: equipos por rank oficial
+      const teams = Object.keys(sd).filter(t => sd[t].w > 0).sort((a, b) => (_rk[a] || 99) - (_rk[b] || 99));
+      setTeam(sd[def] ? def : teams[0] || "");
     }
   }, [lg, sn, data]);
 
