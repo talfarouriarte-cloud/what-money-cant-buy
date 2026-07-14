@@ -1139,6 +1139,14 @@
     "Select teams",
     "Seleccionar equipos"
   ],
+  "add_team": [
+    "+ Add",
+    "+ Añadir"
+  ],
+  "done_btn": [
+    "Done",
+    "Hecho"
+  ],
   "install_app": [
     "Install app",
     "Instalar app"
