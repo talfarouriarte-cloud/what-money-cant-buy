@@ -14,6 +14,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main  # ADR-002/ADR-004: workflow de producto, opera sobre main (lee fixtures frescos, publica crests.json en producción)
 
       - name: Set up Python
         uses: actions/setup-python@v5
