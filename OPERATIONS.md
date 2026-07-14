@@ -1,17 +1,24 @@
-# Operations Guide — Football beyond money v3.1
+# Operations Guide — Football beyond money
+
+## 0. Branches & data flow
+
+- **`main`** = producción (GitHub Pages, footballbeyondmoney.uk). Recibe: (a) promociones `develop→main` con gate humano (promoción = deploy), (b) los commits diarios de datos de `update.yml` y (c) los commits de `crests.json` de `build-crests.yml`. Los workflows de producto operan sobre `main` (ADR-002, ADR-004) aunque el schedule corra desde `develop` por ser la rama default: el checkout lleva `ref: main` explícito.
+- **`develop`** = rama de trabajo y default. Todo el pipeline de agentes opera solo aquí. Al arrancar cada épica se hace merge `main→develop` para partir de la realidad actual, datos incluidos (ADR-002).
 
 ## 1. Daily updates (automatic)
 
-GitHub Actions runs `update.py` twice daily at 06:00 and 08:00 UTC (dual cron for reliability — GitHub may skip scheduled runs on free-tier repos).
+GitHub Actions runs `update.py` four times daily — crons at 00:00, 00:02, 06:01 and 08:00 UTC (redundant slots because GitHub may skip scheduled runs on free-tier repos). Commits land on `main`.
 
 ### What it does
-1. Detects current season from date (Aug+ = new season, always advances)
+1. Detects current season from date: **July 15+ = new season** (ADR-008; single derivation in `derive_season()`, `update.py`)
 2. Loads wages from `all_wages.json` (missing teams filled from previous season; promoted teams get league minimum)
-3. Fetches fixture calendar + match results from football-data.org API (real-time, minutes after final whistle)
+3. Fetches fixture calendar + match results from football-data.org API (real-time, minutes after final whistle). Guard (ADR-007): if a league's calendar payload doesn't match `CURRENT_SEASON`, that league is discarded and picked up by a later cron once published.
 4. Downloads match results CSVs from football-data.co.uk as fallback (1-2 day delay)
 5. Computes expected points, MC bands, budget forecast, position probabilities, narratives
 6. Runs diagnostic checks (budget line parallelism)
-7. Commits updated `data.json` and `fixtures.json`
+7. Commits updated `data.json` and `fixtures.json` to `main`
+
+After every successful run, `build-crests.yml` is triggered automatically via `workflow_run` (ADR-010): `build_crests.py` is idempotent — it only fetches crests for teams in `data.json` ∪ current-season calendar that are missing from `crests.json`; no changes ⇒ no-op commit.
 
 ### Data source priority
 1. **football-data.org API** (primary): scores available minutes after matches. 6 API calls, well within free tier limit (10/min).
@@ -30,27 +37,28 @@ ll: 20 wages (from all_wages.json), min=14M
 ## 2. Season rollover (automatic + one manual step)
 
 ### What's automatic
-- `update.py` always advances to the new season in August (derived from date)
+- `update.py` advances to the new season on **July 15** (ADR-008; derived from date, never hardcoded)
 - CSV URLs derived automatically from season
 - Wages for returning teams filled from previous season until new wages uploaded
 - Promoted teams get league minimum wage until new wages uploaded
+- Leagues whose new calendar isn't published yet are skipped safely (ADR-007 guard) and picked up by the daily cron when they appear
+- Crests for promoted teams: fetched automatically by the `workflow_run` chain (ADR-010) on the first update that sees the new calendar
 - Frontend reads latest season from `data.json`
 
 ### What's manual (once per year)
-1. **August 1st**: GitHub Action creates reminder Issue with checklist
-2. **August**: App already processes new season matches with approximate wages (previous season + league min for promoted teams). Results and rankings work but expected points are approximate.
+1. **August 1st**: GitHub Action (`new-season.yml`) creates reminder Issue with wage checklist
+2. **July 15 → September**: App already processes the new season with approximate wages (previous season + league min for promoted teams). Between July 15 and the real kickoff (~mid-August) the current season shows 0 played matches: calendar and pre-season bands are the content.
 3. **September** (after transfer window closes): Update `all_wages.json` with accurate wage data:
    - Screenshot Capology tables for each league
    - Give to Claude to extract into JSON
    - Update the relevant season key in `all_wages.json`
-   - Commit to repo
+   - Commit to repo (`main`)
    - All data recalculated automatically with accurate wages on next daily run
-4. Check promoted/relegated teams: name mapping in `update.py`, crests
-5. Run `build-crests.yml` workflow for new team crests
+4. Check promoted/relegated teams: API→internal mapping in `name_map.json` (single source for name mapping and display names, ADR-009)
 
 ### Testing season transition
 ```bash
-python test_season_transition.py --month 8 --year 2026
+python test_season_transition.py --month 7 --year 2026
 python test_season_transition.py --month 9 --year 2026
 ```
 
@@ -115,9 +123,11 @@ p50 = deterministic, p10/p90 = MC percentile.
 | Budget & updated lines not parallel | p50 methods differed | Fixed: both deterministic |
 | DIAG shows step mismatches | MC vs deterministic rounding | ±1 per step is normal |
 | Wrong team order at same points | No GD tiebreaker | Fixed: GD from FTHG/FTAG |
-| Season shows wrong year | Hardcoded season | Fixed: auto-derived from date |
+| Season shows wrong year | Hardcoded season | Fixed: auto-derived from date (`derive_season`, ADR-008) |
 | No wages for new season | `all_wages.json` not updated | Update file, commit |
-| 0 remaining fixtures | Name mapping mismatch | Add to NAME_MAP in update.py |
+| 0 remaining fixtures | Name mapping mismatch | Add to `api_to_internal` in `name_map.json` |
+| Production data stale but crons green | Cron committing to wrong branch | `update.yml` checkout must carry `ref: main` (ADR-002); schedule runs from default branch (`develop`) |
+| A league missing after July 15 | Its new calendar not published yet | Normal (ADR-007 guard); daily cron picks it up when the API serves it |
 | Tooltips stuck on iPad | Recharts pointer-events | Fixed: global touch handler |
 | Results not updating | API key missing or expired | Check `FOOTBALL_DATA_API_KEY` secret in repo |
 | GW X -> X (no new matches) | Source not updated yet | API: minutes; CSV: Sun/Wed night |
