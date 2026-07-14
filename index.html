@@ -389,6 +389,12 @@ select.field {
 
 /* --- Large-screen density (≥1024px). Mobile (<1024px) is untouched. --- */
 .desktop-only { display: none; }
+/* Tracker SELECT TEAMS: collapsed one-row summary is desktop-only; the full
+   picker always shows on mobile and is gated behind "+ Add" on desktop.
+   NB: these carry NO `flex` utility class on purpose — `.flex{display:flex}`
+   is declared later in the sheet and would override the desktop toggles. */
+.tracker-teams-collapsed { display: none; }
+.tracker-teams-full { display: flex; }
 .tab-info {
   margin-left: auto;
   flex: 0 0 auto;
@@ -416,6 +422,30 @@ select.field {
   .head-inner { padding: 12px 0; }
   .tabbtn { padding: 11px 12px 9px; }
   .subnav { padding: 8px 0 !important; }
+  /* tabs de categoría + sub-tabs de la categoría activa en una sola fila física */
+  .tabstrip-sub {
+    align-items: center;
+    gap: 6px;
+    margin-left: 14px;
+    padding-left: 14px;
+    border-left: 1px solid var(--hair);
+  }
+  .tabstrip-sub .seg { padding: 5px 13px; font-size: 12px; }
+  /* la barra de sub-tabs propia desaparece: sus pills viven ya en la fila de tabs */
+  .subnavbar { display: none; }
+  /* Tracker SELECT TEAMS colapsado a una fila: chips seleccionados + «+ Add» */
+  .tracker-teams-collapsed { display: flex; align-items: center; flex-wrap: wrap; }
+  .tracker-teams-full { display: none; }
+  .tracker-teams-full.is-open { display: flex; }
+  /* §1: el bloque de título de página (eyebrow + H1/H2 + About) desaparece en
+     desktop — el contexto ya lo da la navegación. Los controles que compartían
+     fila con el título (selectores, presets) permanecen. */
+  .sh-title { display: none; }
+  .section-head { margin: 4px 0 12px; }
+  /* NB: el colapso del margen en vistas "title-only" (section-head sin control
+     hermano visible) queda para el encaje visual §2. No sirve ":empty": .sh-title
+     sigue en el DOM (display:none, no eliminado), así que el nodo cuenta como hijo
+     y ":empty" nunca dispararía — se retira para no dejar intención engañosa. */
   /* "About this tab" bajo demanda: se oculta el toggle in-view, va al ⓘ de la fila de tabs */
   .abouttab { display: none; }
 }
@@ -2201,6 +2231,9 @@ function Tracker({
   const cur = L.cur;
   const [view, setView] = useState("pts"); // pts | pos
   const [compare, setCompare] = useState([team]);
+  // Desktop (≥1024px): SELECT TEAMS collapses to one row (selected chips + "+ Add").
+  // teamsOpen expands the full picker. On <1024px the full picker always shows.
+  const [teamsOpen, setTeamsOpen] = useState(false);
   React.useEffect(() => {
     setCompare([team]);
   }, [team, lg, sn]);
@@ -2628,7 +2661,9 @@ function Tracker({
     className: "col gap-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "section-head"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sh-title"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "eyebrow"
   }, L.name, " \xB7 ", sn), /*#__PURE__*/React.createElement("h2", null, _t("tab_tracker")), /*#__PURE__*/React.createElement(AboutTab, {
     infoKey: "info_tracker"
@@ -2644,14 +2679,38 @@ function Tracker({
       padding: 16
     }
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex between center",
+    className: "flex between center tracker-teams-head",
     style: {
-      marginBottom: 12
+      marginBottom: 12,
+      flexWrap: "wrap",
+      gap: 8
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "eyebrow"
-  }, _t("select_teams"))), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2",
+  }, _t("select_teams")), /*#__PURE__*/React.createElement("div", {
+    className: "tracker-teams-collapsed gap-2 center",
+    style: {
+      flexWrap: "wrap"
+    }
+  }, compare.map(n => /*#__PURE__*/React.createElement("button", {
+    key: n,
+    onClick: () => {
+      if (compare.length > 1) setCompare(compare.filter(x => x !== n));
+    },
+    "aria-disabled": compare.length === 1 ? "true" : undefined,
+    style: compare.length === 1 ? {
+      cursor: "default"
+    } : undefined,
+    className: "chip is-active"
+  }, /*#__PURE__*/React.createElement(Crest, {
+    name: n,
+    size: 16
+  }), /*#__PURE__*/React.createElement("span", null, n))), /*#__PURE__*/React.createElement("button", {
+    className: "chip",
+    "aria-expanded": teamsOpen,
+    onClick: () => setTeamsOpen(o => !o)
+  }, teamsOpen ? _t("done_btn") : _t("add_team")))), /*#__PURE__*/React.createElement("div", {
+    className: "gap-2 tracker-teams-full" + (teamsOpen ? " is-open" : ""),
     style: {
       flexWrap: "wrap"
     }
@@ -3181,7 +3240,9 @@ function Predictions({
     className: "col gap-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "section-head"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sh-title"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "eyebrow"
   }, L.name, " \xB7 ", sn), /*#__PURE__*/React.createElement("h2", null, _t("tab_predictions")))), /*#__PURE__*/React.createElement(AboutTab, {
     infoKey: "info_predictions"
@@ -3857,7 +3918,9 @@ function Matches({
     className: "col gap-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "section-head"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sh-title"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "eyebrow"
   }, L.name, " \xB7 ", sn), /*#__PURE__*/React.createElement("h2", null, _t("tab_matches"))), /*#__PURE__*/React.createElement("div", {
     className: "text-mut mono",
@@ -4691,7 +4754,7 @@ function H2H({
   }, /*#__PURE__*/React.createElement("div", {
     className: "section-head"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "eyebrow"
+    className: "eyebrow sh-title"
   }, _t("tab_h2h")), /*#__PURE__*/React.createElement("h2", null, a, " ", _t("vs"), " ", /*#__PURE__*/React.createElement("select", {
     value: b,
     onChange: e => setB(e.target.value),
@@ -5216,7 +5279,9 @@ function BadRun({
     className: "col gap-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "section-head"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sh-title"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "eyebrow"
   }, L.name, " \xB7 ", sn), /*#__PURE__*/React.createElement("h2", null, _t("tab_badrun")), /*#__PURE__*/React.createElement(AboutTab, {
     infoKey: "info_badrun"
@@ -5750,7 +5815,9 @@ function Overperformance({
     className: "col gap-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "section-head"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sh-title"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "eyebrow"
   }, L.name), /*#__PURE__*/React.createElement("h2", null, _t("tab_explorer")), /*#__PURE__*/React.createElement(AboutTab, {
     infoKey: "info_explorer"
@@ -6116,7 +6183,9 @@ function Calculator({
     className: "col gap-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "section-head"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sh-title"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "eyebrow"
   }, L.name), /*#__PURE__*/React.createElement("h2", null, _t("tab_calc")), /*#__PURE__*/React.createElement("div", {
     className: "text-mut",
@@ -6409,7 +6478,9 @@ function DataSources({
     className: "col gap-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "section-head"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sh-title"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "eyebrow"
   }, L.name, " \xB7 ", sn), /*#__PURE__*/React.createElement("h2", null, _t("data_title"))), /*#__PURE__*/React.createElement(SeasonStepper, {
     sn: sn,
@@ -6798,7 +6869,9 @@ function History({
     className: "col gap-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "section-head"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sh-title"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "eyebrow"
   }, _t("tab_history")), /*#__PURE__*/React.createElement("h2", null, _t("result_distribution")), /*#__PURE__*/React.createElement(AboutTab, {
     infoKey: "info_history"
@@ -7657,6 +7730,11 @@ function TabStrip({
   const infoKey = VIEW_INFO[tab];
   const infoText = infoKey && window._t ? window._t(infoKey) : "";
   const hasInfo = infoText && infoText !== infoKey;
+  // Sub-tabs of the active group, rendered in-line to the right of the category
+  // tabs on desktop (≥1024px) so the whole nav collapses to one physical row.
+  // On <1024px this is hidden (desktop-only) and the standalone SubNav bar shows.
+  const g = GROUPS.find(x => x.id === group);
+  const subViews = g && g.views.length > 1 ? g.views : null;
   return /*#__PURE__*/React.createElement("div", {
     className: "tabstrip"
   }, /*#__PURE__*/React.createElement("div", {
@@ -7667,7 +7745,13 @@ function TabStrip({
     key: gr.id,
     className: "tabbtn " + (group === gr.id ? "is-active" : ""),
     onClick: () => setTab(gr.views[0].id)
-  }, glabel(gr.id))), hasInfo ? /*#__PURE__*/React.createElement("button", {
+  }, glabel(gr.id))), subViews ? /*#__PURE__*/React.createElement("div", {
+    className: "tabstrip-sub desktop-only"
+  }, subViews.map(v => /*#__PURE__*/React.createElement("button", {
+    key: v.id,
+    className: "seg " + (tab === v.id ? "is-active" : ""),
+    onClick: () => setTab(v.id)
+  }, vlabel(v)))) : null, hasInfo ? /*#__PURE__*/React.createElement("button", {
     className: "tab-info desktop-only" + (info ? " is-active" : ""),
     "aria-label": _t("about_this_tab"),
     "aria-expanded": info,
