@@ -2167,7 +2167,7 @@ function Home({
   const budgetRank = [...standings].sort((a, b) => b.w - a.w).findIndex(s => s.n === team) + 1;
   const last5 = t.m.slice(-5);
   const formPts = last5.reduce((s, m) => s + m[2], 0);
-  const next = t.r[0];
+  const next = (t.r || [])[0];
 
   // Recent run vs expected (last 5 / last 10)
   const runDiff = n => t.m.slice(-n).reduce((s, m) => s + (m[2] - m[3]), 0);
@@ -2178,7 +2178,7 @@ function Home({
   const allUpcoming = useMemo(() => {
     const arr = [];
     Object.entries(seasonData).forEach(([n, d]) => {
-      d.r.forEach(r => {
+      (d.r || []).forEach(r => {
         if (r[1] === 1) arr.push({
           home: n,
           away: r[0],
