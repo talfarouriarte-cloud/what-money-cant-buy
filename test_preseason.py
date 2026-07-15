@@ -67,8 +67,9 @@ def test_roster_from_calendar_not_wages():
     cal = _synthetic_calendar(teams)
     fx = {'ll': {CS: {'calendar': cal}}}
     # 'Z' tiene salario pero NO está en el calendario => no debe entrar.
-    # 'D' está en el calendario pero NO tiene salario propio => entra con
-    # fallback (0 aquí; en producción lo rellena load_wages desde la anterior).
+    # 'D' está en el calendario pero NO tiene salario propio => entra con el
+    # fallback de diseño para ascendidos: el mínimo de liga `_min` (correctivo
+    # #62; antes caía a 0 y rompía presupuesto/ratios de los ascendidos).
     wages = {'A': 100.0, 'B': 50.0, 'C': 30.0, 'Z': 999.0, '_min': 30.0}
 
     block = update.build_preseason_block(fx, wages, 'll')
@@ -77,9 +78,14 @@ def test_roster_from_calendar_not_wages():
         f"roster {sorted(block.keys())} != calendario {teams}"
     assert 'Z' not in block, "un equipo con salario pero sin calendario NO debe entrar"
     assert 'D' in block, "un equipo del calendario sin salario propio DEBE entrar"
-    assert block['D']['w'] == 0, f"D sin salario propio => w=0, got {block['D']['w']}"
+    # Ningún equipo del bloque puede quedar con w=0 (presupuesto/ratios rotos).
+    assert all(b['w'] != 0 for b in block.values()), \
+        f"ningún equipo debe tener w=0; got {{t: b['w'] for t, b in block.items()}}"
+    # Un equipo ausente del dict de salarios recibe exactamente round(_min).
+    assert block['D']['w'] == round(wages['_min']), \
+        f"D sin salario propio => w=round(_min)={round(wages['_min'])}, got {block['D']['w']}"
     assert block['A']['w'] == 100, f"A w esperado 100, got {block['A']['w']}"
-    print("OK (1) roster derivado del calendario; salarios sueltos ignorados")
+    print("OK (1) roster derivado del calendario; ascendidos con w=round(_min), no 0")
 
 
 def test_team_fields_and_r():

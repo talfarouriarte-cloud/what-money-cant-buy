@@ -1268,7 +1268,7 @@ def build_preseason_block(fixtures_cal, wages, lg, season=CURRENT_SEASON):
     for t in teams:
         result[t] = {
             'a': [], 'e': [], 'm': [], 'gd': 0,
-            'w': round(wages.get(t, wages.get(fix_name(t), 0))),
+            'w': round(wages.get(t, wages.get(fix_name(t), wages.get('_min', 20)))),
         }
     return result
 
