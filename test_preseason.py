@@ -221,6 +221,61 @@ def test_cumulative_ignores_zero_played():
     print("OK (6) cumulative intacto: 0 jugados no aporta nada")
 
 
+def test_preseason_ranks_permutation():
+    """(8) issue #69: el bloque pre-season recibe `rank` como permutación
+    completa 1..N (p50 de bands desc; empate w desc; empate nombre asc) y el
+    equipo con mayor p50 queda `rank == 1`. Sin esto, officialRanks cae al
+    fallback pts->gd y con todos a 0 la clasificación sale en orden de
+    inserción del calendario (orden aparentemente aleatorio en producción)."""
+    teams = ['A', 'B', 'C', 'D']
+    cal = _synthetic_calendar(teams)
+    fx = {'ll': {CS: {'calendar': cal}}}
+    wages = {'A': 100.0, 'B': 50.0, 'C': 30.0, 'D': 20.0, '_min': 20.0}
+    p = update.PARAMS['ll']
+
+    block = update.build_preseason_block(fx, wages, 'll')
+    remaining = update.get_remaining_fixtures(block, fx, 'll')
+
+    np.random.seed(0)
+    bands = update.run_mc_simulation(block, wages, p['beta'], p['theta1'], p['theta2'], remaining)
+
+    update.attach_preseason_ranks(block, bands)
+
+    ranks = [block[t]['rank'] for t in teams]
+    assert sorted(ranks) == list(range(1, len(teams) + 1)), \
+        f"`rank` debe ser permutación completa 1..N, got {sorted(ranks)}"
+    # Todo equipo tiene rank entero.
+    assert all(isinstance(block[t]['rank'], int) for t in teams), \
+        "cada `rank` debe ser entero"
+    # El equipo con mayor p50 final es rank 1.
+    top = max(teams, key=lambda t: bands[t]['p50'][-1])
+    assert block[top]['rank'] == 1, \
+        f"el equipo con mayor p50 ({top}) debe ser rank 1, got {block[top]['rank']}"
+    # El orden de `rank` respeta el p50 descendente (criterio primario).
+    by_rank = sorted(teams, key=lambda t: block[t]['rank'])
+    p50s = [bands[t]['p50'][-1] for t in by_rank]
+    assert p50s == sorted(p50s, reverse=True), \
+        f"rank ascendente debe seguir p50 descendente, got {list(zip(by_rank, p50s))}"
+
+    # Determinismo de desempates: p50 empatado => w desc; w empatado => nombre asc.
+    tie_block = {
+        'Zeta': {'w': 50}, 'Alfa': {'w': 50},   # mismo p50, mismo w => nombre asc
+        'Beta': {'w': 90}, 'Gamma': {'w': 10},  # mismo p50, w decide
+    }
+    tie_bands = {t: {'p50': [0.0, 7.0]} for t in tie_block}  # p50 final idéntico
+    update.attach_preseason_ranks(tie_block, tie_bands)
+    assert [tie_block[t]['rank'] for t in ['Beta', 'Alfa', 'Zeta', 'Gamma']] == [1, 2, 3, 4], \
+        ("desempate: w desc y luego nombre asc => "
+         f"Beta<Alfa<Zeta<Gamma, got {{t: tie_block[t]['rank'] for t in tie_block}}")
+
+    # No-op sin señal del modelo: si a un equipo le falta p50, no se asigna rank.
+    partial = {'A': {'w': 10}, 'B': {'w': 20}}
+    update.attach_preseason_ranks(partial, {'A': {'p50': [1.0]}})  # falta B
+    assert all('rank' not in partial[t] for t in partial), \
+        "sin p50 completo no se inventa orden (officialRanks cae al fallback)"
+    print("OK (8) rank pre-season: permutación 1..N, mayor p50 => rank 1, desempates deterministas")
+
+
 def test_guard_preserves_real_block_on_outage():
     """(7) Regresión 🔴 #1: con bloque real (N jugados) ya en data.json y sin
     fuente (API+CSV caídos a la vez), la rama pre-season NO se activa — se
@@ -268,5 +323,6 @@ if __name__ == '__main__':
     test_narratives_empty_for_zero_played()
     test_wage_status_stale_on_fallback()
     test_cumulative_ignores_zero_played()
+    test_preseason_ranks_permutation()
     test_guard_preserves_real_block_on_outage()
-    print("\nTODOS LOS TESTS OK (pre-season, issue #59)")
+    print("\nTODOS LOS TESTS OK (pre-season, issue #59 + #69)")

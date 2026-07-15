@@ -616,6 +616,8 @@ select.field {
 
 /* utility */
 .grid-cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+/* Home cards: exactamente 3 columnas en >=1024px (3+3), fluido por debajo. No afecta al otro uso de .grid-cards. */
+@media (min-width: 1024px) { .grid-cards.home3 { grid-template-columns: repeat(3, 1fr); } }
 .row-gap-xs { gap: 6px; }
 .flex { display: flex; }
 .between { justify-content: space-between; }
@@ -1753,7 +1755,7 @@ function Home({
   }, cur, t.w, "M"))))), /*#__PURE__*/React.createElement(AboutTab, {
     infoKey: "info_home"
   }), /*#__PURE__*/React.createElement("div", {
-    className: "grid-cards"
+    className: "grid-cards home3"
   }, /*#__PURE__*/React.createElement(NarrativeCard, {
     q: _tf("card_howis", {
       team
@@ -4429,7 +4431,12 @@ function H2H({
   const sd = D.seasons[lg][sn] || {};
   const L = window.FBM_LEAGUES[lg];
   const standings = useMemo(() => computeStandings(sd), [sd]);
-  const initialB = standings.find(s => s.n !== team)?.n;
+  const initialB = (() => {
+    const nx = sd[team] && sd[team].r && sd[team].r[0];
+    const opp = nx && nx[0];
+    if (opp && opp !== team && sd[opp]) return opp;
+    return standings.find(s => s.n !== team)?.n;
+  })();
   const [b, setB] = useState(() => {
     const h = window.hashGet && window.hashGet("h2b");
     return h && sd[h] && h !== team ? h : initialB;
@@ -5229,9 +5236,14 @@ function BadRun({
   }, [df, nGames, totalRounds]);
   // Guard AFTER all hooks (React rules-of-hooks): un equipo inválido (p. ej. al
   // cambiar de liga desde el Header) no debe alterar el número de hooks ejecutados.
-  if (!t || nP === 0) return /*#__PURE__*/React.createElement(EmptyState, {
+  if (!t) return /*#__PURE__*/React.createElement(EmptyState, {
     L: L,
     sn: sn
+  });
+  if (nP === 0) return /*#__PURE__*/React.createElement(EmptyState, {
+    L: L,
+    sn: sn,
+    msgKey: "season_not_started"
   });
   const RES = {
     3: "#1F8A5B",
@@ -5622,7 +5634,8 @@ function BadRun({
 }
 function EmptyState({
   L,
-  sn
+  sn,
+  msgKey = "not_in_league"
 }) {
   return /*#__PURE__*/React.createElement("div", {
     className: "card",
@@ -5632,7 +5645,7 @@ function EmptyState({
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-mut"
-  }, _t("not_in_league"), " ", sn, "."));
+  }, _t(msgKey), msgKey === "not_in_league" ? " " + sn + "." : ""));
 }
 
 /* ---------- Overperformance (explorer) — 3 metrics from cumulative, trailing windows ---------- */
