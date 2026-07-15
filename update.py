@@ -564,6 +564,34 @@ def attach_ranks(season, stats, matches, lg):
     return season
 
 
+def attach_preseason_ranks(block, bands):
+    """Asigna `rank` 1..N a cada equipo del bloque pre-season (0 jugados)
+    según el orden ESPERADO del modelo (ADR-005·R·1, issue #69).
+
+    Sin resultados, `officialRanks` (index.html) caería al fallback pts->gd;
+    con todos los equipos a 0 puntos ese fallback conserva el orden de
+    inserción del calendario (clasificación en orden aparentemente aleatorio).
+    Este `rank` fija en su lugar el orden esperado del modelo. Cuando aparezcan
+    resultados reales el camino normal (attach_ranks/compute_league_ranks)
+    sobreescribe el bloque íntegro con el rank OFICIAL — sin migración.
+
+    Criterio determinista, permutación completa 1..N:
+      1. p50 final de `bands` (puntos proyectados a fin de temporada) descendente;
+      2. empate => salario `w` descendente;
+      3. empate => nombre ascendente.
+
+    No-op si el bloque está vacío o a algún equipo le falta su p50 en `bands`
+    (sin señal del modelo no se inventa orden; `officialRanks` cae al fallback).
+    """
+    teams = list(block.keys())
+    if not teams or any(t not in bands or not bands[t].get('p50') for t in teams):
+        return block
+    order = sorted(teams, key=lambda t: (-bands[t]['p50'][-1], -block[t]['w'], t))
+    for r, t in enumerate(order, 1):
+        block[t]['rank'] = r
+    return block
+
+
 def recalculate_budget_bands(fixtures_cal, wages, beta, t1, t2, lg, season_data, remaining_fixtures, n_sims=10000):
     """Recalculate budget-only bands using the SAME match order as actual season.
     For played matches: uses opponent order from season_data.m array.
@@ -1392,7 +1420,8 @@ def update():
         print(f"  {lg}: {len(wages)-1} wages (from all_wages.json), min={wages['_min']}M")
         
         p = PARAMS[lg]
-        
+        is_preseason = False
+
         # Prefer API results (real-time) over CSV (1-2 day delay)
         if lg in api_results and len(api_results[lg]) > 0:
             print(f"  Using football-data.org API results ({len(api_results[lg])} matches)")
@@ -1414,6 +1443,7 @@ def update():
             if not result:
                 print(f"  Skipping {lg}: calendario pre-season sin equipos")
                 continue
+            is_preseason = True
         else:
             print(f"  Skipping {lg}: no data source available")
             continue
@@ -1439,7 +1469,16 @@ def update():
         remaining = get_remaining_fixtures(result, fixtures_cal, lg)
         new_bands = run_mc_simulation(result, wages, p['beta'], p['theta1'], p['theta2'], remaining)
         data['bands'][lg] = new_bands
-        
+
+        # Pre-season (issue #69): sin resultados el bloque no lleva `rank`
+        # (attach_ranks solo corre en el camino con partidos), así que
+        # officialRanks caería al fallback pts->gd y con todos a 0 preserva el
+        # orden de inserción del calendario. Fijamos aquí el orden ESPERADO del
+        # modelo a partir del p50 de las bandas recién calculadas (ADR-005·R·1).
+        # El camino con resultados ya trae el rank OFICIAL y no se toca.
+        if is_preseason:
+            attach_preseason_ranks(result, new_bands)
+
         sb = new_bands[sample]
         print(f"  MC: {sample} p10/p50/p90 = {sb['p10'][-1]}/{sb['p50'][-1]}/{sb['p90'][-1]}")
         

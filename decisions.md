@@ -155,6 +155,17 @@ Fact-based (spec §2.1): la tabla mostrada debe coincidir con la oficial. Backen
 
 Medio: revertir la emisión de `rank` en `data.json` y devolver los sorts al frontend es medio día; el compromiso real es el contrato de datos (`rank` oficial en `data.json`) que el frontend pasará a asumir.
 
+### Revisión R·1 (2026-07-15, issue #69) — el campo `rank` en pre-season
+
+**Contexto de la revisión.** El frontend ordena Tracker, tabla principal y Predicciones por el campo `rank` que este ADR fija en `data.json` (vía `officialRanks`, `index.html`). El camino con resultados lo emite (`attach_ranks`/`compute_league_ranks`), pero el bloque pre-season (0 partidos jugados en la liga, issue #59) no lo llevaba: `officialRanks` caía entonces al fallback puntos→diferencia general y, con todos los equipos a 0, ese fallback conserva el orden de inserción del calendario — clasificación en orden aparentemente aleatorio en producción.
+
+**Aclaración de alcance (no toca la cadena de desempate de este ADR).** El campo `rank` tiene dos regímenes, ambos oficiales para el frontend:
+
+- **Con resultados** (≥1 partido jugado en la liga): `rank` es el **ranking oficial** resuelto por la cadena `TIEBREAKERS[lg]` de este ADR (`attach_ranks`/`compute_league_ranks`, sin cambios).
+- **Pre-season** (0 partidos jugados en la liga): no hay resultados que desempatar, así que `rank` representa el **orden ESPERADO del modelo**. Se asigna en `attach_preseason_ranks` (`update.py`) como permutación completa 1..N con este criterio, verbatim: p50 de `bands` descendente; empate → salario `w` descendente; empate → nombre ascendente. Es determinista y no invoca `attach_ranks`/`compute_league_ranks`.
+
+Cuando aparece el primer resultado real, el camino normal sobreescribe el bloque íntegro con el `rank` oficial: no hay migración ni estado intermedio persistido. Con resultados presentes la salida es byte-idéntica a la previa a esta revisión.
+
 ## ADR-006 (2026-07-11) — Desempate del forecast: puntos simulados → rank oficial actual
 
 ### Contexto
