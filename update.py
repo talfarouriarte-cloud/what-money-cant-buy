@@ -123,11 +123,18 @@ def detect_wage_status(lg, season, _cache={}):
             return 'fresh'
     lg_key = WAGES_LG_MAP.get(lg, lg)
     cur_wages = _cache['data'].get(lg_key, {}).get(season, {})
-    if not cur_wages:
-        return 'fresh'
     prev_y = int(season[:2]) - 1
     prev_sn = f'{prev_y:02d}/{prev_y+1:02d}'
     prev_wages = _cache['data'].get(lg_key, {}).get(prev_sn, {})
+    # Camino de fallback (espejo de load_wages, issue #59 pto 5): si la temporada
+    # tiene <15 salarios propios y existe la anterior, load_wages rellena desde
+    # ella => los salarios mostrados NO son de esta temporada => 'stale'. No
+    # devolver 'fresh' por mera ausencia de la clave en all_wages.json si hubo
+    # fallback (bloque pre-season sin salarios propios todavía).
+    if len(cur_wages) < 15 and prev_wages:
+        return 'stale'
+    if not cur_wages:
+        return 'fresh'
     if not prev_wages:
         return 'fresh'
     common = set(cur_wages.keys()) & set(prev_wages.keys())
@@ -568,19 +575,20 @@ def recalculate_budget_bands(fixtures_cal, wages, beta, t1, t2, lg, season_data,
     bands = {}
     for team in season_data:
         td = season_data[team]
-        if not td.get('m'):
-            continue
-        
-        # Build fixture list: played matches (same order as actual) + remaining
+
+        # Build fixture list: played matches (same order as actual) + remaining.
+        # Pre-season (issue #59): `m` puede estar vacío; el calendario restante
+        # aporta la temporada completa, así que NO se salta por `m` vacío — la
+        # guarda de `n == 0` cubre los equipos sin ningún partido.
         fixes = []
-        for m in td['m']:
+        for m in td.get('m', []):
             opp = m[0]
             ih = m[1]
             fixes.append((opp, ih))
-        
+
         for opp, is_home, *_ in remaining_fixtures.get(team, []):
             fixes.append((opp, is_home))
-        
+
         n = len(fixes)
         if n == 0:
             continue
@@ -1037,7 +1045,12 @@ def generate_narratives_all(data):
     for lg in PARAMS:
         sd = data['seasons'][lg].get(CURRENT_SEASON, {})
         if not sd: continue
-        
+        # Pre-season (issue #59): si el bloque de temporada actual tiene 0
+        # partidos jugados, no hay narrativa que contar => {} para la liga.
+        if not any(sd[t].get('a') for t in sd):
+            result[lg] = {}
+            continue
+
         pos = data.get('pos', {}).get(lg, {}).get(CURRENT_SEASON, {})
         cur = pos.get('cur', {})
         if not cur: continue
@@ -1228,6 +1241,91 @@ def compute_all_position_probs(data, fixtures_cal):
     return pos
 
 
+def build_preseason_block(fixtures_cal, wages, lg, season=CURRENT_SEASON):
+    """Construye el bloque de la temporada actual SIN resultados (0 jugados) a
+    partir del calendario (issue #59).
+
+    Roster derivado del calendario (nombres vía fix_name/name_map.json), NUNCA
+    de las claves de salarios: un equipo con salario pero sin partidos en el
+    calendario no entra, y un equipo del calendario sin salario propio entra con
+    el salario de fallback ya cargado por load_wages. Por equipo: a=[], e=[],
+    m=[], gd=0, w=salario fallback. El campo `r` (partidos restantes con
+    probabilidades) lo rellena el bucle de update() vía build_remaining_r,
+    reutilizando la construcción de r_list existente. Devuelve {} si el
+    calendario no aporta equipos."""
+    cal_data = fixtures_cal.get(lg, {}).get(season, {})
+    cal = cal_data.get('calendar', cal_data) if isinstance(cal_data, dict) else cal_data
+    teams = []
+    seen = set()
+    for gw_data in cal or []:
+        for pair in gw_data.get('matches', []):
+            for name in (pair[0], pair[1]):
+                t = fix_name(name)
+                if t not in seen:
+                    seen.add(t)
+                    teams.append(t)
+    result = {}
+    for t in teams:
+        result[t] = {
+            'a': [], 'e': [], 'm': [], 'gd': 0,
+            'w': round(wages.get(t, wages.get(fix_name(t), 0))),
+        }
+    return result
+
+
+def build_remaining_r(team, rem, wages, p):
+    """Construye la lista `r` (partidos restantes con probabilidades) de un
+    equipo a partir de sus fixtures restantes. Extraído verbatim del bucle de
+    update() para reutilizarlo desde el camino pre-season (issue #59) y poder
+    testearlo aislado. Cada entrada: [opp, isHome, pWin, pDraw, pLoss, gw, date]."""
+    r_list = []
+    for opp, is_home, gw_num, match_date, *_ in rem:
+        wh = wages.get(team, wages.get('_min', 20)) if is_home else wages.get(opp, wages.get(fix_name(opp), wages.get('_min', 20)))
+        wa = wages.get(opp, wages.get(fix_name(opp), wages.get('_min', 20))) if is_home else wages.get(team, wages.get('_min', 20))
+        x = np.log2(wa / wh)
+        ph = float(round(1 - expit(p['theta2'] + p['beta'] * x), 2))
+        pd_ = float(round(expit(p['theta2'] + p['beta'] * x) - expit(p['theta1'] + p['beta'] * x), 2))
+        pa = float(round(1 - ph - pd_, 2))
+        # r entry: [opp, isHome, pWin, pDraw, pLoss, matchday, date]
+        if is_home:
+            r_list.append([fix_name(opp), 1, ph, pd_, pa, gw_num, match_date[:10] if match_date else ''])
+        else:
+            r_list.append([fix_name(opp), 0, pa, pd_, ph, gw_num, match_date[:10] if match_date else ''])
+    return r_list
+
+
+def update_cumulative(data):
+    """Actualiza data['cumulative'] con la temporada actual. Una temporada con
+    0 partidos jugados (bloque pre-season, issue #59) no aporta nada: la guarda
+    `not t.get('a')` salta esos equipos, así que el acumulado queda intacto."""
+    if 'cumulative' not in data:
+        data['cumulative'] = {}
+    for lg in PARAMS:
+        if lg not in data['cumulative']:
+            data['cumulative'][lg] = {}
+        sd = data['seasons'][lg].get(CURRENT_SEASON, {})
+        for team in sd:
+            t = sd[team]
+            if not t.get('a') or not t.get('e') or not t.get('w'):
+                continue
+            act = t['a'][-1]
+            exp = t['e'][-1]
+            wage = t['w']
+
+            if team not in data['cumulative'][lg]:
+                data['cumulative'][lg][team] = [0, 0, 0, []]
+
+            c = data['cumulative'][lg][team]
+            c[3] = [s for s in c[3] if s[0] != CURRENT_SEASON]
+            c[3].append([CURRENT_SEASON, wage, round(exp, 1), act])
+            cumOP = sum(s[3] - s[2] for s in c[3])
+            nS = len(c[3])
+            avgExp = sum(s[2] for s in c[3]) / nS if nS > 0 else 1
+            c[0] = round(cumOP, 1)
+            c[1] = nS
+            c[2] = round((cumOP / nS) / avgExp * 100, 1) if avgExp > 0 else 0
+
+
 def update():
     print(f"=== Update: {datetime.now().strftime('%Y-%m-%d %H:%M')} ===")
     
@@ -1289,6 +1387,15 @@ def update():
         elif files[lg]:
             print(f"  Using football-data.co.uk CSV (API unavailable)")
             result = process_season(files[lg], wages, p['beta'], p['theta1'], p['theta2'], fixtures_cal, lg)
+        elif fixtures_cal and lg in fixtures_cal and CURRENT_SEASON in fixtures_cal[lg]:
+            # Pre-season (issue #59): sin resultados API ni CSV pero con calendario
+            # de la temporada actual => bloque pre-season (0 jugados) desde el
+            # calendario. Zona de rigor: esta rama SOLO se activa sin resultados.
+            print(f"  {lg}: sin resultados — construyendo bloque pre-season desde el calendario")
+            result = build_preseason_block(fixtures_cal, wages, lg)
+            if not result:
+                print(f"  Skipping {lg}: calendario pre-season sin equipos")
+                continue
         else:
             print(f"  Skipping {lg}: no data source available")
             continue
@@ -1320,21 +1427,7 @@ def update():
         
         # Add remaining fixtures with probabilities to each team
         for team in result:
-            rem = remaining.get(team, [])
-            r_list = []
-            for opp, is_home, gw_num, match_date, *_ in rem:
-                wh = wages.get(team, wages.get('_min', 20)) if is_home else wages.get(opp, wages.get(fix_name(opp), wages.get('_min', 20)))
-                wa = wages.get(opp, wages.get(fix_name(opp), wages.get('_min', 20))) if is_home else wages.get(team, wages.get('_min', 20))
-                x = np.log2(wa / wh)
-                ph = float(round(1 - expit(p['theta2'] + p['beta'] * x), 2))
-                pd_ = float(round(expit(p['theta2'] + p['beta'] * x) - expit(p['theta1'] + p['beta'] * x), 2))
-                pa = float(round(1 - ph - pd_, 2))
-                # r entry: [opp, isHome, pWin, pDraw, pLoss, matchday, date]
-                if is_home:
-                    r_list.append([fix_name(opp), 1, ph, pd_, pa, gw_num, match_date[:10] if match_date else ''])
-                else:
-                    r_list.append([fix_name(opp), 0, pa, pd_, ph, gw_num, match_date[:10] if match_date else ''])
-            result[team]['r'] = r_list
+            result[team]['r'] = build_remaining_r(team, remaining.get(team, []), wages, p)
         data['seasons'][lg][CURRENT_SEASON] = result
         print(f"  Added remaining fixtures: {len(result[sample].get('r',[]))} per team")
     
@@ -1377,32 +1470,7 @@ def update():
     
     # Update cumulative with current season
     print(f"  Updating cumulative with {CURRENT_SEASON}...")
-    if 'cumulative' not in data:
-        data['cumulative'] = {}
-    for lg in PARAMS:
-        if lg not in data['cumulative']:
-            data['cumulative'][lg] = {}
-        sd = data['seasons'][lg].get(CURRENT_SEASON, {})
-        for team in sd:
-            t = sd[team]
-            if not t.get('a') or not t.get('e') or not t.get('w'):
-                continue
-            act = t['a'][-1]
-            exp = t['e'][-1]
-            wage = t['w']
-            
-            if team not in data['cumulative'][lg]:
-                data['cumulative'][lg][team] = [0, 0, 0, []]
-            
-            c = data['cumulative'][lg][team]
-            c[3] = [s for s in c[3] if s[0] != CURRENT_SEASON]
-            c[3].append([CURRENT_SEASON, wage, round(exp, 1), act])
-            cumOP = sum(s[3] - s[2] for s in c[3])
-            nS = len(c[3])
-            avgExp = sum(s[2] for s in c[3]) / nS if nS > 0 else 1
-            c[0] = round(cumOP, 1)
-            c[1] = nS
-            c[2] = round((cumOP / nS) / avgExp * 100, 1) if avgExp > 0 else 0
+    update_cumulative(data)
     
     # Detect stale wages (>=80% identical to previous season)
     print("  Checking wage freshness...")
