@@ -1247,6 +1247,10 @@
     "Not in this league in",
     "No estaba en esta liga en"
   ],
+  "season_not_started": [
+    "Season not started yet.",
+    "Temporada no comenzada."
+  ],
   "go_current": [
     "Go to current season",
     "Ir a la temporada actual"
