@@ -276,6 +276,53 @@ def test_preseason_ranks_permutation():
     print("OK (8) rank pre-season: permutación 1..N, mayor p50 => rank 1, desempates deterministas")
 
 
+def test_compute_position_probs_cur_equals_pre_preseason():
+    """(9) issue #76: en pre-season (0 jugados) las columnas POS de «Previsión
+    actualizada» (cur) y «Previsión presupuesto» (pre) son conceptualmente la
+    misma previsión. Dos simulaciones MC independientes divergían por ruido en
+    zonas apiñadas de la tabla (±1 puesto) aunque el p50 fuese idéntico. El
+    contrato: compute_all_position_probs NO llama a simulate_current_positions
+    en pre-season — asigna pos[lg][CS]['cur'] como DEEP COPY de ['pre'] y deja
+    hist=[]. En cuanto hay ≥1 jugado (_has_real_block True) vuelve el camino
+    normal."""
+    teams = [f'T{i:02d}' for i in range(16)]
+    cal = _synthetic_calendar(teams)
+    fx = {'ll': {CS: {'calendar': cal}}}
+    wages = {t: 100 - 3 * i for i, t in enumerate(teams)}
+
+    # Bloque pre-season: 0 jugados (a=[]) => _has_real_block(sd) es False.
+    sd = {t: {'a': [], 'e': [], 'm': [], 'gd': 0, 'w': wages[t]} for t in teams}
+    data = {'seasons': {lg: {} for lg in update.PARAMS}, 'pos': {}}
+    data['seasons']['ll'] = {CS: sd}
+
+    # load_wages sintético (sin all_wages.json ni red): el resto de ligas quedan
+    # vacías, así que compute_all_position_probs solo procesa 'll'.
+    orig_load = update.load_wages
+    update.load_wages = lambda lg, season, _cache={}: dict(wages)
+    try:
+        np.random.seed(0)
+        pos = update.compute_all_position_probs(data, fx)
+    finally:
+        update.load_wages = orig_load
+
+    block = pos['ll'][CS]
+    assert 'pre' in block and 'cur' in block, f"faltan pre/cur: {sorted(block)}"
+    assert set(block['cur'].keys()) == set(teams), \
+        "cur debe cubrir exactamente el roster del calendario"
+    # cur deep-equal a pre para TODOS los equipos (DoD del issue #76).
+    assert block['cur'] == block['pre'], \
+        "en pre-season cur debe ser deep-equal a pre (sin divergencia MC)"
+    # Deep copy, NO referencia compartida: mutar cur no debe tocar pre.
+    assert block['cur'] is not block['pre'], "cur no debe ser el MISMO objeto que pre"
+    a_team = teams[0]
+    block['cur'][a_team]['1st'] = -999.0
+    assert block['pre'][a_team]['1st'] != -999.0, \
+        "mutar cur no debe alterar pre (deep copy, no referencia compartida)"
+    # hist vacío en pre-season (0 jugados no aporta evolución por jornada).
+    assert block.get('hist') == [], f"hist debe ser [] en pre-season, got {block.get('hist')!r}"
+    print("OK (9) pre-season: cur == deep copy de pre; hist []")
+
+
 def test_guard_preserves_real_block_on_outage():
     """(7) Regresión 🔴 #1: con bloque real (N jugados) ya en data.json y sin
     fuente (API+CSV caídos a la vez), la rama pre-season NO se activa — se
@@ -324,5 +371,6 @@ if __name__ == '__main__':
     test_wage_status_stale_on_fallback()
     test_cumulative_ignores_zero_played()
     test_preseason_ranks_permutation()
+    test_compute_position_probs_cur_equals_pre_preseason()
     test_guard_preserves_real_block_on_outage()
-    print("\nTODOS LOS TESTS OK (pre-season, issue #59 + #69)")
+    print("\nTODOS LOS TESTS OK (pre-season, issue #59 + #69 + #76)")

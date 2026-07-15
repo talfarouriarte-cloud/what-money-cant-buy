@@ -11,6 +11,7 @@ Usage: python update.py
        FOOTBALL_DATA_API_KEY=xxx python update.py  (to update fixtures from API)
 Requirements: pip install pandas numpy scipy requests
 """
+import copy
 import json, os, sys
 from datetime import datetime
 # Import resiliente por dependencia: permite importar los helpers puros
@@ -1248,14 +1249,26 @@ def compute_all_position_probs(data, fixtures_cal):
             
             # Current season only
             if sn == CURRENT_SEASON:
-                remaining = get_remaining_fixtures(sd, fixtures_cal, lg)
-                cur = simulate_current_positions(sd, wages, p['beta'], p['theta1'], p['theta2'], remaining, lg=lg)
-                pos[lg][sn]['cur'] = cur
-                # Position probability evolution by GW (Phase 2)
-                hist = compute_position_history(sd, wages, p['beta'], p['theta1'], p['theta2'], fixtures_cal, lg, sn, n_sims=2000, gw_step=1)
-                pos[lg][sn]['hist'] = hist
-                if hist:
-                    print(f"      hist: {len(hist)} GW snapshots")
+                if not _has_real_block(sd):
+                    # Pre-season (0 jugados): «actualizada» y «presupuesto» son
+                    # la misma previsión. Dos simulaciones MC independientes
+                    # (pre y cur) divergen por ruido en zonas apiñadas de la
+                    # tabla (issue #76) aunque las entradas sean equivalentes.
+                    # Copiamos `pre` en `cur` (deep copy, sin referencia
+                    # compartida) para que las columnas POS sean idénticas.
+                    # En cuanto haya ≥1 partido jugado, se recae en el camino
+                    # normal con simulate_current_positions.
+                    pos[lg][sn]['cur'] = copy.deepcopy(pre)
+                    pos[lg][sn]['hist'] = []
+                else:
+                    remaining = get_remaining_fixtures(sd, fixtures_cal, lg)
+                    cur = simulate_current_positions(sd, wages, p['beta'], p['theta1'], p['theta2'], remaining, lg=lg)
+                    pos[lg][sn]['cur'] = cur
+                    # Position probability evolution by GW (Phase 2)
+                    hist = compute_position_history(sd, wages, p['beta'], p['theta1'], p['theta2'], fixtures_cal, lg, sn, n_sims=2000, gw_step=1)
+                    pos[lg][sn]['hist'] = hist
+                    if hist:
+                        print(f"      hist: {len(hist)} GW snapshots")
             
             # Log top 3
             top = sorted(pre.items(), key=lambda x: -x[1]['1st'])[:3]
