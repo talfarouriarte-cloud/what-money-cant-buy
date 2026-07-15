@@ -3629,10 +3629,18 @@ function Matches({
   // responsive cell size: matrix must fit the container width (original behavior)
   const [wrapW, setWrapW] = useState(0);
   const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
+  // real vertical room available below the grid wrapper (viewport height − everything above it):
+  // measured against the live layout, never a magic frame-height constant.
+  const [wrapTop, setWrapTop] = useState(0);
+  const [vh, setVh] = useState(typeof window !== "undefined" ? window.innerHeight : 800);
   React.useEffect(() => {
     const measure = () => {
-      if (wrapRef.current) setWrapW(wrapRef.current.clientWidth);
+      if (wrapRef.current) {
+        setWrapW(wrapRef.current.clientWidth);
+        setWrapTop(wrapRef.current.getBoundingClientRect().top);
+      }
       setVw(window.innerWidth);
+      setVh(window.innerHeight);
     };
     measure();
     window.addEventListener("resize", measure);
@@ -3645,13 +3653,29 @@ function Matches({
   const fullBleed = vw <= 1024;
   const padX = fullBleed ? 8 : 24;
   const bleed = vw <= 720 ? 14 : 20;
-  const cellSz = wrapW > 0 ? Math.max(12, Math.floor((wrapW - padX - labelW) / nT)) : 26;
+  // width-derived cell size (original behavior — the only constraint on mobile <1024px)
+  const cellW = wrapW > 0 ? Math.max(12, Math.floor((wrapW - padX - labelW) / nT)) : 26;
+  // ≥1024px: the whole square must also fit vertically. Derive a second cap from the real
+  // height left under the wrapper (vh − wrapTop, measured), discounting the card's own padding
+  // and the grid's header row. cellSz = min(width-derived, height-derived); square floor stays 12.
+  let cellSz = cellW;
+  if (vw >= 1024 && wrapW > 0 && wrapTop > 0) {
+    const cardPad = fullBleed ? 4 : 12;
+    // header row runs ~one cell tall plus the wage rótulo + padding when labels are shown
+    const headExtra = labelWide ? 22 : 6;
+    const availH = vh - wrapTop - cardPad * 2 - headExtra - 16; // 16 = respiro inferior del viewport
+    const cellH = Math.floor(availH / (nT + 1)); // +1 reserva la fila de cabecera del grid
+    cellSz = Math.max(12, Math.min(cellW, cellH));
+  }
   const compact = !labelWide;
   const crestSz = Math.max(10, Math.min(24, cellSz - 2));
   const dotSz = Math.max(5, Math.round(cellSz * 0.35));
   // re-measure after the full-bleed (negative margin) switch changes the card width
   React.useEffect(() => {
-    if (wrapRef.current) setWrapW(wrapRef.current.clientWidth);
+    if (wrapRef.current) {
+      setWrapW(wrapRef.current.clientWidth);
+      setWrapTop(wrapRef.current.getBoundingClientRect().top);
+    }
   }, [compact, fullBleed]);
 
   // suppress page scroll while dragging across grid cells
