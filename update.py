@@ -1326,6 +1326,19 @@ def update_cumulative(data):
             c[2] = round((cumOP / nS) / avgExp * 100, 1) if avgExp > 0 else 0
 
 
+def _has_real_block(existing):
+    """True si `existing` (bloque de CURRENT_SEASON ya cargado de data.json)
+    contiene al menos un equipo con partidos jugados (`a` no vacío).
+
+    La rama pre-season (issue #59) SOLO debe activarse cuando esto es False:
+    o no hay bloque (arranque pre-season) o el bloque existente es de 0 jugados
+    (refresco pre-season). Si ya hay un bloque real con jornadas jugadas, un
+    corte simultáneo de API+CSV NO debe entrar en pre-season y sobrescribirlo
+    a 0 jugados — debe caer en el `else`/skip y PRESERVAR `existing`.
+    """
+    return bool(existing) and any(existing[t].get('a') for t in existing)
+
+
 def update():
     print(f"=== Update: {datetime.now().strftime('%Y-%m-%d %H:%M')} ===")
     
@@ -1387,10 +1400,15 @@ def update():
         elif files[lg]:
             print(f"  Using football-data.co.uk CSV (API unavailable)")
             result = process_season(files[lg], wages, p['beta'], p['theta1'], p['theta2'], fixtures_cal, lg)
-        elif fixtures_cal and lg in fixtures_cal and CURRENT_SEASON in fixtures_cal[lg]:
+        elif not _has_real_block(existing) \
+                and fixtures_cal and lg in fixtures_cal and CURRENT_SEASON in fixtures_cal[lg]:
             # Pre-season (issue #59): sin resultados API ni CSV pero con calendario
             # de la temporada actual => bloque pre-season (0 jugados) desde el
-            # calendario. Zona de rigor: esta rama SOLO se activa sin resultados.
+            # calendario. Zona de rigor: esta rama SOLO se activa sin resultados
+            # Y sin bloque real previo (precondición del issue: data.json aún no
+            # tiene bloque con jornadas jugadas). Así un corte de API+CSV a mitad
+            # de temporada cae en el `else`/skip y PRESERVA `existing` en vez de
+            # resetearlo a 0 jugados.
             print(f"  {lg}: sin resultados — construyendo bloque pre-season desde el calendario")
             result = build_preseason_block(fixtures_cal, wages, lg)
             if not result:

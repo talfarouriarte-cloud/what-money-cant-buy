@@ -215,6 +215,46 @@ def test_cumulative_ignores_zero_played():
     print("OK (6) cumulative intacto: 0 jugados no aporta nada")
 
 
+def test_guard_preserves_real_block_on_outage():
+    """(7) Regresión 🔴 #1: con bloque real (N jugados) ya en data.json y sin
+    fuente (API+CSV caídos a la vez), la rama pre-season NO se activa — se
+    preserva `existing` en vez de resetearlo a 0 jugados.
+
+    La rama del bucle es
+        elif not _has_real_block(existing) and fixtures_cal and lg in ... :
+    así que `_has_real_block` es exactamente lo que decide entre pre-season y
+    el `else`/skip que conserva los datos. Este test cubre esa decisión.
+    """
+    # Bloque real con jornadas jugadas => la rama pre-season debe QUEDAR FUERA.
+    real_block = {
+        'A': {'a': [1.0, 1.0], 'e': [0.9, 0.9], 'm': [['B', 1]], 'gd': 2, 'w': 100},
+        'B': {'a': [0.0, 3.0], 'e': [1.1, 1.1], 'm': [['A', 0]], 'gd': -2, 'w': 50},
+    }
+    assert update._has_real_block(real_block), \
+        "bloque con `a` no vacío => hay bloque real => NO pre-season (se preserva)"
+
+    # Sin bloque (arranque pre-season): la rama SÍ debe activarse.
+    assert not update._has_real_block({}), \
+        "sin bloque => pre-season permitido (arranque de temporada)"
+
+    # Bloque pre-season previo (0 jugados, `a` vacío): refresco permitido.
+    zero_block = {
+        'A': {'a': [], 'e': [], 'm': [], 'gd': 0, 'w': 100},
+        'B': {'a': [], 'e': [], 'm': [], 'gd': 0, 'w': 50},
+    }
+    assert not update._has_real_block(zero_block), \
+        "bloque de 0 jugados => pre-season permitido (refresco del bloque pre-season)"
+
+    # Un solo equipo con partidos ya basta para considerarlo bloque real.
+    mixed = {
+        'A': {'a': [], 'e': [], 'm': [], 'gd': 0, 'w': 100},
+        'B': {'a': [2.0], 'e': [1.0], 'm': [['A', 1]], 'gd': 1, 'w': 50},
+    }
+    assert update._has_real_block(mixed), \
+        "al menos un equipo con `a` no vacío => bloque real => se preserva"
+    print("OK (7) guarda: bloque real con outage se preserva; pre-season solo sin bloque real")
+
+
 if __name__ == '__main__':
     test_roster_from_calendar_not_wages()
     test_team_fields_and_r()
@@ -222,4 +262,5 @@ if __name__ == '__main__':
     test_narratives_empty_for_zero_played()
     test_wage_status_stale_on_fallback()
     test_cumulative_ignores_zero_played()
+    test_guard_preserves_real_block_on_outage()
     print("\nTODOS LOS TESTS OK (pre-season, issue #59)")
