@@ -36,8 +36,12 @@ VALID_SP1 = (
     "SP1,16/08/2026,Sevilla,Valencia,0,0,D\n"
 )
 # Mismo contenido pero con BOM UTF-8 al inicio (football-data lo sirve así a
-# menudo). Debe aceptarse igual.
+# menudo). Dos formas que hay que tolerar:
+#   - U+FEFF: cuando requests decodifica el cuerpo como utf-8.
+#   - `ï»¿` (mojibake): los tres bytes del BOM UTF-8 leídos como latin-1, que
+#     es lo que ocurre en el cron real y la forma que el issue #79 cita literal.
 VALID_SP1_BOM = "﻿" + VALID_SP1
+VALID_SP1_BOM_MOJIBAKE = "ï»¿" + VALID_SP1
 # Fuzzy-redirect: CSV del Championship escocés (SC1) servido en la URL de SP1.
 WRONG_LEAGUE_SC1 = (
     "Div,Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR\n"
@@ -58,10 +62,13 @@ def test_valid_csv_accepted():
 
 
 def test_valid_csv_with_bom_accepted():
-    """DoD: CSV válido con BOM => aceptado."""
+    """DoD: CSV válido con BOM => aceptado. Ambas formas (U+FEFF y el mojibake
+    `ï»¿` que el issue #79 cita literal y que produce el cron real)."""
     ok, reason = update.validate_csv_content(VALID_SP1_BOM, 'SP1')
-    assert ok, f"CSV válido con BOM debe aceptarse, got reason={reason!r}"
-    print("OK CSV válido con BOM aceptado")
+    assert ok, f"CSV válido con BOM U+FEFF debe aceptarse, got reason={reason!r}"
+    ok_m, reason_m = update.validate_csv_content(VALID_SP1_BOM_MOJIBAKE, 'SP1')
+    assert ok_m, f"CSV válido con BOM mojibake ï»¿ debe aceptarse, got reason={reason_m!r}"
+    print("OK CSV válido con BOM aceptado (U+FEFF y mojibake ï»¿)")
 
 
 def test_wrong_league_rejected():
