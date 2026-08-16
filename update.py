@@ -11,6 +11,7 @@ Usage: python update.py
        FOOTBALL_DATA_API_KEY=xxx python update.py  (to update fixtures from API)
 Requirements: pip install pandas numpy scipy requests
 """
+import copy
 import json, os, sys
 from datetime import datetime
 # Import resiliente por dependencia: permite importar los helpers puros
@@ -177,6 +178,11 @@ URLS = {
     'l1': f'{_CSV_BASE}/F1.csv',
     'ed': f'{_CSV_BASE}/N1.csv',
 }
+# Código `Div` esperado por liga, derivado del nombre de fichero en URLS
+# (issue #79): ll→SP1, pl→E0, sa→I1, bl→D1, l1→F1, ed→N1. Es la firma que
+# valida que el CSV descargado es de la liga pedida y no el «más parecido»
+# que football-data.co.uk sirva por fuzzy-redirect.
+EXPECTED_DIV = {lg: url.rsplit('/', 1)[-1].rsplit('.', 1)[0] for lg, url in URLS.items()}
 NAME_MAP = {
     "Nott'm Forest": "Nottm Forest", "Ath Madrid": "At Madrid",
     # Serie A
@@ -368,13 +374,84 @@ def fetch_fixtures_from_api():
 def fix_name(n):
     return NAME_MAP.get(n, n)
 
+def validate_csv_content(text, expected_div, expected_season=None):
+    """Valida que `text` es un CSV de football-data.co.uk de la liga esperada.
+
+    Defensa contra el agujero del issue #79: cuando el CSV de la temporada aún
+    no existe, football-data.co.uk NO devuelve 404 — a veces sirve por
+    fuzzy-redirect el fichero «más parecido» (otra liga), a veces devuelve un
+    cuerpo HTML (status 300). Ninguno debe procesarse como resultados de la
+    liga pedida.
+
+    Contrato:
+      - La primera columna del header debe ser `Div` (tolerando el BOM UTF-8,
+        tanto `\\ufeff` como su representación mojibake `ï»¿`).
+      - El valor de `Div` en la primera fila de datos debe ser `expected_div`.
+      - Si se pasa `expected_season` ('YY/NN'), el año de la primera fecha
+        (`Date`, `dd/mm/yyyy` o `dd/mm/yy`) debe caer en la ventana de esa
+        temporada. Cierra la otra dimensión del mismo fallo de fuzzy-match:
+        servir la temporada PASADA de la liga correcta (mismo `Div`) en la URL
+        de la actual. Solo rechaza cuando el año se parsea limpio y queda
+        fuera de ventana; ausencia/formato raro de `Date` no rechaza (el
+        pipeline ya tolera filas malas con on_bad_lines='skip').
+
+    Devuelve `(ok, motivo)`: `ok` bool; `motivo` describe el rechazo para el
+    log (None si válido). No usa pandas — parseo puro para tests standalone.
+    """
+    lines = [ln for ln in text.splitlines() if ln.strip()]
+    if not lines:
+        return False, "fichero vacío"
+    header = lines[0].lstrip('﻿')
+    if header.startswith('ï»¿'):  # BOM mal decodificado (mojibake)
+        header = header[len('ï»¿'):]
+    cols = [c.strip().strip('"') for c in header.split(',')]
+    first_col = cols[0] if cols else ''
+    if first_col != 'Div':
+        return False, f"primera columna {first_col!r} != 'Div' (¿HTML u otra estructura?)"
+    if len(lines) < 2:
+        return False, "sin filas de datos"
+    fields = lines[1].split(',')
+    div_val = fields[0].strip().strip('"')
+    if div_val != expected_div:
+        return False, f"Div={div_val!r} != esperado {expected_div!r}"
+    if expected_season:
+        try:
+            start_year = 2000 + int(expected_season.split('/')[0])
+        except (ValueError, IndexError):
+            start_year = None
+        date_idx = cols.index('Date') if 'Date' in cols else None
+        if start_year is not None and date_idx is not None and date_idx < len(fields):
+            parts = fields[date_idx].strip().strip('"').split('/')
+            if len(parts) == 3 and parts[2].isdigit():
+                yr = int(parts[2])
+                if yr < 100:
+                    yr += 2000
+                if yr not in (start_year, start_year + 1):
+                    return False, (f"año de Date {yr} fuera de la temporada "
+                                   f"{expected_season} ({start_year}/{start_year + 1}) "
+                                   f"— ¿temporada pasada de la misma liga?")
+    return True, None
+
 def download_current_season():
     results = {}
     for lg, url in URLS.items():
         print(f"  Downloading {lg}...")
         try:
-            r = requests.get(url, timeout=30)
-            r.raise_for_status()
+            # allow_redirects=False: un 3xx (fuzzy-redirect a otra liga) NO se
+            # sigue; cualquier status != 200 es fallo (issue #79).
+            r = requests.get(url, timeout=30, allow_redirects=False)
+            if r.status_code != 200:
+                print(f"    FAILED: status {r.status_code} (url {url}) — "
+                      f"redirect/HTML rechazado")
+                results[lg] = None
+                continue
+            expected_div = EXPECTED_DIV[lg]
+            ok, reason = validate_csv_content(r.text, expected_div, CURRENT_SEASON)
+            if not ok:
+                print(f"    WARNING: contenido inválido para {lg} "
+                      f"(esperaba Div={expected_div}): {reason} — descartado")
+                results[lg] = None
+                continue
             path = os.path.join(DATA_DIR, f'current_{lg}.csv')
             with open(path, 'w') as f:
                 f.write(r.text)
@@ -405,6 +482,7 @@ def process_season(filepath_or_df, wages, beta, t1, t2, fixtures_calendar=None, 
     # Build matchday lookup from fixture calendar: (home, away) -> official GW
     gw_lookup = {}
     date_lookup = {}
+    calendar_teams = set()
     if fixtures_calendar and lg:
         cal = fixtures_calendar.get(lg, {}).get(CURRENT_SEASON, {}).get('calendar', [])
         for gw_data in cal:
@@ -413,11 +491,19 @@ def process_season(filepath_or_df, wages, beta, t1, t2, fixtures_calendar=None, 
             for mi, pair in enumerate(gw_data['matches']):
                 h_fix, a_fix = fix_name(pair[0]), fix_name(pair[1])
                 gw_lookup[(h_fix, a_fix)] = gw
+                calendar_teams.add(h_fix)
+                calendar_teams.add(a_fix)
                 if mi < len(dates) and dates[mi]:
                     date_lookup[(h_fix, a_fix)] = dates[mi][:10]
-    
+
+    # Universo de equipos (issue #80): con calendario de CURRENT_SEASON siembra
+    # TODOS sus equipos (vía fix_name en el bucle de arriba) UNIÓN los que
+    # aparezcan en resultados; los que no han jugado quedan con las estructuras
+    # vacías de la inicialización (mismo estado que build_preseason_block). Sin
+    # calendario (ligas históricas, llamadas sin lg) el universo es solo `df` —
+    # byte-idéntico al comportamiento previo.
     td = {}
-    for t in sorted(set(df['HomeTeam']) | set(df['AwayTeam'])):
+    for t in sorted(calendar_teams | set(df['HomeTeam']) | set(df['AwayTeam'])):
         td[t] = {'pts':[],'exp':[],'m':[],'cp':0,'ce':0.0,'gf':0,'ga':0,'gf_away':0,'wins':0,'wins_away':0}
     season_matches = []  # (home, away, home_goals, away_goals) para desempates ADR-005
     for _, r in df.iterrows():
@@ -448,7 +534,12 @@ def process_season(filepath_or_df, wages, beta, t1, t2, fixtures_calendar=None, 
             td[team]['pts'].append(td[team]['cp'])
             td[team]['exp'].append(round(td[team]['ce'], 1))
             td[team]['m'].append([opp, ih, pts, round(exp, 2), official_gw, mdate])
-    result = {t: {'a':d['pts'],'e':d['exp'],'m':d['m'],'w':round(wages.get(t, wages.get(fix_name(t), 0))),'gd':d['gf']-d['ga']} for t,d in td.items()}
+    # Cadena de fallback de salarios (spec §3bis.2): actual -> anterior -> `_min`.
+    # Los ascendidos que entran por calendario (issue #80) sin salario propio ni
+    # de la temporada previa caen al mínimo de liga — mismo eslabón que
+    # build_preseason_block (update.py:1397). Terminar en 0 los emitiría con
+    # `w:0` (falsy), que update_cumulative descartaría en silencio.
+    result = {t: {'a':d['pts'],'e':d['exp'],'m':d['m'],'w':round(wages.get(t, wages.get(fix_name(t), wages.get('_min', 20)))),'gd':d['gf']-d['ga']} for t,d in td.items()}
     stats = {t: {'pts': d['cp'], 'gd': d['gf']-d['ga'], 'gf': d['gf'],
                  'gf_away': d['gf_away'], 'wins': d['wins'], 'wins_away': d['wins_away']}
              for t, d in td.items()}
@@ -1248,14 +1339,26 @@ def compute_all_position_probs(data, fixtures_cal):
             
             # Current season only
             if sn == CURRENT_SEASON:
-                remaining = get_remaining_fixtures(sd, fixtures_cal, lg)
-                cur = simulate_current_positions(sd, wages, p['beta'], p['theta1'], p['theta2'], remaining, lg=lg)
-                pos[lg][sn]['cur'] = cur
-                # Position probability evolution by GW (Phase 2)
-                hist = compute_position_history(sd, wages, p['beta'], p['theta1'], p['theta2'], fixtures_cal, lg, sn, n_sims=2000, gw_step=1)
-                pos[lg][sn]['hist'] = hist
-                if hist:
-                    print(f"      hist: {len(hist)} GW snapshots")
+                if not _has_real_block(sd):
+                    # Pre-season (0 jugados): «actualizada» y «presupuesto» son
+                    # la misma previsión. Dos simulaciones MC independientes
+                    # (pre y cur) divergen por ruido en zonas apiñadas de la
+                    # tabla (issue #76) aunque las entradas sean equivalentes.
+                    # Copiamos `pre` en `cur` (deep copy, sin referencia
+                    # compartida) para que las columnas POS sean idénticas.
+                    # En cuanto haya ≥1 partido jugado, se recae en el camino
+                    # normal con simulate_current_positions.
+                    pos[lg][sn]['cur'] = copy.deepcopy(pre)
+                    pos[lg][sn]['hist'] = []
+                else:
+                    remaining = get_remaining_fixtures(sd, fixtures_cal, lg)
+                    cur = simulate_current_positions(sd, wages, p['beta'], p['theta1'], p['theta2'], remaining, lg=lg)
+                    pos[lg][sn]['cur'] = cur
+                    # Position probability evolution by GW (Phase 2)
+                    hist = compute_position_history(sd, wages, p['beta'], p['theta1'], p['theta2'], fixtures_cal, lg, sn, n_sims=2000, gw_step=1)
+                    pos[lg][sn]['hist'] = hist
+                    if hist:
+                        print(f"      hist: {len(hist)} GW snapshots")
             
             # Log top 3
             top = sorted(pre.items(), key=lambda x: -x[1]['1st'])[:3]
@@ -1459,7 +1562,11 @@ def update():
         old_gw = len(list(existing.values())[0]['a']) if existing else 0
         data['seasons'][lg][CURRENT_SEASON] = result
         
-        sample = list(result.keys())[0]
+        # Elegir como `sample` de diagnóstico un equipo CON partidos jugados: con
+        # el sembrado del calendario (issue #80) el primero alfabético puede ser
+        # uno de 0 jugados y degradaría este log (GW -> 0), justo el canal que
+        # cazó el «ll: 4 teams» del issue.
+        sample = max(result, key=lambda t: len(result[t]['a']))
         new_gw = len(result[sample]['a'])
         sample_gd = result[sample].get('gd', 'MISSING')
         print(f"  {lg}: {len(result)} teams, GW {old_gw} -> {new_gw}, {sample} gd={sample_gd}")

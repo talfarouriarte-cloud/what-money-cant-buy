@@ -7,6 +7,8 @@ on:
     types: [completed]
   pull_request:
     types: [closed, labeled]
+  issues:
+    types: [closed]
 permissions:
   contents: write
   pull-requests: write
@@ -14,7 +16,7 @@ permissions:
   statuses: write
   actions: read
 concurrency:
-  group: epic-merge-${{ github.event.workflow_run.head_branch || github.event.pull_request.head.ref }}
+  group: epic-merge-${{ github.event.workflow_run.head_branch || github.event.pull_request.head.ref || github.event.issue.number }}
   cancel-in-progress: false
 jobs:
   call:
