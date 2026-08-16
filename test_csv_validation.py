@@ -176,8 +176,12 @@ def _run_download_with(by_url):
 
 def test_download_passes_allow_redirects_false():
     """Contrato 1: allow_redirects=False en cada requests.get."""
-    by_url = {url: (200, VALID_SP1 if update.EXPECTED_DIV[lg] == 'SP1'
-                    else _valid_csv(update.EXPECTED_DIV[lg]))
+    # Todas las ligas con el generador anclado a update.CURRENT_SEASON (nit #1
+    # ronda 2): VALID_SP1 lleva el año literal 2026 y, con el ancla de temporada
+    # activa en download_current_season, rompería la rama `ll` en cuanto
+    # CURRENT_SEASON avance (2027-07-15). VALID_SP1 sigue sirviendo a los tests
+    # unitarios de validate_csv_content (2 args, sin ancla), donde el año es inocuo.
+    by_url = {url: (200, _valid_csv(update.EXPECTED_DIV[lg]))
               for lg, url in update.URLS.items()}
     with _run_download_with(by_url) as (results, fake, tmp):
         assert all(kw.get('allow_redirects') is False for _, kw in fake.calls), \
