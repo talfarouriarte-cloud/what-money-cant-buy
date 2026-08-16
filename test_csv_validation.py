@@ -22,12 +22,26 @@ con BOM => aceptado. Sin red ni pandas: monkeypatch de update.requests.
 Ejecutable standalone con exit code (asserts):
     python3 test_csv_validation.py
 """
+import contextlib
 import os
 import tempfile
 
 import update
 
 CS_DIV = update.EXPECTED_DIV  # ll->SP1, pl->E0, ...
+_START_YEAR = 2000 + int(update.CURRENT_SEASON.split('/')[0])
+
+
+def _valid_csv(div, year=None):
+    """CSV mínimo válido de `div` con fechas en la temporada dada (por defecto la
+    actual), para que los tests de integración sigan la ventana de temporada del
+    validador (nit #4) sin depender de un año hardcodeado."""
+    y = _START_YEAR if year is None else year
+    return (
+        "Div,Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR\n"
+        f"{div},15/08/{y},A,B,1,0,H\n"
+        f"{div},16/08/{y},C,D,0,0,D\n"
+    )
 
 # --- CSVs sintéticos ---------------------------------------------------------
 VALID_SP1 = (
@@ -95,6 +109,23 @@ def test_empty_and_headeronly_rejected():
     print("OK vacío y solo-header rechazados")
 
 
+def test_wrong_season_rejected():
+    """Nit #4: liga correcta pero temporada PASADA (fuzzy-match a /2526/) => None.
+    El `Div` coincide, así que solo el ancla de temporada puede rechazarlo."""
+    past = _valid_csv('SP1', year=_START_YEAR - 1)
+    ok, reason = update.validate_csv_content(past, 'SP1', update.CURRENT_SEASON)
+    assert not ok, "CSV de la temporada pasada NO debe aceptarse como actual"
+    assert str(_START_YEAR - 1) in reason, \
+        f"el motivo debe citar el año fuera de ventana, got {reason!r}"
+    ok_cur, _ = update.validate_csv_content(
+        _valid_csv('SP1'), 'SP1', update.CURRENT_SEASON)
+    assert ok_cur, "CSV de la temporada actual debe aceptarse"
+    # Sin expected_season el ancla no aplica (retrocompatible).
+    ok_no, _ = update.validate_csv_content(past, 'SP1')
+    assert ok_no, "sin expected_season la temporada no se comprueba"
+    print(f"OK temporada pasada rechazada ({reason})")
+
+
 def test_expected_div_derived_from_urls():
     """El mapeo esperado se deriva de URLS, no se hardcodea aparte."""
     assert CS_DIV == {
@@ -122,34 +153,39 @@ class _FakeRequests:
         return _FakeResp(status, text)
 
 
+@contextlib.contextmanager
 def _run_download_with(by_url):
+    """Corre download_current_season con requests/DATA_DIR monkeypatcheados.
+    `TemporaryDirectory` limpia el tmp al salir del `with` y el `finally`
+    restaura los globals — las tres cosas se cierran juntas (nit #5). Las
+    aserciones sobre ficheros escritos van DENTRO del `with`, antes de la
+    limpieza."""
     orig_req = update.requests
     orig_dir = update.DATA_DIR
     fake = _FakeRequests(by_url)
-    tmp = tempfile.mkdtemp()
-    update.requests = fake
-    update.DATA_DIR = tmp
-    try:
-        results = update.download_current_season()
-    finally:
-        update.requests = orig_req
-        update.DATA_DIR = orig_dir
-    return results, fake, tmp
+    with tempfile.TemporaryDirectory() as tmp:
+        update.requests = fake
+        update.DATA_DIR = tmp
+        try:
+            results = update.download_current_season()
+            yield results, fake, tmp
+        finally:
+            update.requests = orig_req
+            update.DATA_DIR = orig_dir
 
 
 def test_download_passes_allow_redirects_false():
     """Contrato 1: allow_redirects=False en cada requests.get."""
     by_url = {url: (200, VALID_SP1 if update.EXPECTED_DIV[lg] == 'SP1'
-                    else f"Div,Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR\n"
-                         f"{update.EXPECTED_DIV[lg]},15/08/2026,A,B,1,0,H\n")
+                    else _valid_csv(update.EXPECTED_DIV[lg]))
               for lg, url in update.URLS.items()}
-    results, fake, tmp = _run_download_with(by_url)
-    assert all(kw.get('allow_redirects') is False for _, kw in fake.calls), \
-        "cada requests.get debe pasar allow_redirects=False"
-    # Todas las ligas válidas => path escrito y fichero en disco.
-    for lg in update.URLS:
-        assert results[lg] is not None, f"{lg} válido debe devolver path"
-        assert os.path.exists(results[lg]), f"{lg}: el CSV debe escribirse"
+    with _run_download_with(by_url) as (results, fake, tmp):
+        assert all(kw.get('allow_redirects') is False for _, kw in fake.calls), \
+            "cada requests.get debe pasar allow_redirects=False"
+        # Todas las ligas válidas => path escrito y fichero en disco.
+        for lg in update.URLS:
+            assert results[lg] is not None, f"{lg} válido debe devolver path"
+            assert os.path.exists(results[lg]), f"{lg}: el CSV debe escribirse"
     print("OK download: allow_redirects=False y CSVs válidos escritos")
 
 
@@ -160,21 +196,19 @@ def test_download_rejects_redirect_and_wrong_league_and_html():
         urls['ll']: (301, ""),                 # redirect => None
         urls['pl']: (200, WRONG_LEAGUE_SC1),   # 200 pero otra liga => None
         urls['sa']: (300, HTML_300),           # HTML 300 => None
-        urls['bl']: (200, "Div,Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR\n"
-                          "D1,15/08/2026,Bayern,Dortmund,3,1,H\n"),  # válido
-        urls['l1']: (200, "Div,Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR\n"
-                          "F1,15/08/2026,PSG,Lyon,2,0,H\n"),          # válido
+        urls['bl']: (200, _valid_csv('D1')),   # válido (temporada actual)
+        urls['l1']: (200, _valid_csv('F1')),   # válido (temporada actual)
         urls['ed']: (404, ""),                 # 404 => None
     }
-    results, fake, tmp = _run_download_with(by_url)
-    assert results['ll'] is None, "301 redirect => None"
-    assert results['pl'] is None, "CSV de otra liga (SC1) => None"
-    assert results['sa'] is None, "HTML 300 => None"
-    assert results['ed'] is None, "404 => None"
-    assert results['bl'] is not None and os.path.exists(results['bl']), \
-        "D1 válido => path escrito"
-    assert results['l1'] is not None and os.path.exists(results['l1']), \
-        "F1 válido => path escrito"
+    with _run_download_with(by_url) as (results, fake, tmp):
+        assert results['ll'] is None, "301 redirect => None"
+        assert results['pl'] is None, "CSV de otra liga (SC1) => None"
+        assert results['sa'] is None, "HTML 300 => None"
+        assert results['ed'] is None, "404 => None"
+        assert results['bl'] is not None and os.path.exists(results['bl']), \
+            "D1 válido => path escrito"
+        assert results['l1'] is not None and os.path.exists(results['l1']), \
+            "F1 válido => path escrito"
     print("OK download: redirect/otra-liga/HTML/404 => None; válidos escritos")
 
 
@@ -184,6 +218,7 @@ if __name__ == '__main__':
     test_wrong_league_rejected()
     test_html_rejected()
     test_empty_and_headeronly_rejected()
+    test_wrong_season_rejected()
     test_expected_div_derived_from_urls()
     test_download_passes_allow_redirects_false()
     test_download_rejects_redirect_and_wrong_league_and_html()

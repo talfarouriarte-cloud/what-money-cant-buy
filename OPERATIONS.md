@@ -13,7 +13,7 @@ GitHub Actions runs `update.py` four times daily — crons at 00:00, 00:02, 06:0
 1. Detects current season from date: **July 15+ = new season** (ADR-008; single derivation in `derive_season()`, `update.py`)
 2. Loads wages from `all_wages.json` (missing teams filled from previous season; promoted teams get league minimum)
 3. Fetches fixture calendar + match results from football-data.org API (real-time, minutes after final whistle). Guard (ADR-007): if a league's calendar payload doesn't match `CURRENT_SEASON`, that league is discarded and picked up by a later cron once published.
-4. Downloads match results CSVs from football-data.co.uk as fallback (1-2 day delay)
+4. Downloads match results CSVs from football-data.co.uk as fallback (1-2 day delay). Guard (issue #79, twin of ADR-007 on the CSV path): the request uses `allow_redirects=False` and any status ≠ 200 discards the league; the body is then validated (`validate_csv_content`) so its `Div` column matches the requested league and the first `Date` falls in `CURRENT_SEASON`. This blocks football-data.co.uk's fuzzy-redirect to the "closest" file of another league and its HTML 300 bodies when the season's CSV doesn't exist yet. A discarded league logs `WARNING: contenido inválido para <lg> ... descartado` and is picked up by a later cron once the real CSV is published.
 5. Computes expected points, MC bands, budget forecast, position probabilities, narratives
 6. Runs diagnostic checks (budget line parallelism)
 7. Commits updated `data.json` and `fixtures.json` to `main`
@@ -22,7 +22,7 @@ After every successful run, `build-crests.yml` is triggered automatically via `w
 
 ### Data source priority
 1. **football-data.org API** (primary): scores available minutes after matches. 6 API calls, well within free tier limit (10/min).
-2. **football-data.co.uk CSV** (fallback): updated Sunday/Wednesday nights. Used if API key missing or API fails.
+2. **football-data.co.uk CSV** (fallback): updated Sunday/Wednesday nights. Used if API key missing or API fails **and** the downloaded CSV passes the league+season validation above (issue #79); otherwise the league is discarded, not ingested.
 
 ### Budget forecast
 Both updated and budget p50 use deterministic expected value (`pw×3 + pd`). MC only for p10/p90 bands. Guarantees parallel projected lines.
@@ -128,6 +128,7 @@ p50 = deterministic, p10/p90 = MC percentile.
 | 0 remaining fixtures | Name mapping mismatch | Add to `api_to_internal` in `name_map.json` |
 | Production data stale but crons green | Cron committing to wrong branch | `update.yml` checkout must carry `ref: main` (ADR-002); schedule runs from default branch (`develop`) |
 | A league missing after July 15 | Its new calendar not published yet | Normal (ADR-007 guard); daily cron picks it up when the API serves it |
+| `WARNING: contenido inválido para <lg> ... descartado` in cron log | football-data.co.uk served a redirect / another league / HTML / past season instead of the season's CSV (not published yet) | Normal (issue #79 guard); daily cron picks it up when the real CSV appears |
 | Tooltips stuck on iPad | Recharts pointer-events | Fixed: global touch handler |
 | Results not updating | API key missing or expired | Check `FOOTBALL_DATA_API_KEY` secret in repo |
 | GW X -> X (no new matches) | Source not updated yet | API: minutes; CSV: Sun/Wed night |
