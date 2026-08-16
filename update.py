@@ -534,7 +534,12 @@ def process_season(filepath_or_df, wages, beta, t1, t2, fixtures_calendar=None, 
             td[team]['pts'].append(td[team]['cp'])
             td[team]['exp'].append(round(td[team]['ce'], 1))
             td[team]['m'].append([opp, ih, pts, round(exp, 2), official_gw, mdate])
-    result = {t: {'a':d['pts'],'e':d['exp'],'m':d['m'],'w':round(wages.get(t, wages.get(fix_name(t), 0))),'gd':d['gf']-d['ga']} for t,d in td.items()}
+    # Cadena de fallback de salarios (spec §3bis.2): actual -> anterior -> `_min`.
+    # Los ascendidos que entran por calendario (issue #80) sin salario propio ni
+    # de la temporada previa caen al mínimo de liga — mismo eslabón que
+    # build_preseason_block (update.py:1397). Terminar en 0 los emitiría con
+    # `w:0` (falsy), que update_cumulative descartaría en silencio.
+    result = {t: {'a':d['pts'],'e':d['exp'],'m':d['m'],'w':round(wages.get(t, wages.get(fix_name(t), wages.get('_min', 20)))),'gd':d['gf']-d['ga']} for t,d in td.items()}
     stats = {t: {'pts': d['cp'], 'gd': d['gf']-d['ga'], 'gf': d['gf'],
                  'gf_away': d['gf_away'], 'wins': d['wins'], 'wins_away': d['wins_away']}
              for t, d in td.items()}
@@ -1557,7 +1562,11 @@ def update():
         old_gw = len(list(existing.values())[0]['a']) if existing else 0
         data['seasons'][lg][CURRENT_SEASON] = result
         
-        sample = list(result.keys())[0]
+        # Elegir como `sample` de diagnóstico un equipo CON partidos jugados: con
+        # el sembrado del calendario (issue #80) el primero alfabético puede ser
+        # uno de 0 jugados y degradaría este log (GW -> 0), justo el canal que
+        # cazó el «ll: 4 teams» del issue.
+        sample = max(result, key=lambda t: len(result[t]['a']))
         new_gw = len(result[sample]['a'])
         sample_gd = result[sample].get('gd', 'MISSING')
         print(f"  {lg}: {len(result)} teams, GW {old_gw} -> {new_gw}, {sample} gd={sample_gd}")

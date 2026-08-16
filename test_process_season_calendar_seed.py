@@ -111,12 +111,13 @@ def test_played_teams_numbers_unchanged_by_seeding():
     solo AÑADE equipos vacíos, jamás altera la agregación de los que jugaron.
 
     El sembrado es inerte para el núcleo numérico (a/e/w/gd y el core de cada
-    entrada de `m`: opp/ih/pts/exp). El baseline es la MISMA `df` sin calendario,
-    que reproduce la agregación del código previo para los equipos con partidos.
-    Los índices gw (4) y date (5) de `m` derivan del calendario vía gw_lookup/
-    date_lookup — ya presentes antes de este issue cuando se pasa calendario— y
-    por eso se excluyen de la comparación (en el baseline sin calendario valen
-    0/'')."""
+    entrada de `m`: opp/ih/pts/exp). El baseline es la MISMA `df` corrida por la
+    rama SIN calendario del código actual — que el test (3) verifica byte-idéntica
+    al comportamiento previo por construcción (`calendar_teams` vacío ⇒ universo
+    solo `df`), no un baseline capturado del HEAD anterior. Los índices gw (4) y
+    date (5) de `m` derivan del calendario vía gw_lookup/date_lookup — ya
+    presentes antes de este issue cuando se pasa calendario— y por eso se excluyen
+    de la comparación (en el baseline sin calendario valen 0/'')."""
     teams = _teams(20)
     cal = _round_robin_calendar(teams)
     fx = {'ll': {CS: {'calendar': cal}}}
@@ -144,6 +145,41 @@ def test_played_teams_numbers_unchanged_by_seeding():
             assert ms[:4] == md[:4], \
                 f"{t}: core del partido cambió al sembrar: {ms[:4]!r} vs {md[:4]!r}"
     print("OK (2) equipos con partidos: a/e/w/gd y core de `m` idénticos con y sin sembrado")
+
+
+def test_seeded_upgraded_teams_fall_back_to_min_wage():
+    """(spec §3bis.2) Los ascendidos que entran SOLO por calendario, sin salario
+    propio ni de la temporada previa, salen con `w == round(wages['_min'])`, NO
+    con 0. Reproduce el caso real de La Liga 26/27: `all_wages.json` no tiene la
+    clave de la temporada nueva y el relleno desde la previa no cubre a los 3
+    ascendidos (Malaga/La Coruna/Santander).
+
+    Un `w:0` sería falsy y update_cumulative (`not t.get('w')`) descartaría a esos
+    equipos del acumulado histórico incluso tras jugar toda la temporada. Este
+    assert blinda la cadena de fallback y es el que cazaría una regresión del
+    último eslabón (`wages.get('_min', 20)`)."""
+    teams = _teams(20)
+    cal = _round_robin_calendar(teams)
+    fx = {'ll': {CS: {'calendar': cal}}}
+    # Solo 17 equipos con salario propio; los 3 últimos son los "ascendidos"
+    # sin entrada (ni actual ni previa). `_min` disponible como último eslabón.
+    upgraded = set(teams[-3:])
+    wages = {t: 100 - i for i, t in enumerate(teams) if t not in upgraded}
+    wages['_min'] = 20
+    p = update.PARAMS['ll']
+    # df de 2 partidos entre 4 equipos CON salario (no toca a los ascendidos).
+    df = _two_match_df(teams)
+
+    result = update.process_season(df, wages, p['beta'], p['theta1'], p['theta2'], fx, 'll')
+
+    assert set(result.keys()) == set(teams), "el bloque debe cubrir los 20 equipos"
+    for t in upgraded:
+        assert result[t]['w'] == round(wages['_min']), \
+            (f"{t} (ascendido sin salario) debe caer a `_min`="
+             f"{round(wages['_min'])}, got w={result[t]['w']!r} — un 0 falsy lo "
+             f"excluiría de update_cumulative (spec §3bis.2)")
+        assert result[t]['w'] != 0, f"{t}: `w` no debe ser 0 (falsy)"
+    print("OK (salarios) ascendidos sin salario caen a `_min`, no a 0 (spec §3bis.2)")
 
 
 def test_no_calendar_behavior_unchanged():
@@ -201,6 +237,7 @@ def test_full_pipeline_tolerates_zero_played():
 if __name__ == '__main__':
     test_block_seeded_with_all_calendar_teams()
     test_played_teams_numbers_unchanged_by_seeding()
+    test_seeded_upgraded_teams_fall_back_to_min_wage()
     test_no_calendar_behavior_unchanged()
     test_full_pipeline_tolerates_zero_played()
     print("\nTODOS LOS TESTS OK (process_season siembra calendario, issue #80)")
