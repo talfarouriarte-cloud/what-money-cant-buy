@@ -178,6 +178,11 @@ URLS = {
     'l1': f'{_CSV_BASE}/F1.csv',
     'ed': f'{_CSV_BASE}/N1.csv',
 }
+# Código `Div` esperado por liga, derivado del nombre de fichero en URLS
+# (issue #79): ll→SP1, pl→E0, sa→I1, bl→D1, l1→F1, ed→N1. Es la firma que
+# valida que el CSV descargado es de la liga pedida y no el «más parecido»
+# que football-data.co.uk sirva por fuzzy-redirect.
+EXPECTED_DIV = {lg: url.rsplit('/', 1)[-1].rsplit('.', 1)[0] for lg, url in URLS.items()}
 NAME_MAP = {
     "Nott'm Forest": "Nottm Forest", "Ath Madrid": "At Madrid",
     # Serie A
@@ -369,13 +374,84 @@ def fetch_fixtures_from_api():
 def fix_name(n):
     return NAME_MAP.get(n, n)
 
+def validate_csv_content(text, expected_div, expected_season=None):
+    """Valida que `text` es un CSV de football-data.co.uk de la liga esperada.
+
+    Defensa contra el agujero del issue #79: cuando el CSV de la temporada aún
+    no existe, football-data.co.uk NO devuelve 404 — a veces sirve por
+    fuzzy-redirect el fichero «más parecido» (otra liga), a veces devuelve un
+    cuerpo HTML (status 300). Ninguno debe procesarse como resultados de la
+    liga pedida.
+
+    Contrato:
+      - La primera columna del header debe ser `Div` (tolerando el BOM UTF-8,
+        tanto `\\ufeff` como su representación mojibake `ï»¿`).
+      - El valor de `Div` en la primera fila de datos debe ser `expected_div`.
+      - Si se pasa `expected_season` ('YY/NN'), el año de la primera fecha
+        (`Date`, `dd/mm/yyyy` o `dd/mm/yy`) debe caer en la ventana de esa
+        temporada. Cierra la otra dimensión del mismo fallo de fuzzy-match:
+        servir la temporada PASADA de la liga correcta (mismo `Div`) en la URL
+        de la actual. Solo rechaza cuando el año se parsea limpio y queda
+        fuera de ventana; ausencia/formato raro de `Date` no rechaza (el
+        pipeline ya tolera filas malas con on_bad_lines='skip').
+
+    Devuelve `(ok, motivo)`: `ok` bool; `motivo` describe el rechazo para el
+    log (None si válido). No usa pandas — parseo puro para tests standalone.
+    """
+    lines = [ln for ln in text.splitlines() if ln.strip()]
+    if not lines:
+        return False, "fichero vacío"
+    header = lines[0].lstrip('﻿')
+    if header.startswith('ï»¿'):  # BOM mal decodificado (mojibake)
+        header = header[len('ï»¿'):]
+    cols = [c.strip().strip('"') for c in header.split(',')]
+    first_col = cols[0] if cols else ''
+    if first_col != 'Div':
+        return False, f"primera columna {first_col!r} != 'Div' (¿HTML u otra estructura?)"
+    if len(lines) < 2:
+        return False, "sin filas de datos"
+    fields = lines[1].split(',')
+    div_val = fields[0].strip().strip('"')
+    if div_val != expected_div:
+        return False, f"Div={div_val!r} != esperado {expected_div!r}"
+    if expected_season:
+        try:
+            start_year = 2000 + int(expected_season.split('/')[0])
+        except (ValueError, IndexError):
+            start_year = None
+        date_idx = cols.index('Date') if 'Date' in cols else None
+        if start_year is not None and date_idx is not None and date_idx < len(fields):
+            parts = fields[date_idx].strip().strip('"').split('/')
+            if len(parts) == 3 and parts[2].isdigit():
+                yr = int(parts[2])
+                if yr < 100:
+                    yr += 2000
+                if yr not in (start_year, start_year + 1):
+                    return False, (f"año de Date {yr} fuera de la temporada "
+                                   f"{expected_season} ({start_year}/{start_year + 1}) "
+                                   f"— ¿temporada pasada de la misma liga?")
+    return True, None
+
 def download_current_season():
     results = {}
     for lg, url in URLS.items():
         print(f"  Downloading {lg}...")
         try:
-            r = requests.get(url, timeout=30)
-            r.raise_for_status()
+            # allow_redirects=False: un 3xx (fuzzy-redirect a otra liga) NO se
+            # sigue; cualquier status != 200 es fallo (issue #79).
+            r = requests.get(url, timeout=30, allow_redirects=False)
+            if r.status_code != 200:
+                print(f"    FAILED: status {r.status_code} (url {url}) — "
+                      f"redirect/HTML rechazado")
+                results[lg] = None
+                continue
+            expected_div = EXPECTED_DIV[lg]
+            ok, reason = validate_csv_content(r.text, expected_div, CURRENT_SEASON)
+            if not ok:
+                print(f"    WARNING: contenido inválido para {lg} "
+                      f"(esperaba Div={expected_div}): {reason} — descartado")
+                results[lg] = None
+                continue
             path = os.path.join(DATA_DIR, f'current_{lg}.csv')
             with open(path, 'w') as f:
                 f.write(r.text)
