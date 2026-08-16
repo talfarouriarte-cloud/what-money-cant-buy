@@ -482,6 +482,7 @@ def process_season(filepath_or_df, wages, beta, t1, t2, fixtures_calendar=None, 
     # Build matchday lookup from fixture calendar: (home, away) -> official GW
     gw_lookup = {}
     date_lookup = {}
+    calendar_teams = set()
     if fixtures_calendar and lg:
         cal = fixtures_calendar.get(lg, {}).get(CURRENT_SEASON, {}).get('calendar', [])
         for gw_data in cal:
@@ -490,11 +491,19 @@ def process_season(filepath_or_df, wages, beta, t1, t2, fixtures_calendar=None, 
             for mi, pair in enumerate(gw_data['matches']):
                 h_fix, a_fix = fix_name(pair[0]), fix_name(pair[1])
                 gw_lookup[(h_fix, a_fix)] = gw
+                calendar_teams.add(h_fix)
+                calendar_teams.add(a_fix)
                 if mi < len(dates) and dates[mi]:
                     date_lookup[(h_fix, a_fix)] = dates[mi][:10]
-    
+
+    # Universo de equipos (issue #80): con calendario de CURRENT_SEASON siembra
+    # TODOS sus equipos (vía fix_name en el bucle de arriba) UNIÓN los que
+    # aparezcan en resultados; los que no han jugado quedan con las estructuras
+    # vacías de la inicialización (mismo estado que build_preseason_block). Sin
+    # calendario (ligas históricas, llamadas sin lg) el universo es solo `df` —
+    # byte-idéntico al comportamiento previo.
     td = {}
-    for t in sorted(set(df['HomeTeam']) | set(df['AwayTeam'])):
+    for t in sorted(calendar_teams | set(df['HomeTeam']) | set(df['AwayTeam'])):
         td[t] = {'pts':[],'exp':[],'m':[],'cp':0,'ce':0.0,'gf':0,'ga':0,'gf_away':0,'wins':0,'wins_away':0}
     season_matches = []  # (home, away, home_goals, away_goals) para desempates ADR-005
     for _, r in df.iterrows():
@@ -525,7 +534,12 @@ def process_season(filepath_or_df, wages, beta, t1, t2, fixtures_calendar=None, 
             td[team]['pts'].append(td[team]['cp'])
             td[team]['exp'].append(round(td[team]['ce'], 1))
             td[team]['m'].append([opp, ih, pts, round(exp, 2), official_gw, mdate])
-    result = {t: {'a':d['pts'],'e':d['exp'],'m':d['m'],'w':round(wages.get(t, wages.get(fix_name(t), 0))),'gd':d['gf']-d['ga']} for t,d in td.items()}
+    # Cadena de fallback de salarios (spec §3bis.2): actual -> anterior -> `_min`.
+    # Los ascendidos que entran por calendario (issue #80) sin salario propio ni
+    # de la temporada previa caen al mínimo de liga — mismo eslabón que
+    # build_preseason_block (update.py:1397). Terminar en 0 los emitiría con
+    # `w:0` (falsy), que update_cumulative descartaría en silencio.
+    result = {t: {'a':d['pts'],'e':d['exp'],'m':d['m'],'w':round(wages.get(t, wages.get(fix_name(t), wages.get('_min', 20)))),'gd':d['gf']-d['ga']} for t,d in td.items()}
     stats = {t: {'pts': d['cp'], 'gd': d['gf']-d['ga'], 'gf': d['gf'],
                  'gf_away': d['gf_away'], 'wins': d['wins'], 'wins_away': d['wins_away']}
              for t, d in td.items()}
@@ -1548,7 +1562,11 @@ def update():
         old_gw = len(list(existing.values())[0]['a']) if existing else 0
         data['seasons'][lg][CURRENT_SEASON] = result
         
-        sample = list(result.keys())[0]
+        # Elegir como `sample` de diagnóstico un equipo CON partidos jugados: con
+        # el sembrado del calendario (issue #80) el primero alfabético puede ser
+        # uno de 0 jugados y degradaría este log (GW -> 0), justo el canal que
+        # cazó el «ll: 4 teams» del issue.
+        sample = max(result, key=lambda t: len(result[t]['a']))
         new_gw = len(result[sample]['a'])
         sample_gd = result[sample].get('gd', 'MISSING')
         print(f"  {lg}: {len(result)} teams, GW {old_gw} -> {new_gw}, {sample} gd={sample_gd}")
