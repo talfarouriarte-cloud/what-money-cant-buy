@@ -482,6 +482,7 @@ def process_season(filepath_or_df, wages, beta, t1, t2, fixtures_calendar=None, 
     # Build matchday lookup from fixture calendar: (home, away) -> official GW
     gw_lookup = {}
     date_lookup = {}
+    calendar_teams = set()
     if fixtures_calendar and lg:
         cal = fixtures_calendar.get(lg, {}).get(CURRENT_SEASON, {}).get('calendar', [])
         for gw_data in cal:
@@ -490,11 +491,19 @@ def process_season(filepath_or_df, wages, beta, t1, t2, fixtures_calendar=None, 
             for mi, pair in enumerate(gw_data['matches']):
                 h_fix, a_fix = fix_name(pair[0]), fix_name(pair[1])
                 gw_lookup[(h_fix, a_fix)] = gw
+                calendar_teams.add(h_fix)
+                calendar_teams.add(a_fix)
                 if mi < len(dates) and dates[mi]:
                     date_lookup[(h_fix, a_fix)] = dates[mi][:10]
-    
+
+    # Universo de equipos (issue #80): con calendario de CURRENT_SEASON siembra
+    # TODOS sus equipos (vía fix_name en el bucle de arriba) UNIÓN los que
+    # aparezcan en resultados; los que no han jugado quedan con las estructuras
+    # vacías de la inicialización (mismo estado que build_preseason_block). Sin
+    # calendario (ligas históricas, llamadas sin lg) el universo es solo `df` —
+    # byte-idéntico al comportamiento previo.
     td = {}
-    for t in sorted(set(df['HomeTeam']) | set(df['AwayTeam'])):
+    for t in sorted(calendar_teams | set(df['HomeTeam']) | set(df['AwayTeam'])):
         td[t] = {'pts':[],'exp':[],'m':[],'cp':0,'ce':0.0,'gf':0,'ga':0,'gf_away':0,'wins':0,'wins_away':0}
     season_matches = []  # (home, away, home_goals, away_goals) para desempates ADR-005
     for _, r in df.iterrows():
