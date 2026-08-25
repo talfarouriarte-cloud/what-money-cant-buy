@@ -1657,15 +1657,22 @@ function Home({
     const avg3 = n3 > 0 ? Math.round(op3 / n3 * 10) / 10 : 0;
     const trendUp = avg3 > avg10;
     const trendDown = avg3 < avg10 - 0.5;
+    // Muestra de partidos para la significancia: la paridad con el frontend
+    // pre-rediseño (5abe344a: `nm = nAll*38`) es una fórmula CERRADA con el
+    // literal 38, NO el conteo de jornadas por liga `totalRounds = (L.n-1)*2`.
+    // Con totalRounds, ligas de 18 equipos (bl, ed → 34) divergían de la
+    // semántica exacta que exige el contrato del issue #86 (`√(nAll·38)`); para
+    // La Liga (20 → 38) coincidían y el DoD de At Madrid no lo detectaba.
+    const SIG_ROUNDS = 38;
     const msP = (() => {
-      const co = totOP, nm = nAll * totalRounds;
+      const co = totOP, nm = nAll * SIG_ROUNDS;
       if (nm <= 0 || co === 0) return 100;
       const z2 = Math.abs(co) / (FBM_SIG * Math.sqrt(nm));
       return Math.round(2 * (1 - fbmNormCDF(z2)) * 1000) / 10;
     })();
     const isSig = msP < 5;
     const ms = (() => {
-      const co = totOP, nm = nAll * totalRounds;
+      const co = totOP, nm = nAll * SIG_ROUNDS;
       if (nm <= 0 || co === 0) return 0;
       const z = Math.abs(co) / (FBM_SIG * Math.sqrt(nm));
       const p = 2 * (1 - fbmNormCDF(z));
