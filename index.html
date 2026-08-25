@@ -1628,19 +1628,20 @@ function Home({
   // Long-term management card: consume cumulative[lg][team] (issue #86,
   // paridad semántica con el frontend pre-rediseño 5abe344a).
   const cum = D.cumulative && D.cumulative[lg] && D.cumulative[lg][team] || null;
-  const MGMT_SIG = 1.58;
-  const mgmtNormCDF = z => {
-    const tt = 1 / (1 + 0.2316419 * Math.abs(z));
-    const dd = 0.3989423 * Math.exp(-z * z / 2);
-    const p = dd * tt * (0.3193815 + tt * (-0.3565638 + tt * (1.781478 + tt * (-1.821256 + tt * 1.330274))));
-    return z > 0 ? 1 - p : p;
-  };
+  // Recorte a la temporada seleccionada: `sn` es navegable en Home, así que los
+  // totales, ventanas y % se derivan de las temporadas <= sn (con sn = temporada
+  // actual el resultado es idéntico al frontend de origen 5abe344a). Nit #1.
+  // La normal acumulada se reutiliza de FBM_SIG/fbmNormCDF (def. única en
+  // index.html:5202, disponibles en tiempo de render) en vez de duplicarla — nit #5.
+  const arrAll = cum && cum[3] || [];
+  const arr = arrAll.filter(s => s[0] <= sn);
   let mgmtColor = "var(--neg)";
   let mgmtBody;
-  if (cum) {
-    const arr = cum[3] || [];
-    const nAll = cum[1];
-    const totOP = cum[0];
+  if (cum && arr.length) {
+    const nAll = arr.length;
+    const totOP = Math.round(arr.reduce((a, s) => a + (s[3] - s[2]), 0) * 10) / 10;
+    // pctOP se recalcula sobre el corte por `sn`; tras el recorte del nit #1 no se
+    // puede consumir cum[2] (all-time), así que el nit #6 queda superado por el #1.
     let totExp = 0;
     arr.forEach(s => { totExp += s[2]; });
     const pctOP = totExp > 0 ? Math.round(totOP / totExp * 1000) / 10 : 0;
@@ -1657,17 +1658,17 @@ function Home({
     const trendUp = avg3 > avg10;
     const trendDown = avg3 < avg10 - 0.5;
     const msP = (() => {
-      const co = totOP, nm = nAll * 38;
+      const co = totOP, nm = nAll * totalRounds;
       if (nm <= 0 || co === 0) return 100;
-      const z2 = Math.abs(co) / (MGMT_SIG * Math.sqrt(nm));
-      return Math.round(2 * (1 - mgmtNormCDF(z2)) * 1000) / 10;
+      const z2 = Math.abs(co) / (FBM_SIG * Math.sqrt(nm));
+      return Math.round(2 * (1 - fbmNormCDF(z2)) * 1000) / 10;
     })();
     const isSig = msP < 5;
     const ms = (() => {
-      const co = totOP, nm = nAll * 38;
+      const co = totOP, nm = nAll * totalRounds;
       if (nm <= 0 || co === 0) return 0;
-      const z = Math.abs(co) / (MGMT_SIG * Math.sqrt(nm));
-      const p = 2 * (1 - mgmtNormCDF(z));
+      const z = Math.abs(co) / (FBM_SIG * Math.sqrt(nm));
+      const p = 2 * (1 - fbmNormCDF(z));
       return Math.round((co >= 0 ? 1 : -1) * (100 - p * 100) * 10) / 10;
     })();
     const curDf = Math.round(df * 10) / 10;
@@ -1686,6 +1687,9 @@ function Home({
       color: v >= 0 ? "var(--pos)" : "var(--neg)",
       borderColor: "transparent"
     });
+    // posPill solo mira el signo para elegir el par de colores; estas constantes
+    // nombran la tendencia en vez de pasar un ±1 que se leería como un dato — nit #7.
+    const PILL_DOWN = -1, PILL_UP = 1;
     mgmtBody = /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       className: "hero-num"
     }, /*#__PURE__*/React.createElement("div", {
@@ -1713,17 +1717,20 @@ function Home({
     }, /*#__PURE__*/React.createElement("span", {
       className: "pill",
       style: posPill(totOP)
-    }, sgn(pctOP), "%"), /*#__PURE__*/React.createElement("span", {
+    }, sgn(pctOP), "%"),
+    // La señal de significancia (isSig) se movió del color de la píldora al texto
+    // de la narrativa (mgmt_significant) a propósito con el rediseño — nit #7.
+    /*#__PURE__*/React.createElement("span", {
       className: "pill ghost"
     }, _t("mgmt_score"), ": ", sgn(ms)), /*#__PURE__*/React.createElement("span", {
       className: "pill",
       style: posPill(curDf)
     }, sn, ": ", sgn(curDf)), trendDown ? /*#__PURE__*/React.createElement("span", {
       className: "pill",
-      style: posPill(-1)
+      style: posPill(PILL_DOWN)
     }, "↘ ", _t("mgmt_pill_declining")) : trendUp ? /*#__PURE__*/React.createElement("span", {
       className: "pill",
-      style: posPill(1)
+      style: posPill(PILL_UP)
     }, "↗ ", _t("mgmt_pill_improving")) : null));
   } else {
     mgmtBody = /*#__PURE__*/React.createElement("div", {
