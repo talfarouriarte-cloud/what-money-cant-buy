@@ -1657,13 +1657,9 @@ function Home({
     const avg3 = n3 > 0 ? Math.round(op3 / n3 * 10) / 10 : 0;
     const trendUp = avg3 > avg10;
     const trendDown = avg3 < avg10 - 0.5;
-    // Muestra de partidos para la significancia: la paridad con el frontend
-    // pre-rediseño (5abe344a: `nm = nAll*38`) es una fórmula CERRADA con el
-    // literal 38, NO el conteo de jornadas por liga `totalRounds = (L.n-1)*2`.
-    // Con totalRounds, ligas de 18 equipos (bl, ed → 34) divergían de la
-    // semántica exacta que exige el contrato del issue #86 (`√(nAll·38)`); para
-    // La Liga (20 → 38) coincidían y el DoD de At Madrid no lo detectaba.
-    const SIG_ROUNDS = 38;
+    // nm = nAll·SIG_ROUNDS (literal 38, def. de módulo junto a FBM_SIG). Paridad
+    // con 5abe344a; el mismo SIG_ROUNDS lo consume el Explorer (modo "ms"), así
+    // que Home y Explorer no pueden divergir en bl/l1/ed (34) — nits #1/#4 de #88.
     const msP = (() => {
       const co = totOP, nm = nAll * SIG_ROUNDS;
       if (nm <= 0 || co === 0) return 100;
@@ -5214,6 +5210,13 @@ function H2H({
 /* ---------- BadRun / Run Evaluator ---------- */
 /* ---------- BadRun / Run Evaluator — cumulative funnel + rarity verdict ---------- */
 const FBM_SIG = 1.58;
+// Muestra de partidos para la significancia (Managerial Score). Es una fórmula
+// CERRADA con el literal 38 en el frontend pre-rediseño 5abe344a, NO el conteo
+// de jornadas por liga `totalRounds = (L.n-1)*2`: ligas de 18 equipos (bl, l1,
+// ed → 34) divergían de la semántica exacta `√(nAll·38)` del issue #86. Vive en
+// scope de módulo para que card_mgmt (Home) y el Explorer lean el MISMO valor
+// nombrado y no puedan volver a divergir.
+const SIG_ROUNDS = 38;
 function fbmNormCDF(z) {
   const t = 1 / (1 + 0.2316419 * Math.abs(z));
   const d = 0.3989423 * Math.exp(-z * z / 2);
@@ -5735,7 +5738,6 @@ function Overperformance({
   const L = window.FBM_LEAGUES[lg];
   const teams = D.cumulative && D.cumulative[lg] || {};
   const seasonsAsc = useMemo(() => Object.keys(D.seasons[lg] || {}).sort(), [lg]);
-  const totalRounds = (L.n - 1) * 2;
   const [mode, setMode0] = useState(() => {
     const h = window.hashGet && window.hashGet("om");
     return ["pts", "norm", "ms"].indexOf(h) >= 0 ? h : "pts";
@@ -5787,7 +5789,7 @@ function Overperformance({
         ns: nS
       };
     }
-    const p = fbmPval(cumOP, nS * totalRounds);
+    const p = fbmPval(cumOP, nS * SIG_ROUNDS);
     return {
       v: Math.round((cumOP >= 0 ? 1 : -1) * (100 - p * 100)),
       ns: nS
@@ -5832,7 +5834,7 @@ function Overperformance({
       const sd = teams[t] && teams[t][3].find(x => x[0] === s);
       if (!sd) return;
       const d = sd[3] - sd[2];
-      r[t] = mode === "pts" ? Math.round(d) : mode === "norm" ? sd[2] > 0 ? Math.round(d / sd[2] * 1000) / 10 : 0 : Math.round((d >= 0 ? 1 : -1) * (100 - fbmPval(d, totalRounds) * 100));
+      r[t] = mode === "pts" ? Math.round(d) : mode === "norm" ? sd[2] > 0 ? Math.round(d / sd[2] * 1000) / 10 : 0 : Math.round((d >= 0 ? 1 : -1) * (100 - fbmPval(d, SIG_ROUNDS) * 100));
     });
     return r;
   }), [sel, teams, mode, seasonsAsc]);
@@ -5858,7 +5860,7 @@ function Overperformance({
         }
       }
       if (n === 0) return;
-      r[t] = mode === "pts" ? Math.round(cumOP) : mode === "norm" ? cumExp / n > 0 ? Math.round(cumOP / n / (cumExp / n) * 1000) / 10 : 0 : Math.round((cumOP >= 0 ? 1 : -1) * (100 - fbmPval(cumOP, n * totalRounds) * 100));
+      r[t] = mode === "pts" ? Math.round(cumOP) : mode === "norm" ? cumExp / n > 0 ? Math.round(cumOP / n / (cumExp / n) * 1000) / 10 : 0 : Math.round((cumOP >= 0 ? 1 : -1) * (100 - fbmPval(cumOP, n * SIG_ROUNDS) * 100));
     });
     return r;
   }), [sel, teams, mode, win, seasonsAsc]);
