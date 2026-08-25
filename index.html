@@ -1625,6 +1625,118 @@ function Home({
   const d5 = runDiff(5),
     d10 = runDiff(10);
 
+  // Long-term management card: consume cumulative[lg][team] (issue #86,
+  // paridad semántica con el frontend pre-rediseño 5abe344a).
+  const cum = D.cumulative && D.cumulative[lg] && D.cumulative[lg][team] || null;
+  // Recorte a la temporada seleccionada: `sn` es navegable en Home, así que los
+  // totales, ventanas y % se derivan de las temporadas <= sn (con sn = temporada
+  // actual el resultado es idéntico al frontend de origen 5abe344a). Nit #1.
+  // La normal acumulada se reutiliza de FBM_SIG/fbmNormCDF (def. única en
+  // index.html:5202, disponibles en tiempo de render) en vez de duplicarla — nit #5.
+  const arrAll = cum && cum[3] || [];
+  const arr = arrAll.filter(s => s[0] <= sn);
+  let mgmtColor = "var(--neg)";
+  let mgmtBody;
+  if (cum && arr.length) {
+    const nAll = arr.length;
+    const totOP = Math.round(arr.reduce((a, s) => a + (s[3] - s[2]), 0) * 10) / 10;
+    // pctOP se recalcula sobre el corte por `sn`; tras el recorte del nit #1 no se
+    // puede consumir cum[2] (all-time), así que el nit #6 queda superado por el #1.
+    let totExp = 0;
+    arr.forEach(s => { totExp += s[2]; });
+    const pctOP = totExp > 0 ? Math.round(totOP / totExp * 1000) / 10 : 0;
+    const n10 = Math.min(10, arr.length);
+    let op10 = 0;
+    for (let ii = arr.length - n10; ii < arr.length; ii++) op10 += arr[ii][3] - arr[ii][2];
+    op10 = Math.round(op10);
+    const avg10 = n10 > 0 ? Math.round(op10 / n10 * 10) / 10 : 0;
+    const n3 = Math.min(3, arr.length);
+    let op3 = 0;
+    for (let jj = arr.length - n3; jj < arr.length; jj++) op3 += arr[jj][3] - arr[jj][2];
+    op3 = Math.round(op3);
+    const avg3 = n3 > 0 ? Math.round(op3 / n3 * 10) / 10 : 0;
+    const trendUp = avg3 > avg10;
+    const trendDown = avg3 < avg10 - 0.5;
+    const msP = (() => {
+      const co = totOP, nm = nAll * totalRounds;
+      if (nm <= 0 || co === 0) return 100;
+      const z2 = Math.abs(co) / (FBM_SIG * Math.sqrt(nm));
+      return Math.round(2 * (1 - fbmNormCDF(z2)) * 1000) / 10;
+    })();
+    const isSig = msP < 5;
+    const ms = (() => {
+      const co = totOP, nm = nAll * totalRounds;
+      if (nm <= 0 || co === 0) return 0;
+      const z = Math.abs(co) / (FBM_SIG * Math.sqrt(nm));
+      const p = 2 * (1 - fbmNormCDF(z));
+      return Math.round((co >= 0 ? 1 : -1) * (100 - p * 100) * 10) / 10;
+    })();
+    const curDf = Math.round(df * 10) / 10;
+    const sgn = v => (v >= 0 ? "+" : "") + v;
+    const verdictKey = totOP > 5 ? "mgmt_verdict_above" : totOP < -5 ? "mgmt_verdict_below" : "mgmt_verdict_inline";
+    let narr = _t(verdictKey) + " (" + sgn(pctOP) + "%).";
+    if (isSig) narr += " " + _t("mgmt_significant");
+    if (n10 >= 3 && n3 >= 2) {
+      narr += " " + (trendDown ? _tf("mgmt_trend_declining", { op10: sgn(op10), op3: sgn(op3) }) : trendUp ? _tf("mgmt_trend_improving", { op3: sgn(op3), avg10: sgn(avg10) }) : _tf("mgmt_trend_steady", { avg10: sgn(avg10) }));
+    }
+    narr += " " + _tf("mgmt_cur_close", { sn: sn, df: sgn(curDf), n: nP });
+    narr += (curDf >= 0) !== (totOP >= 0) ? _t("mgmt_against_trend") : ".";
+    mgmtColor = totOP >= 0 ? "var(--pos)" : "var(--neg)";
+    const posPill = v => ({
+      background: v >= 0 ? "rgba(27,122,74,0.12)" : "rgba(178,59,42,0.10)",
+      color: v >= 0 ? "var(--pos)" : "var(--neg)",
+      borderColor: "transparent"
+    });
+    // posPill solo mira el signo para elegir el par de colores; estas constantes
+    // nombran la tendencia en vez de pasar un ±1 que se leería como un dato — nit #7.
+    const PILL_DOWN = -1, PILL_UP = 1;
+    mgmtBody = /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "hero-num"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "bignum " + (totOP >= 0 ? "delta-up" : "delta-down")
+    }, sgn(totOP)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "eyebrow"
+    }, _t("pts")), /*#__PURE__*/React.createElement("div", {
+      className: "text-mut",
+      style: {
+        fontSize: 12
+      }
+    }, _t(totOP >= 0 ? "mgmt_above_budget" : "mgmt_below_budget"), " \xB7 ", nAll, " ", _t("seasons_lc")))), /*#__PURE__*/React.createElement("div", {
+      className: "text-mut",
+      style: {
+        fontSize: 12,
+        lineHeight: 1.55,
+        marginTop: 12
+      }
+    }, narr), /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-2",
+      style: {
+        marginTop: 12,
+        flexWrap: "wrap"
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "pill",
+      style: posPill(totOP)
+    }, sgn(pctOP), "%"),
+    // La señal de significancia (isSig) se movió del color de la píldora al texto
+    // de la narrativa (mgmt_significant) a propósito con el rediseño — nit #7.
+    /*#__PURE__*/React.createElement("span", {
+      className: "pill ghost"
+    }, _t("mgmt_score"), ": ", sgn(ms)), /*#__PURE__*/React.createElement("span", {
+      className: "pill",
+      style: posPill(curDf)
+    }, sn, ": ", sgn(curDf)), trendDown ? /*#__PURE__*/React.createElement("span", {
+      className: "pill",
+      style: posPill(PILL_DOWN)
+    }, "↘ ", _t("mgmt_pill_declining")) : trendUp ? /*#__PURE__*/React.createElement("span", {
+      className: "pill",
+      style: posPill(PILL_UP)
+    }, "↗ ", _t("mgmt_pill_improving")) : null));
+  } else {
+    mgmtBody = /*#__PURE__*/React.createElement("div", {
+      className: "text-mut"
+    }, _t("no_historical"));
+  }
   const teamColor = "var(--accent)";
   return /*#__PURE__*/React.createElement("div", {
     className: "col gap-4"
@@ -1873,56 +1985,8 @@ function Home({
     q: _t("card_mgmt"),
     tab: "overperformance",
     setTab: setTab,
-    color: df >= 0 ? "var(--pos)" : "var(--neg)"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "hero-num"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "bignum " + (df >= 0 ? "delta-up" : "delta-down")
-  }, df >= 0 ? "+" : "", df.toFixed(1)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "eyebrow"
-  }, _t("vs_budget")), /*#__PURE__*/React.createElement("div", {
-    className: "text-mut",
-    style: {
-      fontSize: 12
-    }
-  }, _t("budget_lc"), " #", budgetRank, " \xB7 ", _t("rank"), " #", rank))), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-3",
-    style: {
-      marginTop: 14
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "col",
-    style: {
-      flex: 1
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "eyebrow"
-  }, _t("data_wage_col")), /*#__PURE__*/React.createElement("div", {
-    className: "smnum mono"
-  }, cur, t.w, /*#__PURE__*/React.createElement("span", {
-    className: "text-mut",
-    style: {
-      fontSize: 12
-    }
-  }, "M"))), /*#__PURE__*/React.createElement("div", {
-    className: "col",
-    style: {
-      flex: 1
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "eyebrow"
-  }, _t("expected")), /*#__PURE__*/React.createElement("div", {
-    className: "smnum mono"
-  }, ep.toFixed(0))), /*#__PURE__*/React.createElement("div", {
-    className: "col",
-    style: {
-      flex: 1
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "eyebrow"
-  }, _t("actual")), /*#__PURE__*/React.createElement("div", {
-    className: "smnum mono"
-  }, ap)))), /*#__PURE__*/React.createElement(NarrativeCard, {
+    color: mgmtColor
+  }, mgmtBody), /*#__PURE__*/React.createElement(NarrativeCard, {
     q: _t("card_run"),
     tab: "badrun",
     setTab: setTab,
