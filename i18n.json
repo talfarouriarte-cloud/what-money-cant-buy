@@ -219,6 +219,62 @@
     "No historical data",
     "Sin datos históricos"
   ],
+  "mgmt_above_budget": [
+    "above budget",
+    "sobre presupuesto"
+  ],
+  "mgmt_below_budget": [
+    "below budget",
+    "bajo presupuesto"
+  ],
+  "mgmt_verdict_above": [
+    "Consistently above budget",
+    "Rinde por encima de su presupuesto"
+  ],
+  "mgmt_verdict_below": [
+    "Consistently below budget",
+    "Rinde por debajo de su presupuesto"
+  ],
+  "mgmt_verdict_inline": [
+    "In line with budget",
+    "Rinde acorde a su presupuesto"
+  ],
+  "mgmt_significant": [
+    "Statistically significant — not luck.",
+    "Estadísticamente significativo — no es azar."
+  ],
+  "mgmt_trend_declining": [
+    "10yr: {op10}, 3yr: {op3} — declining.",
+    "10a: {op10}, 3a: {op3} — a la baja."
+  ],
+  "mgmt_trend_improving": [
+    "3yr: {op3} (10yr: {avg10}/season) — improving.",
+    "3a: {op3} ({avg10}/temp en 10a) — al alza."
+  ],
+  "mgmt_trend_steady": [
+    "Steady: {avg10}/season over 10yr.",
+    "Estable: {avg10}/temp en 10a."
+  ],
+  "mgmt_cur_close": [
+    "{sn}: {df} after {n}g",
+    "{sn}: {df} tras {n}j"
+  ],
+  "mgmt_against_trend": [
+    " — against the trend.",
+    " Distinto a la tendencia."
+  ],
+  "mgmt_score": [
+    "Score",
+    "Puntuación"
+  ],
+  "mgmt_pill_declining": [
+    "declining",
+    "bajando"
+  ],
+  "mgmt_pill_improving": [
+    "improving",
+    "subiendo"
+  ],
   "vs_budget": [
     "vs budget",
     "vs presupuesto"
