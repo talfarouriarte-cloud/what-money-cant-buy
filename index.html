@@ -1631,8 +1631,10 @@ function Home({
   // Recorte a la temporada seleccionada: `sn` es navegable en Home, así que los
   // totales, ventanas y % se derivan de las temporadas <= sn (con sn = temporada
   // actual el resultado es idéntico al frontend de origen 5abe344a). Nit #1.
-  // La normal acumulada se reutiliza de FBM_SIG/fbmNormCDF (def. única en
-  // index.html:5202, disponibles en tiempo de render) en vez de duplicarla — nit #5.
+  // FBM_SIG/SIG_ROUNDS/fbmNormCDF se definen en el IIFE de src/tabs.jsx y se
+  // exportan a `window` a su cierre; card_mgmt (otro IIFE) los consume como
+  // `window.*` en tiempo de render (idioma cross-bloque: window.__FBM,
+  // window.FBM_LEAGUES) en vez de duplicarlos — nit #5.
   const arrAll = cum && cum[3] || [];
   const arr = arrAll.filter(s => s[0] <= sn);
   let mgmtColor = "var(--neg)";
@@ -1657,21 +1659,22 @@ function Home({
     const avg3 = n3 > 0 ? Math.round(op3 / n3 * 10) / 10 : 0;
     const trendUp = avg3 > avg10;
     const trendDown = avg3 < avg10 - 0.5;
-    // nm = nAll·SIG_ROUNDS (literal 38, def. de módulo junto a FBM_SIG). Paridad
-    // con 5abe344a; el mismo SIG_ROUNDS lo consume el Explorer (modo "ms"), así
-    // que Home y Explorer no pueden divergir en bl/l1/ed (34) — nits #1/#4 de #88.
+    // nm = nAll·SIG_ROUNDS (literal 38). SIG_ROUNDS/FBM_SIG viven en el IIFE de
+    // src/tabs.jsx y se leen aquí vía `window.*` (exportados a su cierre); el
+    // mismo SIG_ROUNDS lo consume el Explorer (modo "ms"), así que Home y
+    // Explorer no pueden divergir en bl/l1/ed (34) — nits #1/#4 de #88.
     const msP = (() => {
-      const co = totOP, nm = nAll * SIG_ROUNDS;
+      const co = totOP, nm = nAll * window.SIG_ROUNDS;
       if (nm <= 0 || co === 0) return 100;
-      const z2 = Math.abs(co) / (FBM_SIG * Math.sqrt(nm));
-      return Math.round(2 * (1 - fbmNormCDF(z2)) * 1000) / 10;
+      const z2 = Math.abs(co) / (window.FBM_SIG * Math.sqrt(nm));
+      return Math.round(2 * (1 - window.fbmNormCDF(z2)) * 1000) / 10;
     })();
     const isSig = msP < 5;
     const ms = (() => {
-      const co = totOP, nm = nAll * SIG_ROUNDS;
+      const co = totOP, nm = nAll * window.SIG_ROUNDS;
       if (nm <= 0 || co === 0) return 0;
-      const z = Math.abs(co) / (FBM_SIG * Math.sqrt(nm));
-      const p = 2 * (1 - fbmNormCDF(z));
+      const z = Math.abs(co) / (window.FBM_SIG * Math.sqrt(nm));
+      const p = 2 * (1 - window.fbmNormCDF(z));
       return Math.round((co >= 0 ? 1 : -1) * (100 - p * 100) * 10) / 10;
     })();
     const curDf = Math.round(df * 10) / 10;
@@ -5213,9 +5216,11 @@ const FBM_SIG = 1.58;
 // Muestra de partidos para la significancia (Managerial Score). Es una fórmula
 // CERRADA con el literal 38 en el frontend pre-rediseño 5abe344a, NO el conteo
 // de jornadas por liga `totalRounds = (L.n-1)*2`: ligas de 18 equipos (bl, l1,
-// ed → 34) divergían de la semántica exacta `√(nAll·38)` del issue #86. Vive en
-// scope de módulo para que card_mgmt (Home) y el Explorer lean el MISMO valor
-// nombrado y no puedan volver a divergir.
+// ed → 34) divergían de la semántica exacta `√(nAll·38)` del issue #86. El
+// Explorer (mismo IIFE de src/tabs.jsx) la lee desnuda; card_mgmt (Home, otro
+// IIFE) la consume como `window.SIG_ROUNDS` — se exporta a `window` al cierre
+// de este bloque (junto a FBM_SIG) para que ambas vistas lean el MISMO valor y
+// no puedan volver a divergir.
 const SIG_ROUNDS = 38;
 function fbmNormCDF(z) {
   const t = 1 / (1 + 0.2316419 * Math.abs(z));
@@ -7240,7 +7245,7 @@ Object.assign(window, {
   DataSources,
   History
 });
-Object.assign(window, { _extends, fbmExcl, ProbCell, Predictions, EvolutionChart, Matches, MatchTip, H2H, fbmNormCDF, BadRun, EmptyState, fbmPval, Overperformance, Calculator, Methodology, DataSources, WageEvolution, SourceCard, History });
+Object.assign(window, { _extends, fbmExcl, ProbCell, Predictions, EvolutionChart, Matches, MatchTip, H2H, fbmNormCDF, BadRun, EmptyState, fbmPval, Overperformance, Calculator, Methodology, DataSources, WageEvolution, SourceCard, History, FBM_SIG, SIG_ROUNDS });
 })();
 </script>
 
