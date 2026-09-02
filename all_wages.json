@@ -286,6 +286,28 @@
       "Parma": 22,
       "Pisa": 21,
       "Lecce": 17
+    },
+    "26/27": {
+      "Juventus": 151,
+      "Inter Milan": 144,
+      "Napoli": 118,
+      "AC Milan": 109,
+      "Roma": 103,
+      "Como": 67,
+      "Lazio": 66,
+      "Atalanta": 65,
+      "Fiorentina": 56,
+      "Bologna": 44,
+      "Torino": 37,
+      "Sassuolo": 36,
+      "Udinese": 27,
+      "Monza": 26,
+      "Venezia": 26,
+      "Cagliari": 23,
+      "Genoa": 23,
+      "Parma": 20,
+      "Lecce": 17,
+      "Frosinone": 7
     }
   },
   "bundesliga": {
@@ -557,6 +579,26 @@
       "Koln": 34,
       "Heidenheim": 26,
       "St Pauli": 26
+    },
+    "26/27": {
+      "Bayern Munich": 224,
+      "Borussia Dortmund": 102,
+      "Bayer Leverkusen": 82,
+      "Leipzig": 80,
+      "Stuttgart": 57,
+      "Hoffenheim": 53,
+      "Eintracht Frankfurt": 52,
+      "Freiburg": 49,
+      "Monchengladbach": 46,
+      "Mainz": 39,
+      "Werder Bremen": 34,
+      "Koln": 33,
+      "Augsburg": 32,
+      "Union Berlin": 29,
+      "Hamburg": 23,
+      "Schalke 04": 18,
+      "Elversberg": 9,
+      "Paderborn": 8
     }
   },
   "ligue_1": {
@@ -840,6 +882,26 @@
       "Toulouse": 20,
       "Angers": 19,
       "Le Havre": 18
+    },
+    "26/27": {
+      "PSG": 182,
+      "Lyon": 63,
+      "Marseille": 59,
+      "Rennes": 47,
+      "Monaco": 46,
+      "Lille": 41,
+      "Nice": 39,
+      "Paris FC": 35,
+      "Strasbourg": 28,
+      "Lens": 28,
+      "Brest": 21,
+      "Auxerre": 18,
+      "Lorient": 17,
+      "Toulouse": 17,
+      "Angers": 14,
+      "Le Havre": 12,
+      "Troyes": 8,
+      "Le Mans": 3
     }
   },
   "eredivisie": {
@@ -1105,6 +1167,24 @@
       "Excelsior": 5,
       "Volendam": 4,
       "Telstar": 3
+    },
+    "26/27": {
+      "PSV": 30,
+      "Ajax": 28,
+      "Feyenoord": 21,
+      "AZ Alkmaar": 17,
+      "Twente": 10,
+      "Utrecht": 9,
+      "NEC Nijmegen": 8,
+      "Heerenveen": 6,
+      "Fortuna Sittard": 6,
+      "PEC Zwolle": 4,
+      "Go Ahead Eagles": 4,
+      "Sparta Rotterdam": 4,
+      "Groningen": 3,
+      "Excelsior": 3,
+      "Telstar": 1,
+      "Willem II": 1
     }
   },
   "la_liga": {
@@ -1390,6 +1470,28 @@
       "Oviedo": 26,
       "Levante": 25,
       "Alaves": 25
+    },
+    "26/27": {
+      "Real Madrid": 295,
+      "Barcelona": 208,
+      "At Madrid": 155,
+      "Ath Bilbao": 90,
+      "Betis": 63,
+      "Sociedad": 60,
+      "Villarreal": 57,
+      "Sevilla": 46,
+      "Valencia": 45,
+      "Celta": 35,
+      "Vallecano": 29,
+      "Getafe": 28,
+      "Osasuna": 27,
+      "Espanol": 26,
+      "Alaves": 24,
+      "Elche": 16,
+      "Levante": 15,
+      "La Coruna": 9,
+      "Santander": 7,
+      "Malaga": 6
     }
   },
   "premier_league": {
@@ -1678,6 +1780,28 @@
       "Leeds": 57,
       "Brentford": 57,
       "Burnley": 56
+    },
+    "26/27": {
+      "Man City": 191,
+      "Liverpool": 191,
+      "Arsenal": 172,
+      "Man United": 155,
+      "Tottenham": 146,
+      "Chelsea": 127,
+      "Aston Villa": 101,
+      "Newcastle": 81,
+      "Nottm Forest": 76,
+      "Crystal Palace": 71,
+      "Brighton": 70,
+      "Bournemouth": 64,
+      "Sunderland": 61,
+      "Fulham": 60,
+      "Everton": 59,
+      "Leeds": 56,
+      "Brentford": 51,
+      "Ipswich": 28,
+      "Hull": 18,
+      "Coventry": 16
     }
   }
 }
