@@ -68,6 +68,29 @@ def _wages_for(matches, base=100):
     return w
 
 
+def _final_standings(matches):
+    """Totales de temporada {team: {pts,gd,gf,gf_away,wins,wins_away}} calculados
+    INDEPENDIENTEMENTE de update.py (espejo de la agregación de process_season).
+    Reconstruye el `stats` que compute_league_ranks recibe en attach_ranks."""
+    st = {}
+
+    def ensure(t):
+        st.setdefault(t, {'pts': 0, 'gd': 0, 'gf': 0, 'gf_away': 0,
+                          'wins': 0, 'wins_away': 0})
+
+    for (h, a, hg, ag) in matches:
+        ensure(h); ensure(a)
+        st[h]['gf'] += hg; st[h]['gd'] += hg - ag
+        st[a]['gf'] += ag; st[a]['gd'] += ag - hg; st[a]['gf_away'] += ag
+        if hg > ag:
+            st[h]['pts'] += 3; st[h]['wins'] += 1
+        elif ag > hg:
+            st[a]['pts'] += 3; st[a]['wins'] += 1; st[a]['wins_away'] += 1
+        else:
+            st[h]['pts'] += 1; st[a]['pts'] += 1
+    return st
+
+
 def _replay_expected_rk(matches, lg):
     """Réplica INDEPENDIENTE de la construcción de `rk` en process_season: replay
     fila a fila acumulando los mismos stats (pts, gd, gf, gf_away, wins,
@@ -227,14 +250,38 @@ def test_no_regresion_campos_existentes_bit_identicos():
             assert on[t][field] == off[t][field], \
                 (f"{t}.{field} cambió al activar rk/rank: "
                  f"on={on[t][field]!r} off={off[t][field]!r}")
-        # OFF no asigna rank; ON sí (entero). La igualdad de `rank` con la
-        # clasificación oficial ya la valida (c) contra la réplica independiente.
         assert 'rank' not in off[t] or off[t].get('rank') is None
         assert isinstance(on[t]['rank'], int)
-    # `rank` es permutación completa 1..N sobre el bloque ON.
+    # `rank` bit-idéntico al código previo: el rank que emite el código previo es
+    # compute_league_ranks(stats_totales, matches, lg) — reconstruido aquí desde
+    # cero (compute_league_ranks y TIEBREAKERS quedan intactos en este PR).
+    official = update.compute_league_ranks(_final_standings(matches), matches, 'll')
+    for t in on:
+        assert on[t]['rank'] == official[t], \
+            f"{t}: rank={on[t]['rank']} != clasificación oficial {official[t]}"
+    # …y permutación completa 1..N sobre el bloque ON.
     n = len(on)
     assert sorted(on[t]['rank'] for t in on) == list(range(1, n + 1))
-    print("OK (d) a/e/m/w/gd bit-idénticos con rk/rank on/off; rank oficial intacto")
+    print("OK (d) a/e/m/w/gd bit-idénticos con rk/rank on/off; rank == oficial")
+
+
+def test_preseason_block_emits_empty_rk():
+    """Equipos sin partidos (build_preseason_block) llevan `rk: []` (contrato
+    punto 4): mantiene el invariante len(rk)==len(a) con a=[] y no rompe el
+    consumo del frontend en la rama pre-season."""
+    teams = [f'T{i:02d}' for i in range(6)]
+    cal = [{'gw': i + 1, 'matches': [[teams[2 * (i % 3)], teams[2 * (i % 3) + 1]]],
+            'dates': ['2026-08-15T17:00:00Z']} for i in range(6)]
+    fx = {'ll': {update.CURRENT_SEASON: {'calendar': cal}}}
+    wages = {t: 100 - i for i, t in enumerate(teams)}
+    wages['_min'] = min(wages.values())
+
+    block = update.build_preseason_block(fx, wages, 'll')
+    assert block, "el bloque pre-season no debe estar vacío"
+    for t, b in block.items():
+        assert b['rk'] == [], f"{t}: pre-season debe emitir rk=[], got {b.get('rk')!r}"
+        assert b['a'] == [] and len(b['rk']) == len(b['a'])
+    print("OK (pre-season) build_preseason_block emite rk=[] (len(rk)==len(a))")
 
 
 if __name__ == '__main__':
@@ -242,4 +289,5 @@ if __name__ == '__main__':
     test_last_rk_equals_rank()
     test_rk_matches_official_replay_and_permutation()
     test_no_regresion_campos_existentes_bit_identicos()
+    test_preseason_block_emits_empty_rk()
     print("\nTODOS LOS TESTS OK (rk[] rango oficial por partido, ADR-005·R·2)")

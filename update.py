@@ -1419,7 +1419,10 @@ def build_preseason_block(fixtures_cal, wages, lg, season=CURRENT_SEASON):
     result = {}
     for t in teams:
         result[t] = {
-            'a': [], 'e': [], 'm': [], 'gd': 0,
+            # rk: [] (ADR-005·R·2) — sin partidos no hay cortes de rango; mantiene
+            # el invariante len(rk)==len(a) con a=[]. attach_preseason_ranks fija
+            # `rank` (orden esperado del modelo) sin tocar rk.
+            'a': [], 'e': [], 'm': [], 'rk': [], 'gd': 0,
             'w': round(wages.get(t, wages.get(fix_name(t), wages.get('_min', 20)))),
         }
     return result
