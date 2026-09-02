@@ -11,10 +11,15 @@ Cubre:
   (a) `len(rk) == len(a)` por equipo (una entrada por partido jugado).
   (b) `rk[-1] == rank` para todo equipo con partidos.
   (c) Fixture sintético de La Liga con empate a puntos resuelto por mini-liga:
-      el `rk` de cada corte es una permutación 1..K sobre los K equipos con
-      partidos hasta ese corte, y el estado final refleja el desempate oficial
-      (no el ingenuo puntos→GD). Reproducido con una réplica independiente,
-      fila a fila, de la agregación de `process_season`.
+      el `rk` de cada corte es una permutación 1..N sobre el UNIVERSO COMPLETO de
+      la liga (equipos con 0 partidos incluidos, en el grupo de empate a 0), y el
+      estado final refleja el desempate oficial (no el ingenuo puntos→GD).
+      Oráculo derivado de la definición del ADR (tabla oficial sobre el prefijo,
+      universo completo), no de la implementación.
+  (c') Corte inicial: en una liga sembrada de N equipos, tras un único partido el
+      perdedor recibe `rk[0] == N` (último), no 2 — el universo del corte es la
+      liga entera, no el subconjunto {ganador, perdedor}. Ancla anti-regresión del
+      🔴 del universo reducido.
   (d) No-regresión: activar/desactivar la maquinaria de rk/rank (pertenencia a
       TIEBREAKERS) deja `a/e/m/w/gd` bit-idénticos, y `rank` coincide con la
       clasificación oficial — el campo aditivo no perturba nada existente.
@@ -91,24 +96,21 @@ def _final_standings(matches):
     return st
 
 
-def _replay_expected_rk(matches, lg):
-    """Réplica INDEPENDIENTE de la construcción de `rk` en process_season: replay
-    fila a fila acumulando los mismos stats (pts, gd, gf, gf_away, wins,
-    wins_away) y llamando a compute_league_ranks sobre el prefijo tras cada fila,
-    SOLO con los equipos que ya han jugado. Devuelve
-    (expected_rk_por_equipo, cortes) donde `cortes` es la lista de dicts
-    {team: rank} de cada fila (para el chequeo de permutación por corte)."""
-    cum = {}
-
-    def ensure(t):
-        cum.setdefault(t, {'pts': 0, 'gf': 0, 'ga': 0, 'gf_away': 0,
-                           'wins': 0, 'wins_away': 0})
-
+def _replay_expected_rk(matches, lg, universe):
+    """Oráculo derivado de la DEFINICIÓN del ADR (no de la implementación): para
+    cada corte, la tabla OFICIAL de la liga sobre TODO el `universo` de equipos con
+    los puntos/goles del prefijo — un equipo con 0 partidos está en la tabla con 0
+    puntos y GD 0, no fuera de ella. `cum` se siembra con el universo completo
+    ANTES del bucle (igual que `td` en process_season, que se construye desde
+    todas las filas de `df` ∪ calendario), de modo que cada corte es permutación
+    1..N con N = len(universe) FIJO, no una fracción que crece con las filas.
+    Devuelve (expected_rk_por_equipo, cortes)."""
+    cum = {t: {'pts': 0, 'gf': 0, 'ga': 0, 'gf_away': 0, 'wins': 0, 'wins_away': 0}
+           for t in universe}
     season_matches = []
     expected = {}
     cortes = []
     for (h, a, hg, ag) in matches:
-        ensure(h); ensure(a)
         cum[h]['gf'] += hg; cum[h]['ga'] += ag
         cum[a]['gf'] += ag; cum[a]['ga'] += hg
         cum[a]['gf_away'] += ag
@@ -188,20 +190,28 @@ def test_last_rk_equals_rank():
 
 def test_rk_matches_official_replay_and_permutation():
     """(c) `rk` coincide fila a fila con la clasificación oficial recalculada
-    sobre el prefijo, cada corte es permutación 1..K de los K equipos con
-    partidos, y el estado final refleja el desempate por mini-liga."""
+    sobre el prefijo con el UNIVERSO COMPLETO de la liga (definición del ADR),
+    cada corte es permutación 1..N sobre los N equipos de la liga, y el estado
+    final refleja el desempate por mini-liga."""
     matches, (X, Y, Z) = _la_liga_tie_matches()
     df = _matches_to_df(matches)
+    # Universo = todos los equipos que aparecen en df (mismo criterio que `td` en
+    # process_season, que se construye desde todas las filas). Fijo, no crece.
+    universe = sorted({h for h, _, _, _ in matches} | {a for _, a, _, _ in matches})
+    N = len(universe)
     p = update.PARAMS['ll']
     res = update.process_season(df, _wages_for(matches),
                                 p['beta'], p['theta1'], p['theta2'], None, 'll')
 
-    expected, cortes = _replay_expected_rk(matches, 'll')
-    # Cada corte: permutación exacta 1..K sobre los K equipos con partidos.
+    expected, cortes = _replay_expected_rk(matches, 'll', universe)
+    # Cada corte: permutación exacta 1..N sobre TODA la liga (universo fijo). Un
+    # equipo con 0 partidos ocupa su sitio en el grupo de empate a 0 puntos; el
+    # corte NO es un rango dentro del subconjunto que ya jugó.
     for i, ranks_now in enumerate(cortes):
-        k = len(ranks_now)
-        assert sorted(ranks_now.values()) == list(range(1, k + 1)), \
-            f"corte {i}: rk no es permutación 1..{k}: {sorted(ranks_now.values())}"
+        assert len(ranks_now) == N, \
+            f"corte {i}: universo {len(ranks_now)} != N={N} (debe ser fijo)"
+        assert sorted(ranks_now.values()) == list(range(1, N + 1)), \
+            f"corte {i}: rk no es permutación 1..{N}: {sorted(ranks_now.values())}"
 
     # attach_ranks fija rk[-1] al rank oficial de fin de temporada; la réplica
     # debe aplicar el mismo cierre para comparar (todos los equipos han jugado,
@@ -218,8 +228,46 @@ def test_rk_matches_official_replay_and_permutation():
     assert res[X]['rank'] < res[Y]['rank'] < res[Z]['rank'], \
         (f"desempate por mini-liga esperado X<Y<Z, got "
          f"{res[X]['rank']},{res[Y]['rank']},{res[Z]['rank']}")
-    print("OK (c) rk = clasificación oficial por corte (permutación 1..K, "
-          "desempate por mini-liga en el estado final)")
+    print("OK (c) rk = clasificación oficial por corte sobre el universo completo "
+          "(permutación 1..N, desempate por mini-liga en el estado final)")
+
+
+def test_first_cut_is_full_league_table():
+    """(c') Universo del corte = liga entera. Siembra una liga de N=6 equipos por
+    calendario y procesa UN solo partido decisivo (h gana). La tabla oficial en
+    ese instante: ganador 1º (3 pts); los 4 equipos sin jugar, empatados a 0 pts y
+    GD 0, en el medio; perdedor ÚLTIMO (0 pts, GD negativo). Por tanto el perdedor
+    recibe `rk[0] == N` y el ganador `rk[0] == 1`. Con el universo reducido del
+    🔴 el perdedor recibía `rk[0] == 2` (rango dentro de {ganador, perdedor})."""
+    teams = [f'T{i:02d}' for i in range(6)]
+    N = len(teams)
+    # Calendario que siembra los 6 equipos (3 emparejamientos); solo se juega el
+    # primero. process_season construye `td` con los 6 desde el arranque.
+    cal = [{'gw': 1,
+            'matches': [[teams[0], teams[1]], [teams[2], teams[3]], [teams[4], teams[5]]],
+            'dates': ['2026-08-15T17:00:00Z', '2026-08-15T17:00:00Z', '2026-08-15T17:00:00Z']}]
+    fixtures_cal = {'ll': {update.CURRENT_SEASON: {'calendar': cal}}}
+    # df con un único partido: T00 (local) gana 2-0 a T01.
+    df = _matches_to_df([(teams[0], teams[1], 2, 0)])
+    wages = {t: 100 - i for i, t in enumerate(teams)}
+    wages['_min'] = min(wages.values())
+    p = update.PARAMS['ll']
+    res = update.process_season(df, wages, p['beta'], p['theta1'], p['theta2'],
+                                fixtures_cal, 'll')
+
+    assert len(res[teams[0]]['rk']) == 1 and len(res[teams[1]]['rk']) == 1
+    # attach_ranks fija rk[-1]==rank; con un solo partido rk[0] es también el
+    # último corte, así que rk[0] == rank (universo completo en ambos).
+    assert res[teams[1]]['rk'][0] == N, \
+        f"perdedor: rk[0]={res[teams[1]]['rk'][0]} != N={N} (universo reducido?)"
+    assert res[teams[0]]['rk'][0] == 1, \
+        f"ganador: rk[0]={res[teams[0]]['rk'][0]} != 1"
+    # Los 4 equipos sembrados sin jugar quedan con rk=[] (0 partidos) pero sí
+    # pueblan la tabla del corte: ocupan los rangos 2..5.
+    seeded_ranks = sorted(res[t]['rank'] for t in teams[2:])
+    assert seeded_ranks == [2, 3, 4, 5], \
+        f"sembrados sin jugar deben ocupar 2..5, got {seeded_ranks}"
+    print("OK (c') corte inicial sobre liga entera: perdedor rk[0]==N, no 2")
 
 
 def test_no_regresion_campos_existentes_bit_identicos():
@@ -288,6 +336,7 @@ if __name__ == '__main__':
     test_len_rk_matches_len_a()
     test_last_rk_equals_rank()
     test_rk_matches_official_replay_and_permutation()
+    test_first_cut_is_full_league_table()
     test_no_regresion_campos_existentes_bit_identicos()
     test_preseason_block_emits_empty_rk()
     print("\nTODOS LOS TESTS OK (rk[] rango oficial por partido, ADR-005·R·2)")
