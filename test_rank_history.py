@@ -16,10 +16,13 @@ Cubre:
       estado final refleja el desempate oficial (no el ingenuo puntos→GD).
       Oráculo derivado de la definición del ADR (tabla oficial sobre el prefijo,
       universo completo), no de la implementación.
-  (c') Corte inicial: en una liga sembrada de N equipos, tras un único partido el
-      perdedor recibe `rk[0] == N` (último), no 2 — el universo del corte es la
-      liga entera, no el subconjunto {ganador, perdedor}. Ancla anti-regresión del
-      🔴 del universo reducido.
+  (c') Corte inicial: en una liga sembrada de N equipos, el equipo observado
+      juega DOS partidos (pierde el 1º) para que su `rk[0]` sea un corte intermedio
+      y NO `rk[-1]` — así `attach_ranks` no lo sobrescribe y la aserción mide el
+      corte, no el rank final. Tras su primer partido el perdedor recibe
+      `rk[0] == N` (último), no 2: el universo del corte es la liga entera, no el
+      subconjunto {ganador, perdedor}. Ancla anti-regresión del 🔴 del universo
+      reducido, blindada contra el enmascaramiento de `attach_ranks`.
   (d) No-regresión: activar/desactivar la maquinaria de rk/rank (pertenencia a
       TIEBREAKERS) deja `a/e/m/w/gd` bit-idénticos, y `rank` coincide con la
       clasificación oficial — el campo aditivo no perturba nada existente.
@@ -233,41 +236,49 @@ def test_rk_matches_official_replay_and_permutation():
 
 
 def test_first_cut_is_full_league_table():
-    """(c') Universo del corte = liga entera. Siembra una liga de N=6 equipos por
-    calendario y procesa UN solo partido decisivo (h gana). La tabla oficial en
-    ese instante: ganador 1º (3 pts); los 4 equipos sin jugar, empatados a 0 pts y
-    GD 0, en el medio; perdedor ÚLTIMO (0 pts, GD negativo). Por tanto el perdedor
-    recibe `rk[0] == N` y el ganador `rk[0] == 1`. Con el universo reducido del
-    🔴 el perdedor recibía `rk[0] == 2` (rango dentro de {ganador, perdedor})."""
+    """(c') Universo del corte = liga entera, aislado de `attach_ranks`. Siembra
+    una liga de N=6 equipos por calendario. El equipo observado (T01) juega DOS
+    partidos: pierde en la fila 0 (0-2 con T00) y gana en la fila 1 (1-0 a T02).
+    Así `rk[0]` de T01 es el corte tras SU primer partido y NO es `rk[-1]` — por
+    tanto `attach_ranks` (que solo sobrescribe `rk[-1]=rank`) no lo toca, y la
+    aserción mide el CORTE, no el `rank` de fin de temporada.
+
+    Tras la fila 0 la tabla oficial de la liga entera es: ganador T00 1º (3 pts);
+    los 4 equipos sin jugar, empatados a 0 pts y GD 0, en el medio; perdedor T01
+    ÚLTIMO (0 pts, GD −2). Por tanto `rk[0]` de T01 == N. Con el universo reducido
+    del 🔴 el corte se calcularía sobre {T00, T01} y daría `rk[0] == 2`: este test
+    lo distingue precisamente porque `rk[0]` sobrevive a `attach_ranks` (a
+    diferencia de un fixture de un solo partido, donde `rk[0]==rk[-1]` queda
+    enmascarado por la sobrescritura y el test pasaría con el código defectuoso)."""
     teams = [f'T{i:02d}' for i in range(6)]
     N = len(teams)
-    # Calendario que siembra los 6 equipos (3 emparejamientos); solo se juega el
-    # primero. process_season construye `td` con los 6 desde el arranque.
+    # Calendario que siembra los 6 equipos (3 emparejamientos). process_season
+    # construye `td` con los 6 desde el arranque.
     cal = [{'gw': 1,
             'matches': [[teams[0], teams[1]], [teams[2], teams[3]], [teams[4], teams[5]]],
             'dates': ['2026-08-15T17:00:00Z', '2026-08-15T17:00:00Z', '2026-08-15T17:00:00Z']}]
     fixtures_cal = {'ll': {update.CURRENT_SEASON: {'calendar': cal}}}
-    # df con un único partido: T00 (local) gana 2-0 a T01.
-    df = _matches_to_df([(teams[0], teams[1], 2, 0)])
+    # df con dos partidos: T01 pierde en la fila 0 y gana en la fila 1, para que
+    # su rk[0] no sea rk[-1] y sobreviva a attach_ranks.
+    df = _matches_to_df([(teams[0], teams[1], 2, 0),
+                         (teams[1], teams[2], 1, 0)])
     wages = {t: 100 - i for i, t in enumerate(teams)}
     wages['_min'] = min(wages.values())
     p = update.PARAMS['ll']
     res = update.process_season(df, wages, p['beta'], p['theta1'], p['theta2'],
                                 fixtures_cal, 'll')
 
-    assert len(res[teams[0]]['rk']) == 1 and len(res[teams[1]]['rk']) == 1
-    # attach_ranks fija rk[-1]==rank; con un solo partido rk[0] es también el
-    # último corte, así que rk[0] == rank (universo completo en ambos).
+    # T01 jugó 2 partidos: rk[0] es el corte tras la fila 0, distinto de rk[-1].
+    assert len(res[teams[1]]['rk']) == 2, \
+        f"T01 debe tener 2 cortes, got {len(res[teams[1]]['rk'])}"
     assert res[teams[1]]['rk'][0] == N, \
-        f"perdedor: rk[0]={res[teams[1]]['rk'][0]} != N={N} (universo reducido?)"
+        f"corte 0 del perdedor: rk[0]={res[teams[1]]['rk'][0]} != N={N} (universo reducido?)"
+    # T00 solo juega la fila 0: su rk[0] SÍ es rk[-1] (enmascarado por attach_ranks),
+    # pero como ganador el corte y el rank coinciden en 1º de todos modos.
     assert res[teams[0]]['rk'][0] == 1, \
         f"ganador: rk[0]={res[teams[0]]['rk'][0]} != 1"
-    # Los 4 equipos sembrados sin jugar quedan con rk=[] (0 partidos) pero sí
-    # pueblan la tabla del corte: ocupan los rangos 2..5.
-    seeded_ranks = sorted(res[t]['rank'] for t in teams[2:])
-    assert seeded_ranks == [2, 3, 4, 5], \
-        f"sembrados sin jugar deben ocupar 2..5, got {seeded_ranks}"
-    print("OK (c') corte inicial sobre liga entera: perdedor rk[0]==N, no 2")
+    print("OK (c') corte inicial sobre liga entera (aislado de attach_ranks): "
+          "perdedor rk[0]==N, no 2")
 
 
 def test_no_regresion_campos_existentes_bit_identicos():
