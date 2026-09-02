@@ -7438,9 +7438,9 @@ const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const IS_STANDALONE = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 function App() {
   const [data, setData] = useState(null);
-  // fbm_ctx solo suprime Welcome en la PWA instalada (alcance del PR); en
-  // navegador la URL desnuda sigue devolviendo a Welcome, como siempre.
-  const [welcome, setWelcome] = useState(() => !location.hash && !(IS_STANDALONE && readCtx()));
+  // fbm_ctx suprime la Welcome en cualquier contexto (navegador o PWA
+  // instalada): con URL desnuda y contexto guardado se entra directo al Home.
+  const [welcome, setWelcome] = useState(() => !location.hash && !readCtx());
   const [lg, setLg] = useState(() => {
     const h = hashGet("lg");
     if (h && window.FBM_LEAGUES[h]) return h;
