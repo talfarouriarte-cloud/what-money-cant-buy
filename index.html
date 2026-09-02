@@ -1614,7 +1614,14 @@ function Home({
   const ep = t.e[nP - 1] || 0;
   const df = ap - ep;
   const rank = 1 + standings.findIndex(s => s.n === team);
-  const proj = Math.round(ap + (totalRounds - nP) * (ap / Math.max(1, nP)));
+  // Proy = mediana p50 del modelo (paridad con Predicciones, #99): temporada en
+  // curso con bands ⇒ Math.round(p50 último valor); temporada cerrada
+  // (nP >= totalRounds) ⇒ puntos reales; resto ⇒ null (render "—"). Nunca
+  // extrapolación lineal. fbmProjPts es la función pura compartida con
+  // Predictions, resuelta vía window (scope IIFE, #40).
+  const isCurrent = sn === D.currentSeason;
+  const projP50 = fbmProjPts(D, lg, team, isCurrent);
+  const proj = projP50 != null ? Math.round(projP50) : (nP >= totalRounds ? ap : null);
   const budgetRank = [...standings].sort((a, b) => b.w - a.w).findIndex(s => s.n === team) + 1;
   const last5 = t.m.slice(-5);
   const formPts = last5.reduce((s, m) => s + m[2], 0);
@@ -1867,7 +1874,7 @@ function Home({
     style: {
       color: "#fff"
     }
-  }, proj, " ", _t("pts"))), /*#__PURE__*/React.createElement("div", {
+  }, proj == null ? "—" : proj + " " + _t("pts"))), /*#__PURE__*/React.createElement("div", {
     style: {
       minWidth: 88
     }
@@ -2115,7 +2122,7 @@ function Home({
       fontSize: 11,
       marginTop: 12
     }
-  }, _t("projected_final"), proj, " ", _t("pts")))), /*#__PURE__*/React.createElement("div", {
+  }, _t("projected_final"), proj == null ? "—" : proj + " " + _t("pts")))), /*#__PURE__*/React.createElement("div", {
     className: "section-head"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "eyebrow"
@@ -3356,7 +3363,7 @@ function Predictions({
   const cur = posInfo.cur || {};
   const pre = posInfo.pre || {};
   // projected points p50: bands (updated) / pre (budget) last value — current season only
-  const projPts = name => isCurrent && D.bands[lg] && D.bands[lg][name] ? D.bands[lg][name].p50[D.bands[lg][name].p50.length - 1] : null;
+  const projPts = name => fbmProjPts(D, lg, name, isCurrent);
   const budgetPts = name => isCurrent && D.pre[lg] && D.pre[lg][name] ? D.pre[lg][name].p50[D.pre[lg][name].p50.length - 1] : null;
   return /*#__PURE__*/React.createElement("div", {
     className: "col gap-4"
@@ -5246,6 +5253,12 @@ function fbmNormCDF(z) {
   const d = 0.3989423 * Math.exp(-z * z / 2);
   const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
   return z > 0 ? 1 - p : p;
+}
+// Proyección de puntos p50 del modelo (bands actualizadas), último valor — solo
+// temporada en curso. Pura y exportada a window (Object.assign de tabs, #40) para
+// que Home y Predictions muestren el MISMO número bajo "Proy" (issue #99).
+function fbmProjPts(D, lg, name, isCurrent) {
+  return isCurrent && D.bands[lg] && D.bands[lg][name] ? D.bands[lg][name].p50[D.bands[lg][name].p50.length - 1] : null;
 }
 // rarity verdict — window prob → effective windows → per-season → 1 in N.
 // Pura: misma matemática que el useMemo original de BadRun (línea a línea).
@@ -7269,7 +7282,7 @@ Object.assign(window, {
   DataSources,
   History
 });
-Object.assign(window, { _extends, FBM_SIG, fbmExcl, ProbCell, Predictions, EvolutionChart, Matches, MatchTip, H2H, fbmNormCDF, fbmRunVerdict, BadRun, EmptyState, fbmPval, Overperformance, Calculator, Methodology, DataSources, WageEvolution, SourceCard, History });
+Object.assign(window, { _extends, FBM_SIG, fbmExcl, ProbCell, Predictions, EvolutionChart, Matches, MatchTip, H2H, fbmNormCDF, fbmRunVerdict, fbmProjPts, BadRun, EmptyState, fbmPval, Overperformance, Calculator, Methodology, DataSources, WageEvolution, SourceCard, History });
 })();
 </script>
 
