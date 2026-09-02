@@ -1624,6 +1624,23 @@ function Home({
   const runDiff = n => t.m.slice(-n).reduce((s, m) => s + (m[2] - m[3]), 0);
   const d5 = runDiff(5),
     d10 = runDiff(10);
+  // Veredicto de rareza (restaurado, #90). Criterio de ventana del original
+  // 5abe344a: 10 si hay >=10 jugados, si no 5 — pero NO es paridad literal: el
+  // original condicionaba a `sp10 !== null && l10n >= 10`, así que con d10===0
+  // exacto caía a la ventana de 5 y SEGUÍA pintando la frase; aquí
+  // fbmRunVerdict(0, 10, …) devuelve null y la línea desaparece. Ese fallback de
+  // medida nula no se replica (caso inalcanzable en float: exige Σ(pts−exp) de 10
+  // partidos == 0 exacto). Frente al original —que etiquetaba bestN=10:5
+  // hardcodeado y con nP<5 decía "5" calculando sobre nP— Math.min(5,nP) alimenta
+  // cálculo y label con el mismo número. fbmRunVerdict es la función pura
+  // compartida con BadRun, resuelta vía window (scope IIFE, #40).
+  // Coherencia de ventana (decisión consciente, nit #1): el hero-num de la tarjeta
+  // pinta d5 y la frase razona sobre la ventana `n` (10 en el caso normal). No se
+  // reconcilian a la misma ventana a propósito: el `{n}` de run_verdict_short lo
+  // hace explícito en la frase, y la fila `last10` de card_run (bajo FormDots) ya
+  // pinta el Δ de la ventana-10 vs presupuesto, dando su contexto al veredicto.
+  const n = nP >= 10 ? 10 : Math.min(5, nP);
+  const v = n > 0 ? fbmRunVerdict(runDiff(n), n, totalRounds) : null;
 
   // Long-term management card: consume cumulative[lg][team] (issue #86,
   // paridad semántica con el frontend pre-rediseño 5abe344a).
@@ -2002,7 +2019,24 @@ function Home({
     style: {
       fontSize: 12
     }
-  }, _t("vs_budget")))), /*#__PURE__*/React.createElement("div", {
+  }, _t("vs_budget")))), v ? /*#__PURE__*/React.createElement("div", {
+    className: "text-mut",
+    style: {
+      fontSize: 12,
+      marginTop: 3
+    }
+  }, _tf("run_verdict_short", {
+    n: n,
+    dir: _t(v.over ? "overperformance" : "underperformance"),
+    qual: _t(v.over ? "or_more" : "or_worse"),
+    pct: Math.min(99.9, v.seasonPct).toFixed(1) + "%"
+  }), v.oneIn >= 2 ? /*#__PURE__*/React.createElement(React.Fragment, null, " — ", /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: "var(--ink)"
+    }
+  }, _tf("roughly_1_in_n", {
+    n: v.oneIn
+  }))) : null) : null, /*#__PURE__*/React.createElement("div", {
     className: "flex",
     style: {
       marginTop: 12
@@ -5213,6 +5247,24 @@ function fbmNormCDF(z) {
   const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
   return z > 0 ? 1 - p : p;
 }
+// rarity verdict — window prob → effective windows → per-season → 1 in N.
+// Pura: misma matemática que el useMemo original de BadRun (línea a línea).
+// Exportada a window (Object.assign de tabs) para que Home la consuma — #40.
+function fbmRunVerdict(df, nGames, totalRounds) {
+  if (nGames <= 0 || df === 0) return null;
+  const z = Math.abs(df) / (FBM_SIG * Math.sqrt(nGames));
+  const pWindow = (1 - fbmNormCDF(z)) * 100;
+  const kEff = Math.max(1, Math.round(2 * (totalRounds - nGames + 1) / (nGames + 1)));
+  const runPct = kEff > 1 ? (1 - Math.pow(1 - pWindow / 100, kEff)) * 100 : pWindow;
+  const nWindows = Math.floor(totalRounds / nGames);
+  const seasonPct = nWindows > 1 ? (1 - Math.pow(1 - runPct / 100, nWindows)) * 100 : runPct;
+  const oneIn = seasonPct > 0 ? Math.max(1, Math.round(100 / seasonPct)) : 999;
+  return {
+    over: df >= 0,
+    seasonPct,
+    oneIn
+  };
+}
 function BadRun({
   lg,
   sn,
@@ -5283,21 +5335,7 @@ function BadRun({
   const df = totA - totE;
 
   // rarity verdict — window prob → effective windows → per-season → 1 in N
-  const verdict = useMemo(() => {
-    if (nGames <= 0 || df === 0) return null;
-    const z = Math.abs(df) / (FBM_SIG * Math.sqrt(nGames));
-    const pWindow = (1 - fbmNormCDF(z)) * 100;
-    const kEff = Math.max(1, Math.round(2 * (totalRounds - nGames + 1) / (nGames + 1)));
-    const runPct = kEff > 1 ? (1 - Math.pow(1 - pWindow / 100, kEff)) * 100 : pWindow;
-    const nWindows = Math.floor(totalRounds / nGames);
-    const seasonPct = nWindows > 1 ? (1 - Math.pow(1 - runPct / 100, nWindows)) * 100 : runPct;
-    const oneIn = seasonPct > 0 ? Math.max(1, Math.round(100 / seasonPct)) : 999;
-    return {
-      over: df >= 0,
-      seasonPct,
-      oneIn
-    };
-  }, [df, nGames, totalRounds]);
+  const verdict = useMemo(() => fbmRunVerdict(df, nGames, totalRounds), [df, nGames, totalRounds]);
   // Guard AFTER all hooks (React rules-of-hooks): un equipo inválido (p. ej. al
   // cambiar de liga desde el Header) no debe alterar el número de hooks ejecutados.
   if (!t) return /*#__PURE__*/React.createElement(EmptyState, {
@@ -7231,7 +7269,7 @@ Object.assign(window, {
   DataSources,
   History
 });
-Object.assign(window, { _extends, FBM_SIG, fbmExcl, ProbCell, Predictions, EvolutionChart, Matches, MatchTip, H2H, fbmNormCDF, BadRun, EmptyState, fbmPval, Overperformance, Calculator, Methodology, DataSources, WageEvolution, SourceCard, History });
+Object.assign(window, { _extends, FBM_SIG, fbmExcl, ProbCell, Predictions, EvolutionChart, Matches, MatchTip, H2H, fbmNormCDF, fbmRunVerdict, BadRun, EmptyState, fbmPval, Overperformance, Calculator, Methodology, DataSources, WageEvolution, SourceCard, History });
 })();
 </script>
 
@@ -7372,6 +7410,24 @@ function hashSet(obj) {
 }
 window.hashGet = hashGet;
 window.hashSet = hashSet;
+/* Navigation context persisted in localStorage (fbm_ctx: {lg, sel}) —
+   survives PWA cold starts without hash. sn/tab NOT persisted (season is
+   derived — spec §3bis.5). Invalid/absent JSON → null. Non-string lg/sel
+   are dropped here so the three call sites inherit one validation. */
+function readCtx() {
+  try {
+    const raw = localStorage.getItem("fbm_ctx");
+    if (!raw) return null;
+    const o = JSON.parse(raw);
+    if (!o || typeof o !== "object") return null;
+    return {
+      lg: typeof o.lg === "string" ? o.lg : undefined,
+      sel: typeof o.sel === "string" ? o.sel : undefined
+    };
+  } catch (e) {
+    return null;
+  }
+}
 /* Haptics + platform detection (install prompt) */
 function hap(ms) {
   try {
@@ -7382,13 +7438,24 @@ const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const IS_STANDALONE = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 function App() {
   const [data, setData] = useState(null);
-  const [welcome, setWelcome] = useState(() => !location.hash);
+  // fbm_ctx suprime la Welcome en cualquier contexto (navegador o PWA
+  // instalada): con URL desnuda y contexto guardado se entra directo al Home.
+  const [welcome, setWelcome] = useState(() => !location.hash && !readCtx());
   const [lg, setLg] = useState(() => {
     const h = hashGet("lg");
-    return h && window.FBM_LEAGUES[h] ? h : "pl";
+    if (h && window.FBM_LEAGUES[h]) return h;
+    const c = readCtx();
+    return c && c.lg && window.FBM_LEAGUES[c.lg] ? c.lg : "pl";
   });
   const [sn, setSn] = useState("25/26");
-  const [team, setTeam] = useState(() => hashGet("sel") || hashGet("br") || hashGet("h2a") || (hashGet("ex") || "").split(",")[0] || "Liverpool");
+  const [team, setTeam] = useState(() => {
+    const h = hashGet("sel") || hashGet("br") || hashGet("h2a") || (hashGet("ex") || "").split(",")[0];
+    if (h) return h;
+    // solo se recuerda el equipo si su liga coincide con la ya resuelta en `lg`
+    // ({lg, sel} se guarda como par; leerlos desacoplados los mezclaría).
+    const c = readCtx();
+    return c && c.lg === lg && c.sel || "Liverpool";
+  });
   const [tab, setTabRaw] = useState(tabFromHash());
   const [slide, setSlide] = useState({
     dir: null,
@@ -7580,7 +7647,10 @@ function App() {
       const cur = hsn && d.seasons[lg] && d.seasons[lg][hsn] ? hsn : d.currentSeason;
       setSn(cur);
       const sd = d.seasons[lg][cur];
-      const hsel = hashGet("sel") || hashGet("br") || hashGet("h2a") || (hashGet("ex") || "").split(",")[0];
+      // sin el fallback `c.sel` de abajo, el else pisaría el equipo recordado
+      // con el default de liga; `c.lg === lg` evita mezclar par liga/equipo.
+      const c = readCtx();
+      const hsel = hashGet("sel") || hashGet("br") || hashGet("h2a") || (hashGet("ex") || "").split(",")[0] || c && c.lg === lg && c.sel;
       if (sd && hsel && sd[hsel]) setTeam(hsel);else {
         const defT = window.FBM_LEAGUES[lg].def;
         if (sd && sd[defT]) setTeam(defT);else if (sd) setTeam(Object.keys(sd)[0]);
@@ -7617,6 +7687,12 @@ function App() {
       sel: team,
       sn
     });
+    try {
+      localStorage.setItem("fbm_ctx", JSON.stringify({
+        lg,
+        sel: team
+      }));
+    } catch (e) {}
   }, [lg, team, sn, data, welcome]);
   if (!data) {
     return /*#__PURE__*/React.createElement("div", {
