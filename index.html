@@ -1624,9 +1624,21 @@ function Home({
   const runDiff = n => t.m.slice(-n).reduce((s, m) => s + (m[2] - m[3]), 0);
   const d5 = runDiff(5),
     d10 = runDiff(10);
-  // Veredicto de rareza (restaurado, #90): ventana de 10 si hay >=10 jugados,
-  // si no 5 (criterio de la versión original 5abe344a). fbmRunVerdict es la
-  // función pura compartida con BadRun, resuelta vía window (scope IIFE, #40).
+  // Veredicto de rareza (restaurado, #90). Criterio de ventana del original
+  // 5abe344a: 10 si hay >=10 jugados, si no 5 — pero NO es paridad literal: el
+  // original condicionaba a `sp10 !== null && l10n >= 10`, así que con d10===0
+  // exacto caía a la ventana de 5 y SEGUÍA pintando la frase; aquí
+  // fbmRunVerdict(0, 10, …) devuelve null y la línea desaparece. Ese fallback de
+  // medida nula no se replica (caso inalcanzable en float: exige Σ(pts−exp) de 10
+  // partidos == 0 exacto). Frente al original —que etiquetaba bestN=10:5
+  // hardcodeado y con nP<5 decía "5" calculando sobre nP— Math.min(5,nP) alimenta
+  // cálculo y label con el mismo número. fbmRunVerdict es la función pura
+  // compartida con BadRun, resuelta vía window (scope IIFE, #40).
+  // Coherencia de ventana (decisión consciente, nit #1): el hero-num de la tarjeta
+  // pinta d5 y la frase razona sobre la ventana `n` (10 en el caso normal). No se
+  // reconcilian a la misma ventana a propósito: el `{n}` de run_verdict_short lo
+  // hace explícito en la frase, y la fila `last10` de card_run (bajo FormDots) ya
+  // pinta el Δ de la ventana-10 vs presupuesto, dando su contexto al veredicto.
   const n = nP >= 10 ? 10 : Math.min(5, nP);
   const v = n > 0 ? fbmRunVerdict(runDiff(n), n, totalRounds) : null;
 
