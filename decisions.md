@@ -166,6 +166,20 @@ Medio: revertir la emisión de `rank` en `data.json` y devolver los sorts al fro
 
 Cuando aparece el primer resultado real, el camino normal sobreescribe el bloque íntegro con el `rank` oficial: no hay migración ni estado intermedio persistido. Con resultados presentes la salida es byte-idéntica a la previa a esta revisión.
 
+### Revisión R·2 (2026-09-03) — rango oficial por partido jugado (`rk[]`)
+
+**Contexto.** La vista de posición de `EvolutionChart` recalculaba el rango en frontend (`rankAt`: puntos → GD total de temporada → orden de claves), contradiciendo "el frontend lo consume sin ordenar". Instancia: La Liga 26/27 J3, At Madrid y Alavés empatados a 7 puntos y GD +4; la tabla (rank oficial, criterio particular) muestra 3º, el gráfico 4º, y la proyección arranca del rango erróneo. Decisión del propietario, verbatim:
+
+> Mira esta foto. Está claramente mal, el Atleti no cuadra lo que dice el gráfico con lo que se ve en la tabla para la situación actual
+
+> No, lo corregimos todo ahora.
+
+**Decisión.** `update.py` emite `rk[]` por equipo, alineado con `a[]`: `rk[i]` es el rango oficial (cadena `TIEBREAKERS` de la liga) inmediatamente después del partido i-ésimo del equipo, calculado sobre el prefijo de partidos en el orden que define `m`; `rk[-1]` se fija al `rank` vigente. Aditivo: ningún campo existente cambia. El frontend consume `rk` sin ordenar; conserva un fallback determinista solo para datasets sin `rk`.
+
+**Descartado.** Fix solo-frontend con `officialRanks` en el último punto: corrige lo visible pero deja las jornadas pasadas con GD de fin de temporada aplicado retroactivamente (y sin goles por partido en `data.json` no es reconstruible en cliente). Rango por jornada de liga en `pos.hist`: eje distinto al del gráfico (partido i-ésimo del equipo); cambiar el eje es otro rediseño.
+
+**Coste de revertir.** Bajo: un campo aditivo y una función de lectura con fallback.
+
 ## ADR-006 (2026-07-11) — Desempate del forecast: puntos simulados → rank oficial actual
 
 ### Contexto

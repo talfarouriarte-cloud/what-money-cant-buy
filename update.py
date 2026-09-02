@@ -504,7 +504,7 @@ def process_season(filepath_or_df, wages, beta, t1, t2, fixtures_calendar=None, 
     # byte-idéntico al comportamiento previo.
     td = {}
     for t in sorted(calendar_teams | set(df['HomeTeam']) | set(df['AwayTeam'])):
-        td[t] = {'pts':[],'exp':[],'m':[],'cp':0,'ce':0.0,'gf':0,'ga':0,'gf_away':0,'wins':0,'wins_away':0}
+        td[t] = {'pts':[],'exp':[],'m':[],'rk':[],'cp':0,'ce':0.0,'gf':0,'ga':0,'gf_away':0,'wins':0,'wins_away':0}
     season_matches = []  # (home, away, home_goals, away_goals) para desempates ADR-005
     for _, r in df.iterrows():
         h, a = r['HomeTeam'], r['AwayTeam']
@@ -534,12 +534,27 @@ def process_season(filepath_or_df, wages, beta, t1, t2, fixtures_calendar=None, 
             td[team]['pts'].append(td[team]['cp'])
             td[team]['exp'].append(round(td[team]['ce'], 1))
             td[team]['m'].append([opp, ih, pts, round(exp, 2), official_gw, mdate])
+        # ADR-005·R·2 — rango oficial por partido jugado (`rk[]`). Tras haber
+        # actualizado cp/gf/ga/gf_away/wins/wins_away de h y a y anexado el
+        # partido a season_matches, calcula el rank oficial (cadena TIEBREAKERS)
+        # sobre el prefijo de partidos disponible y anótalo para h y a. `stats_now`
+        # tiene la MISMA forma que el `stats` de fin de temporada, pero solo con
+        # los equipos que ya han jugado (evita que equipos sembrados sin partidos
+        # entren en la mini-liga). No-op si `lg` no está en TIEBREAKERS (llamadas
+        # históricas sin liga): `rk` queda [] — mismo criterio que attach_ranks.
+        if lg in TIEBREAKERS:
+            stats_now = {t: {'pts': d['cp'], 'gd': d['gf']-d['ga'], 'gf': d['gf'],
+                             'gf_away': d['gf_away'], 'wins': d['wins'], 'wins_away': d['wins_away']}
+                         for t, d in td.items() if d['m']}
+            ranks_now = compute_league_ranks(stats_now, season_matches, lg)
+            td[h]['rk'].append(ranks_now[h])
+            td[a]['rk'].append(ranks_now[a])
     # Cadena de fallback de salarios (spec §3bis.2): actual -> anterior -> `_min`.
     # Los ascendidos que entran por calendario (issue #80) sin salario propio ni
     # de la temporada previa caen al mínimo de liga — mismo eslabón que
     # build_preseason_block (update.py:1397). Terminar en 0 los emitiría con
     # `w:0` (falsy), que update_cumulative descartaría en silencio.
-    result = {t: {'a':d['pts'],'e':d['exp'],'m':d['m'],'w':round(wages.get(t, wages.get(fix_name(t), wages.get('_min', 20)))),'gd':d['gf']-d['ga']} for t,d in td.items()}
+    result = {t: {'a':d['pts'],'e':d['exp'],'m':d['m'],'rk':d['rk'],'w':round(wages.get(t, wages.get(fix_name(t), wages.get('_min', 20)))),'gd':d['gf']-d['ga']} for t,d in td.items()}
     stats = {t: {'pts': d['cp'], 'gd': d['gf']-d['ga'], 'gf': d['gf'],
                  'gf_away': d['gf_away'], 'wins': d['wins'], 'wins_away': d['wins_away']}
              for t, d in td.items()}
@@ -652,6 +667,12 @@ def attach_ranks(season, stats, matches, lg):
     ranks = compute_league_ranks(stats, matches, lg)
     for t in season:
         season[t]['rank'] = ranks.get(t)
+        # ADR-005·R·2 — invariante rk[-1] == rank: el rango tras el último partido
+        # es el `rank` vigente. El último corte de rk se calculó sobre los equipos
+        # con partidos; `rank` se calcula aquí sobre TODO el bloque (incluye
+        # sembrados sin jugar). Fijarlo reconcilia ambos y cierra la semántica.
+        if season[t].get('rk'):
+            season[t]['rk'][-1] = season[t]['rank']
     return season
 
 
