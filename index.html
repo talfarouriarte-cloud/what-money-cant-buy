@@ -1624,6 +1624,11 @@ function Home({
   const runDiff = n => t.m.slice(-n).reduce((s, m) => s + (m[2] - m[3]), 0);
   const d5 = runDiff(5),
     d10 = runDiff(10);
+  // Veredicto de rareza (restaurado, #90): ventana de 10 si hay >=10 jugados,
+  // si no 5 (criterio de la versión original 5abe344a). fbmRunVerdict es la
+  // función pura compartida con BadRun, resuelta vía window (scope IIFE, #40).
+  const n = nP >= 10 ? 10 : Math.min(5, nP);
+  const v = n > 0 ? fbmRunVerdict(runDiff(n), n, totalRounds) : null;
 
   // Long-term management card: consume cumulative[lg][team] (issue #86,
   // paridad semántica con el frontend pre-rediseño 5abe344a).
@@ -2002,7 +2007,24 @@ function Home({
     style: {
       fontSize: 12
     }
-  }, _t("vs_budget")))), /*#__PURE__*/React.createElement("div", {
+  }, _t("vs_budget")))), v ? /*#__PURE__*/React.createElement("div", {
+    className: "text-mut",
+    style: {
+      fontSize: 12,
+      marginTop: 3
+    }
+  }, _tf("run_verdict_short", {
+    n: n,
+    dir: _t(v.over ? "overperformance" : "underperformance"),
+    qual: _t(v.over ? "or_more" : "or_worse"),
+    pct: Math.min(99.9, v.seasonPct).toFixed(1) + "%"
+  }), v.oneIn >= 2 ? /*#__PURE__*/React.createElement(React.Fragment, null, " — ", /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: "var(--ink)"
+    }
+  }, _tf("roughly_1_in_n", {
+    n: v.oneIn
+  }))) : null) : null, /*#__PURE__*/React.createElement("div", {
     className: "flex",
     style: {
       marginTop: 12
@@ -5213,6 +5235,24 @@ function fbmNormCDF(z) {
   const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
   return z > 0 ? 1 - p : p;
 }
+// rarity verdict — window prob → effective windows → per-season → 1 in N.
+// Pura: misma matemática que el useMemo original de BadRun (línea a línea).
+// Exportada a window (Object.assign de tabs) para que Home la consuma — #40.
+function fbmRunVerdict(df, nGames, totalRounds) {
+  if (nGames <= 0 || df === 0) return null;
+  const z = Math.abs(df) / (FBM_SIG * Math.sqrt(nGames));
+  const pWindow = (1 - fbmNormCDF(z)) * 100;
+  const kEff = Math.max(1, Math.round(2 * (totalRounds - nGames + 1) / (nGames + 1)));
+  const runPct = kEff > 1 ? (1 - Math.pow(1 - pWindow / 100, kEff)) * 100 : pWindow;
+  const nWindows = Math.floor(totalRounds / nGames);
+  const seasonPct = nWindows > 1 ? (1 - Math.pow(1 - runPct / 100, nWindows)) * 100 : runPct;
+  const oneIn = seasonPct > 0 ? Math.max(1, Math.round(100 / seasonPct)) : 999;
+  return {
+    over: df >= 0,
+    seasonPct,
+    oneIn
+  };
+}
 function BadRun({
   lg,
   sn,
@@ -5283,21 +5323,7 @@ function BadRun({
   const df = totA - totE;
 
   // rarity verdict — window prob → effective windows → per-season → 1 in N
-  const verdict = useMemo(() => {
-    if (nGames <= 0 || df === 0) return null;
-    const z = Math.abs(df) / (FBM_SIG * Math.sqrt(nGames));
-    const pWindow = (1 - fbmNormCDF(z)) * 100;
-    const kEff = Math.max(1, Math.round(2 * (totalRounds - nGames + 1) / (nGames + 1)));
-    const runPct = kEff > 1 ? (1 - Math.pow(1 - pWindow / 100, kEff)) * 100 : pWindow;
-    const nWindows = Math.floor(totalRounds / nGames);
-    const seasonPct = nWindows > 1 ? (1 - Math.pow(1 - runPct / 100, nWindows)) * 100 : runPct;
-    const oneIn = seasonPct > 0 ? Math.max(1, Math.round(100 / seasonPct)) : 999;
-    return {
-      over: df >= 0,
-      seasonPct,
-      oneIn
-    };
-  }, [df, nGames, totalRounds]);
+  const verdict = useMemo(() => fbmRunVerdict(df, nGames, totalRounds), [df, nGames, totalRounds]);
   // Guard AFTER all hooks (React rules-of-hooks): un equipo inválido (p. ej. al
   // cambiar de liga desde el Header) no debe alterar el número de hooks ejecutados.
   if (!t) return /*#__PURE__*/React.createElement(EmptyState, {
@@ -7231,7 +7257,7 @@ Object.assign(window, {
   DataSources,
   History
 });
-Object.assign(window, { _extends, FBM_SIG, fbmExcl, ProbCell, Predictions, EvolutionChart, Matches, MatchTip, H2H, fbmNormCDF, BadRun, EmptyState, fbmPval, Overperformance, Calculator, Methodology, DataSources, WageEvolution, SourceCard, History });
+Object.assign(window, { _extends, FBM_SIG, fbmExcl, ProbCell, Predictions, EvolutionChart, Matches, MatchTip, H2H, fbmNormCDF, fbmRunVerdict, BadRun, EmptyState, fbmPval, Overperformance, Calculator, Methodology, DataSources, WageEvolution, SourceCard, History });
 })();
 </script>
 
