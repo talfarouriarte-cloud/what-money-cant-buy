@@ -7412,13 +7412,18 @@ window.hashGet = hashGet;
 window.hashSet = hashSet;
 /* Navigation context persisted in localStorage (fbm_ctx: {lg, sel}) —
    survives PWA cold starts without hash. sn/tab NOT persisted (season is
-   derived — spec §3bis.5). Invalid/absent JSON → null. */
+   derived — spec §3bis.5). Invalid/absent JSON → null. Non-string lg/sel
+   are dropped here so the three call sites inherit one validation. */
 function readCtx() {
   try {
     const raw = localStorage.getItem("fbm_ctx");
     if (!raw) return null;
     const o = JSON.parse(raw);
-    return o && typeof o === "object" ? o : null;
+    if (!o || typeof o !== "object") return null;
+    return {
+      lg: typeof o.lg === "string" ? o.lg : undefined,
+      sel: typeof o.sel === "string" ? o.sel : undefined
+    };
   } catch (e) {
     return null;
   }
@@ -7433,7 +7438,9 @@ const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const IS_STANDALONE = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 function App() {
   const [data, setData] = useState(null);
-  const [welcome, setWelcome] = useState(() => !location.hash && !readCtx());
+  // fbm_ctx solo suprime Welcome en la PWA instalada (alcance del PR); en
+  // navegador la URL desnuda sigue devolviendo a Welcome, como siempre.
+  const [welcome, setWelcome] = useState(() => !location.hash && !(IS_STANDALONE && readCtx()));
   const [lg, setLg] = useState(() => {
     const h = hashGet("lg");
     if (h && window.FBM_LEAGUES[h]) return h;
@@ -7444,8 +7451,10 @@ function App() {
   const [team, setTeam] = useState(() => {
     const h = hashGet("sel") || hashGet("br") || hashGet("h2a") || (hashGet("ex") || "").split(",")[0];
     if (h) return h;
+    // solo se recuerda el equipo si su liga coincide con la ya resuelta en `lg`
+    // ({lg, sel} se guarda como par; leerlos desacoplados los mezclaría).
     const c = readCtx();
-    return c && c.sel || "Liverpool";
+    return c && c.lg === lg && c.sel || "Liverpool";
   });
   const [tab, setTabRaw] = useState(tabFromHash());
   const [slide, setSlide] = useState({
@@ -7638,8 +7647,10 @@ function App() {
       const cur = hsn && d.seasons[lg] && d.seasons[lg][hsn] ? hsn : d.currentSeason;
       setSn(cur);
       const sd = d.seasons[lg][cur];
+      // sin el fallback `c.sel` de abajo, el else pisaría el equipo recordado
+      // con el default de liga; `c.lg === lg` evita mezclar par liga/equipo.
       const c = readCtx();
-      const hsel = hashGet("sel") || hashGet("br") || hashGet("h2a") || (hashGet("ex") || "").split(",")[0] || c && c.sel;
+      const hsel = hashGet("sel") || hashGet("br") || hashGet("h2a") || (hashGet("ex") || "").split(",")[0] || c && c.lg === lg && c.sel;
       if (sd && hsel && sd[hsel]) setTeam(hsel);else {
         const defT = window.FBM_LEAGUES[lg].def;
         if (sd && sd[defT]) setTeam(defT);else if (sd) setTeam(Object.keys(sd)[0]);
