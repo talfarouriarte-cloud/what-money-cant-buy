@@ -504,7 +504,7 @@ def process_season(filepath_or_df, wages, beta, t1, t2, fixtures_calendar=None, 
     # byte-idéntico al comportamiento previo.
     td = {}
     for t in sorted(calendar_teams | set(df['HomeTeam']) | set(df['AwayTeam'])):
-        td[t] = {'pts':[],'exp':[],'m':[],'cp':0,'ce':0.0,'gf':0,'ga':0,'gf_away':0,'wins':0,'wins_away':0}
+        td[t] = {'pts':[],'exp':[],'m':[],'rk':[],'cp':0,'ce':0.0,'gf':0,'ga':0,'gf_away':0,'wins':0,'wins_away':0}
     season_matches = []  # (home, away, home_goals, away_goals) para desempates ADR-005
     for _, r in df.iterrows():
         h, a = r['HomeTeam'], r['AwayTeam']
@@ -534,12 +534,42 @@ def process_season(filepath_or_df, wages, beta, t1, t2, fixtures_calendar=None, 
             td[team]['pts'].append(td[team]['cp'])
             td[team]['exp'].append(round(td[team]['ce'], 1))
             td[team]['m'].append([opp, ih, pts, round(exp, 2), official_gw, mdate])
+        # ADR-005·R·2 — rango oficial por partido jugado (`rk[]`). Tras haber
+        # actualizado cp/gf/ga/gf_away/wins/wins_away de h y a y anexado el
+        # partido a season_matches, calcula el rank OFICIAL (cadena TIEBREAKERS)
+        # sobre el prefijo de partidos disponible y anótalo para h y a. `stats_now`
+        # tiene la MISMA forma y el MISMO universo que el `stats` de fin de
+        # temporada (todo `td`): un corte de `rk` es la tabla oficial de la liga
+        # tras el partido i-ésimo, no un rango dentro del subconjunto que ya jugó.
+        # Un equipo con 0 partidos entra en el grupo de empate a 0 puntos y GD 0;
+        # `_pairs_complete` deja fuera los criterios particulares para pares
+        # incompletos (contorno (a) ADR-005) y la cadena cae a generales →
+        # `_stable_order`, sin distorsionar el rango de nadie que haya jugado. Con
+        # el universo unificado, el último corte coincide de por sí con `rank`
+        # (attach_ranks solo lo reafirma; ver su docstring para el caso de
+        # calendario desigual). No-op si `lg` no está en TIEBREAKERS (llamadas
+        # históricas sin liga): `rk` queda [] — mismo criterio que attach_ranks.
+        if lg in TIEBREAKERS:
+            stats_now = {t: {'pts': d['cp'], 'gd': d['gf']-d['ga'], 'gf': d['gf'],
+                             'gf_away': d['gf_away'], 'wins': d['wins'], 'wins_away': d['wins_away']}
+                         for t, d in td.items()}
+            ranks_now = compute_league_ranks(stats_now, season_matches, lg)
+            td[h]['rk'].append(ranks_now[h])
+            td[a]['rk'].append(ranks_now[a])
     # Cadena de fallback de salarios (spec §3bis.2): actual -> anterior -> `_min`.
     # Los ascendidos que entran por calendario (issue #80) sin salario propio ni
     # de la temporada previa caen al mínimo de liga — mismo eslabón que
     # build_preseason_block (update.py:1397). Terminar en 0 los emitiría con
     # `w:0` (falsy), que update_cumulative descartaría en silencio.
-    result = {t: {'a':d['pts'],'e':d['exp'],'m':d['m'],'w':round(wages.get(t, wages.get(fix_name(t), wages.get('_min', 20)))),'gd':d['gf']-d['ga']} for t,d in td.items()}
+    # ADR-005·R·2 — invariante `len(rk)==len(a)`: `rk` solo se emite cuando la
+    # maquinaria está activa (`lg in TIEBREAKERS`), donde `d['rk']` se llenó en
+    # paralelo con `a`. Con la maquinaria apagada (llamada histórica sin liga o
+    # `lg=None`) NO se emite la clave: así «sin `rk`» es detectable por ausencia
+    # de clave, sin el falso positivo de un `rk:[]` con `a` no vacío. En
+    # producción las 6 ligas están en TIEBREAKERS, así que la clave siempre sale.
+    emit_rk = lg in TIEBREAKERS
+    result = {t: {'a':d['pts'],'e':d['exp'],'m':d['m'],'w':round(wages.get(t, wages.get(fix_name(t), wages.get('_min', 20)))),'gd':d['gf']-d['ga'],
+                  **({'rk':d['rk']} if emit_rk else {})} for t,d in td.items()}
     stats = {t: {'pts': d['cp'], 'gd': d['gf']-d['ga'], 'gf': d['gf'],
                  'gf_away': d['gf_away'], 'wins': d['wins'], 'wins_away': d['wins_away']}
              for t, d in td.items()}
@@ -646,12 +676,25 @@ def compute_league_ranks(stats, matches, lg):
 def attach_ranks(season, stats, matches, lg):
     """Añade el campo `rank` (ADR-005) a cada equipo del dict de temporada SIN
     tocar los campos existentes (a, e, m, w, gd). Devuelve el mismo dict.
-    No-op si `lg` no está en TIEBREAKERS (no hay cadena definida)."""
+    No-op si `lg` no está en TIEBREAKERS (no hay cadena definida).
+
+    Invariante ADR-005·R·2 `rk[-1] == rank`. Los cortes de `rk` ya se calculan
+    sobre el universo completo de la liga (mismo `stats` que aquí), así que para
+    los dos equipos del ÚLTIMO partido de la temporada `rk[-1]` coincide de por sí
+    con `rank`. Para el resto, su `rk[-1]` se fijó tras SU último partido, un
+    instante anterior; con calendario desigual (aplazamientos: un equipo con n-1
+    partidos cuando el resto lleva n) la tabla se mueve por resultados de terceros
+    después de ese instante. Fijar `rk[-1] = rank` da a la serie la semántica
+    querida —el último punto del gráfico es «mi posición AHORA», no «mi posición
+    tras mi último partido»— y por eso ese punto puede saltar respecto al
+    penúltimo por movimiento ajeno; es intencional, no un bug para el eslabón 2."""
     if lg not in TIEBREAKERS:
         return season
     ranks = compute_league_ranks(stats, matches, lg)
     for t in season:
         season[t]['rank'] = ranks.get(t)
+        if season[t].get('rk'):
+            season[t]['rk'][-1] = season[t]['rank']
     return season
 
 
@@ -1398,7 +1441,10 @@ def build_preseason_block(fixtures_cal, wages, lg, season=CURRENT_SEASON):
     result = {}
     for t in teams:
         result[t] = {
-            'a': [], 'e': [], 'm': [], 'gd': 0,
+            # rk: [] (ADR-005·R·2) — sin partidos no hay cortes de rango; mantiene
+            # el invariante len(rk)==len(a) con a=[]. attach_preseason_ranks fija
+            # `rank` (orden esperado del modelo) sin tocar rk.
+            'a': [], 'e': [], 'm': [], 'rk': [], 'gd': 0,
             'w': round(wages.get(t, wages.get(fix_name(t), wages.get('_min', 20)))),
         }
     return result
