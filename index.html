@@ -820,9 +820,10 @@ select.field {
    Loads the REAL production data.json at runtime (no synthesis).
    data.json shape (authoritative, read from the deployed contract):
      model[lg]           = { beta, theta1, theta2 }              ordered-logit params
-     seasons[lg][sn][tm] = { a[], e[], m[], gd, w, r[] }
+     seasons[lg][sn][tm] = { a[], e[], m[], gd, w, r[], rk[] }
         m[i] = [opp, isHome(1/0), ptsActual, ptsExpected]
         r[i] = [opp, isHome(1/0), pW, pD, pL, gw, "YYYY-MM-DD"]   upcoming
+        rk[i] = rango oficial ADR-005 tras el partido i-ésimo; rk[-1] === rank
      bands[lg][tm]       = { p10[], p50[], p90[] }                updated forecast (cur season)
      pre[lg][tm]         = { p10[], p50[], p90[] }                budget forecast (cur season)
      pos[lg][sn]         = { pre:{tm:{1st,ucl,uel,conf,mid,rel,p50}}, cur:{...}, hist:[{probs:{tm:{p50}}}] }
@@ -2413,17 +2414,31 @@ function Tracker({
   const posInfo = isCurrent && D.pos[lg] && D.pos[lg][sn] || D.pos[lg] && D.pos[lg][sn] || null;
   const posData = useMemo(() => {
     if (view !== "pos") return [];
+    // ADR-005·R·2: rango oficial vigente por equipo (solo se usa en el fallback
+    // sin rk); las proyecciones NO alteran esta semántica.
+    const officialRk = officialRanks(seasonData);
+    // Orden determinista de respaldo (ventana promote↔cron, dataset sin rk):
+    // puntos → gd → nombre. Definido FUERA de rankAt para que rankAt no ordene
+    // (ADR-005·R·2: el frontend consume rk sin ordenar).
+    const orderedByPts = i => allTeams.map(t => {
+      const td = seasonData[t];
+      const pts = i < td.a.length ? td.a[i] : td.a[td.a.length - 1] || 0;
+      return {
+        t,
+        pts,
+        gd: td.gd || 0
+      };
+    }).sort((x, y) => y.pts !== x.pts ? y.pts - x.pts : (y.gd !== x.gd ? y.gd - x.gd : (x.t < y.t ? -1 : x.t > y.t ? 1 : 0)));
     const rankAt = (name, i) => {
-      const scores = allTeams.map(t => {
-        const td = seasonData[t];
-        const pts = i < td.a.length ? td.a[i] : td.a[td.a.length - 1] || 0;
-        return {
-          t,
-          pts,
-          gd: td.gd || 0
-        };
-      }).sort((x, y) => y.pts !== x.pts ? y.pts - x.pts : y.gd - x.gd);
-      return 1 + scores.findIndex(s => s.t === name);
+      const td = seasonData[name];
+      // ADR-005·R·2: rango oficial por partido jugado, consumido sin ordenar.
+      if (td && td.rk && td.rk[i] != null) return td.rk[i];
+      // Fallback solo si el dataset no trae rk (ventana entre promote del
+      // frontend y el siguiente cron de datos):
+      const np = td ? td.a.length : 0;
+      // último índice jugado → rango oficial vigente; anteriores → orden determinista.
+      if (i === np - 1) return officialRk[name];
+      return 1 + orderedByPts(i).findIndex(s => s.t === name);
     };
     const hist = posInfo && posInfo.hist || [];
     const curOf = name => posInfo && posInfo.cur && posInfo.cur[name] && posInfo.cur[name].p50 || null;

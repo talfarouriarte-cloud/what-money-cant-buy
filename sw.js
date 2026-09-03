@@ -1,4 +1,4 @@
-var CACHE_NAME = 'fbm-v97';
+var CACHE_NAME = 'fbm-v98';
 var ASSETS = [
   './',
   'index.html',
