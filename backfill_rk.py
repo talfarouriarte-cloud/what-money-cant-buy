@@ -14,8 +14,10 @@ almacenados (`a[]`) antes de escribir nada.
 NO toca update.py, index.html ni el motor numérico. La ÚNICA mutación posible de
 data.json es AÑADIR `rk` y `rank` a cada equipo de un bloque histórico; ningún
 otro campo (`a`, `e`, `m`, `w`, `gd`) de ningún equipo se modifica jamás. La
-escritura es todo-o-nada: solo si TODAS las temporadas procesadas pasan la
-verificación de consistencia.
+escritura es todo-o-nada frente a fallos de VERIFICACIÓN: un solo bloque cuyo CSV
+no cuadre con data.json aborta la escritura completa. Un fallo de DESCARGA
+(5xx/timeout transitorio) NO la aborta: como el script es idempotente, escribe las
+temporadas verificadas y reporta las pendientes para la re-ejecución.
 
 Uso:
     python3 backfill_rk.py [--check] [--data data.json] [--league ll] [--season 13/14]
@@ -54,10 +56,6 @@ try:
 except ImportError:  # pragma: no cover - solo relevante en descarga real
     requests = None
 
-# Código `Div`/fichero por liga (firma de update.py:182, misma tabla que URLS):
-# ll→SP1, pl→E0, sa→I1, bl→D1, l1→F1, ed→N1.
-CSV_CODE = {'ll': 'SP1', 'pl': 'E0', 'sa': 'I1', 'bl': 'D1', 'l1': 'F1', 'ed': 'N1'}
-
 DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_DATA = os.path.join(DATA_DIR, 'data.json')
 
@@ -78,7 +76,10 @@ def download_csv(lg, sn):
     if requests is None:
         return None, "requests no disponible"
     yynn = sn.replace('/', '')
-    code = CSV_CODE[lg]
+    # Código `Div`/fichero por liga: EXPECTED_DIV (update.py:185) es la MISMA
+    # tabla que URLS, derivada de ella, así que no hay copia que mantener en
+    # sincronía (ll→SP1, pl→E0, sa→I1, bl→D1, l1→F1, ed→N1).
+    code = EXPECTED_DIV[lg]
     url = f'https://www.football-data.co.uk/mmz4281/{yynn}/{code}.csv'
     try:
         r = requests.get(url, timeout=30, allow_redirects=False)
@@ -96,25 +97,41 @@ def parse_csv_matches(text):
     """Extrae la lista ORDENADA de partidos válidos del CSV, en orden de filas.
 
     Cada partido es (home, away, ftr, hg, ag) con home/away pasados por fix_name
-    (mismo universo/orden que definió `a[]`/`m[]` históricos). Se ignoran las
-    filas sin FTR (∉ {H,D,A}) o sin FTHG/FTAG numéricos, y las que carezcan de
-    equipo local o visitante (espeja el dropna de process_season).
+    (mismo universo/orden que definió `a[]`/`m[]` históricos). El filtrado ESPEJA
+    el de process_season (update.py:470-477), no solo su dropna:
+
+      - fila ragged (columnas de más): pandas la descarta vía
+        `on_bad_lines='skip'`; csv.DictReader vuelca los sobrantes en `row[None]`,
+        que detectamos para descartarla igual;
+      - `dropna(subset=['HomeTeam','AwayTeam','FTR'])`: solo tumba nulos/vacíos de
+        esas tres columnas, NO valores fuera de dominio. Un FTR presente pero
+        ∉ {H,D,A} se CONSERVA (cae al `else` de compute_rk_and_ranks ⇒ empate,
+        idéntico a process_season), no se descarta;
+      - `pd.to_numeric(FTHG/FTAG, errors='coerce').fillna(0)`: un gol vacío o no
+        numérico da 0 y la fila se CONSERVA, no se descarta.
     """
     matches = []
     reader = csv.DictReader(io.StringIO(text))
     for row in reader:
+        if None in row:  # fila con más columnas que la cabecera ⇒ on_bad_lines='skip'
+            continue
         home = (row.get('HomeTeam') or '').strip()
         away = (row.get('AwayTeam') or '').strip()
         ftr = (row.get('FTR') or '').strip()
-        if not home or not away or ftr not in ('H', 'D', 'A'):
+        if not home or not away or not ftr:  # dropna: solo nulos/vacíos
             continue
-        try:
-            hg = int(float(row['FTHG']))
-            ag = int(float(row['FTAG']))
-        except (TypeError, ValueError, KeyError):
-            continue
+        hg = _coerce_goal(row.get('FTHG'))
+        ag = _coerce_goal(row.get('FTAG'))
         matches.append((fix_name(home), fix_name(away), ftr, hg, ag))
     return matches
+
+
+def _coerce_goal(value):
+    """pd.to_numeric(errors='coerce').fillna(0).astype(int): vacío/no numérico ⇒ 0."""
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return 0
 
 
 # ---------------------------------------------------------------------------
@@ -132,7 +149,8 @@ def compute_rk_and_ranks(matches, lg):
     process_season); gd/gf/gf_away se derivan de los goles.
 
     Devuelve (td, final_ranks) donde:
-      td[t] = {'pts': [acumulado por partido del equipo], 'rk': [rango por partido]}
+      td[t] = {'pts': [acumulado por partido], 'rk': [rango por partido],
+               'mm': [(rival, es_local) por partido]}
       final_ranks = compute_league_ranks(stats_final, todos, lg)
     """
     teams = []
@@ -143,7 +161,7 @@ def compute_rk_and_ranks(matches, lg):
                 seen.add(t)
                 teams.append(t)
     td = {t: {'cp': 0, 'gf': 0, 'ga': 0, 'gf_away': 0, 'wins': 0, 'wins_away': 0,
-              'pts': [], 'rk': []} for t in teams}
+              'pts': [], 'rk': [], 'mm': []} for t in teams}
     season_matches = []  # (home, away, hg, ag) para los criterios de desempate
     for h, a, ftr, hg, ag in matches:
         td[h]['gf'] += hg
@@ -151,6 +169,10 @@ def compute_rk_and_ranks(matches, lg):
         td[a]['gf'] += ag
         td[a]['ga'] += hg
         td[a]['gf_away'] += ag
+        # Huella de la cronología: (rival, es_local) por partido y equipo, en el
+        # MISMO orden y forma que m[i][0]/m[i][1] de process_season (update.py:536).
+        td[h]['mm'].append((a, 1))
+        td[a]['mm'].append((h, 0))
         if ftr == 'H':
             hp, ap = 3, 0
             td[h]['wins'] += 1
@@ -192,9 +214,20 @@ def build_block(block, td, final_ranks, lg, sn):
       1. conjunto de equipos del CSV === conjunto de claves del bloque;
       2. para cada equipo, la secuencia de puntos acumulados derivada del CSV
          (`td[t]['pts']`) === `a[]` almacenado, elemento a elemento;
-      3. si el bloque ya trae `rank`, debe coincidir con `final_ranks[t]`.
+      3. para cada equipo, la cronología reconstruida (rival y flag local/visitante
+         por partido, `td[t]['mm']`) === `m[i][0]`/`m[i][1]` almacenados. Esto ancla
+         la verificación al ORDEN de los partidos, no solo a los puntos: dos
+         ordenaciones distintas del mismo conjunto pueden dar el mismo `a[]` por
+         equipo y `rk[]`/`rank` distintos, y (2) no lo cazaría;
+      4. si el bloque ya trae `rank`, debe coincidir con `final_ranks[t]`.
 
-    Escritura (solo si 1-3 pasan): sobre una COPIA profunda del bloque, para cada
+    Techo de la verificación (lo que el `OK` NO certifica): los goles. Las
+    históricas guardan en `m` [rival, es_local, puntos, exp] pero NO los goles
+    (ADR-005·R·2), así que gen_gd/gen_gf/h2h_* — los criterios finos de la cadena
+    TIEBREAKERS — se toman del CSV sin contraste posible. El `OK` certifica
+    «puntos y cronología reconstruidos idénticos», no «todo verificado».
+
+    Escritura (solo si 1-4 pasan): sobre una COPIA profunda del bloque, para cada
     equipo `rk = td[t]['rk']` con `rk[-1] = final_ranks[t]` y `rank =
     final_ranks[t]`. Invariantes: `len(rk) == len(a)` y `rk[-1] == rank`.
 
@@ -218,6 +251,18 @@ def build_block(block, td, final_ranks, lg, sn):
             if rec[i] != stored[i]:
                 return None, (f"SKIPPED: {lg} {sn} {t} {i} "
                               f"csv={rec[i]} data={stored[i]}")
+
+    for t in block:
+        rec_mm = td[t]['mm']
+        stored_m = block[t].get('m', [])
+        if len(rec_mm) != len(stored_m):
+            return None, (f"SKIPPED: {lg} {sn} {t} len(m) csv={len(rec_mm)} "
+                          f"data={len(stored_m)}")
+        for i, (opp, ih) in enumerate(rec_mm):
+            if stored_m[i][0] != opp or stored_m[i][1] != ih:
+                return None, (f"SKIPPED: {lg} {sn} {t} m[{i}] "
+                              f"csv=({opp},{ih}) "
+                              f"data=({stored_m[i][0]},{stored_m[i][1]})")
 
     for t in block:
         if 'rank' in block[t] and block[t]['rank'] != final_ranks[t]:
@@ -266,13 +311,17 @@ def select_seasons(data, league_filter, season_filter):
 
 
 def write_data(data, path):
-    """Serializa data.json con el MISMO contrato que update.py (separators
-    compactos, ensure_ascii=False, SAFE_REPLACE) — las regiones no tocadas salen
-    byte-idénticas; el único delta son las claves `rk`/`rank` añadidas."""
+    """Serializa data.json con el MISMO contrato de update.py (separators
+    compactos, ensure_ascii=False) — las regiones no tocadas salen byte-idénticas;
+    el único delta son las claves `rk`/`rank` añadidas.
+
+    NO se aplica el SAFE_REPLACE global de update.py (str.replace sobre nombres):
+    (a) spec §3 zona de rigor 3 lo prohíbe en código nuevo; (b) sería no-op — los
+    datos ya vienen normalizados de data.json y este script solo añade enteros,
+    nunca introduce un nombre; (c) un replace ciego sobre el JSON entero podría
+    renombrar claves en bloques que este script declara NO tocar, rompiendo su
+    propia garantía de «resto del fichero byte-idéntico»."""
     out = json.dumps(data, separators=(',', ':'), ensure_ascii=False)
-    SAFE_REPLACE = {"Nott'm Forest": "Nottm Forest", "Ath Madrid": "At Madrid"}
-    for old, new in SAFE_REPLACE.items():
-        out = out.replace(old, new)
     with open(path, 'w', encoding='utf-8') as f:
         f.write(out)
 
@@ -280,10 +329,24 @@ def write_data(data, path):
 # ---------------------------------------------------------------------------
 # Orquestación / CLI
 # ---------------------------------------------------------------------------
-def run(check=False, data_path=None, league=None, season=None):
+def run(check=False, data_path=None, league=None, season=None, downloader=download_csv):
     """Procesa las temporadas seleccionadas. Devuelve el exit code
-    (0 si SKIPPED==0, 1 en caso contrario). Escribe solo si no hay SKIPPED,
-    no es --check y hay algo que escribir."""
+    (0 si SKIPPED==0, 1 en caso contrario).
+
+    `downloader(lg, sn) -> (text, err)` es inyectable (tests sin red).
+
+    Dos tipos de SKIPPED, con semántica de escritura DISTINTA:
+      - SKIPPED de DESCARGA (5xx/timeout/redirect/CSV inválido/requests ausente):
+        NO bloquea la escritura de las temporadas verificadas. El script es
+        idempotente (block_has_full_rk), así que escribir las OK y reportar las
+        pendientes es seguro: la re-ejecución retoma solo lo que falta, sin que un
+        5xx transitorio tire las decenas de temporadas ya verificadas.
+      - SKIPPED de VERIFICACIÓN (el CSV no cuadra con data.json): SÍ aborta la
+        escritura completa (todo-o-nada). Un desajuste puede señalar que la
+        cronología del CSV ha derivado; abortar es lo correcto.
+
+    Escribe solo si: no hay SKIPPED de verificación, no es --check, y hay algo que
+    escribir."""
     data_path = data_path or DEFAULT_DATA
     if league and league not in TIEBREAKERS:
         print(f"Liga desconocida: {league!r} (esperada una de {list(TIEBREAKERS)})")
@@ -293,32 +356,32 @@ def run(check=False, data_path=None, league=None, season=None):
 
     targets = select_seasons(data, league, season)
     ok = 0
-    skipped = 0
+    skipped_descarga = 0
+    skipped_verificacion = 0
     new_blocks = {}
-    lines = []
     for lg, sn in targets:
         block = data['seasons'][lg][sn]
-        text, err = download_csv(lg, sn)
+        text, err = downloader(lg, sn)
         if err:
-            lines.append(f"SKIPPED: {lg} {sn} {err}")
-            skipped += 1
+            print(f"SKIPPED: {lg} {sn} {err}")  # progreso inmediato (~78 descargas)
+            skipped_descarga += 1
             continue
         matches = parse_csv_matches(text)
         td, final_ranks = compute_rk_and_ranks(matches, lg)
         new_block, reason = build_block(block, td, final_ranks, lg, sn)
         if reason:
-            lines.append(reason)
-            skipped += 1
+            print(reason)
+            skipped_verificacion += 1
             continue
         new_blocks[(lg, sn)] = new_block
-        lines.append(f"OK {lg} {sn} ({len(td)} equipos, {len(matches)} partidos)")
+        print(f"OK {lg} {sn} ({len(td)} equipos, {len(matches)} partidos)")
         ok += 1
 
-    for ln in lines:
-        print(ln)
-    print(f"OK={ok} SKIPPED={skipped}")
+    skipped = skipped_descarga + skipped_verificacion
+    print(f"OK={ok} SKIPPED={skipped} "
+          f"(descarga={skipped_descarga} verificacion={skipped_verificacion})")
 
-    if skipped == 0 and not check and new_blocks:
+    if skipped_verificacion == 0 and not check and new_blocks:
         for (lg, sn), nb in new_blocks.items():
             data['seasons'][lg][sn] = nb
         write_data(data, data_path)
