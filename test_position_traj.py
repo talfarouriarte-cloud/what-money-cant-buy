@@ -23,6 +23,9 @@ Cubre (issue #110):
      jornada 5 con ph=1.0): traj == [[5, p50]] con el ganador en rango 1 en el
      100% de las réplicas.
   5. Imprime el tiempo de simulate_position_probs con y sin match_gws (§5).
+  6. No-regresión numérica CON RNG (semilla fija): las categorías y el p50 de la
+     rama match_gws!=None coinciden con la histórica sobre el calendario real,
+     tanto en curso (rank oficial) como en pretemporada (noise).
 """
 import json
 import sys
@@ -151,6 +154,51 @@ def test_deterministic_single_match():
 
 
 # ---------------------------------------------------------------------------
+# (6) No-regresión numérica: la rama match_gws!=None NO altera las categorías
+#     ni el p50 respecto a la rama histórica (match_gws=None), sobre el
+#     calendario real y CON RNG. Cierra el hueco del test (3), que sólo cubría
+#     n_matches==0 (determinista, sin RNG). La equivalencia depende de detalles
+#     frágiles (rng de misma forma, indexado por índice original del partido,
+#     un noise por réplica); este test los mecaniza. Semilla explícita: hoy no
+#     hay np.random.seed en update.py, así que dos llamadas sin sembrar no son
+#     comparables.
+# ---------------------------------------------------------------------------
+def _assert_same_categories(teams, A, B, label):
+    for t in teams:
+        for k in ('1st', 'ucl', 'uel', 'ucol', 'mid', 'rel', 'p50'):
+            assert A[t][k] == B[t][k], \
+                f"{label} {t}: categoría {k} difiere con/sin match_gws " \
+                f"({A[t][k]} != {B[t][k]})"
+
+
+def test_numeric_regression_match_gws():
+    teams, current_pts, current_ranks, match_list, match_gws = _liga_real()
+    n_sims = 3000
+
+    # Rama en curso (current_ranks dado ⇒ desempate por rank oficial, sin noise).
+    np.random.seed(20261110)
+    A = simulate_position_probs(teams, current_pts, match_list, n_sims=n_sims,
+                                lg=LG, current_ranks=current_ranks, match_gws=match_gws)
+    np.random.seed(20261110)
+    B = simulate_position_probs(teams, current_pts, match_list, n_sims=n_sims,
+                                lg=LG, current_ranks=current_ranks)
+    _assert_same_categories(teams, A, B, 'cur')
+
+    # Rama de pretemporada (current_ranks=None ⇒ desempate por noise; es donde el
+    # cambio de posición del sorteo del noise tiene más superficie).
+    np.random.seed(20261110)
+    Ap = simulate_position_probs(teams, current_pts, match_list, n_sims=n_sims,
+                                 lg=LG, current_ranks=None, match_gws=match_gws)
+    np.random.seed(20261110)
+    Bp = simulate_position_probs(teams, current_pts, match_list, n_sims=n_sims,
+                                 lg=LG, current_ranks=None)
+    _assert_same_categories(teams, Ap, Bp, 'pre')
+
+    print("OK (6) no-regresión numérica: 1st/ucl/uel/ucol/mid/rel/p50 idénticos "
+          "con/sin match_gws sobre calendario real (cur con rank y pre con noise)")
+
+
+# ---------------------------------------------------------------------------
 # (5) Coste medido: tiempo con y sin match_gws (§5 del issue)
 # ---------------------------------------------------------------------------
 def test_report_timing():
@@ -174,5 +222,6 @@ if __name__ == '__main__':
     test_full_trajectory_invariant()
     test_no_matches_empty_traj()
     test_deterministic_single_match()
+    test_numeric_regression_match_gws()
     test_report_timing()
     print("\nTODOS LOS TESTS OK (ADR-011)")

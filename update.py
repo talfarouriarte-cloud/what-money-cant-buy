@@ -985,8 +985,8 @@ def simulate_position_probs(teams, current_pts, match_list, n_sims=10000, lg=Non
         else:
             order = np.argsort(-current_pts)
         pos_counts = np.zeros((n_teams, n_teams), dtype=int)
-        for rank, idx in enumerate(order):
-            pos_counts[idx, rank] = n_sims
+        # order[rank] = team_idx en esa posición ⇒ pos_counts[idx, rank] = n_sims.
+        pos_counts[order, np.arange(n_teams)] = n_sims
         if match_gws is not None:
             # 0 partidos pendientes ⇒ no hay jornadas que simular (ADR-011).
             traj_by_team = {team: [] for team in teams}
@@ -1014,6 +1014,9 @@ def simulate_position_probs(teams, current_pts, match_list, n_sims=10000, lg=Non
         traj_counts = {g: np.zeros((n_teams, n_teams), dtype=int) for g in known_gws}
         final_counts = np.zeros((n_teams, n_teams), dtype=int)
         rng = np.random.random((n_sims, n_matches))
+        # Índice de posiciones 0..n_teams-1 para tallies vectorizados (ADR-011 nit 6):
+        # order[rank]=idx ⇒ counts[order, arange] += 1 equivale al bucle escalar.
+        arange_teams = np.arange(n_teams)
 
         for s in range(n_sims):
             pts = current_pts.copy()
@@ -1037,9 +1040,7 @@ def simulate_position_probs(teams, current_pts, match_list, n_sims=10000, lg=Non
                         order = np.lexsort((rank_arr, -pts))
                     else:
                         order = np.argsort(-(pts + noise))
-                    tc = traj_counts[g]
-                    for rank, idx in enumerate(order):
-                        tc[idx, rank] += 1
+                    traj_counts[g][order, arange_teams] += 1
             if has_unknown:
                 # El tally final incluye TODOS los partidos (los de jornada
                 # desconocida quedaron tras el último corte): corte extra.
@@ -1047,8 +1048,7 @@ def simulate_position_probs(teams, current_pts, match_list, n_sims=10000, lg=Non
                     order = np.lexsort((rank_arr, -pts))
                 else:
                     order = np.argsort(-(pts + noise))
-                for rank, idx in enumerate(order):
-                    final_counts[idx, rank] += 1
+                final_counts[order, arange_teams] += 1
 
         if has_unknown or not known_gws:
             pos_counts = final_counts
@@ -1063,6 +1063,7 @@ def simulate_position_probs(teams, current_pts, match_list, n_sims=10000, lg=Non
     else:
         pos_counts = np.zeros((n_teams, n_teams), dtype=int)  # [team_idx, position] count
         rng = np.random.random((n_sims, n_matches))
+        arange_teams = np.arange(n_teams)
 
         for s in range(n_sims):
             pts = current_pts.copy()
@@ -1082,8 +1083,7 @@ def simulate_position_probs(teams, current_pts, match_list, n_sims=10000, lg=Non
             else:
                 noise = np.random.random(n_teams) * 0.001
                 order = np.argsort(-(pts + noise))
-            for rank, idx in enumerate(order):
-                pos_counts[idx, rank] += 1
+            pos_counts[order, arange_teams] += 1
 
     # Convert to category probabilities using per-league spots
     result = {}

@@ -826,7 +826,8 @@ select.field {
         rk[i] = rango oficial ADR-005 tras el partido i-ésimo; rk[-1] === rank
      bands[lg][tm]       = { p10[], p50[], p90[] }                updated forecast (cur season)
      pre[lg][tm]         = { p10[], p50[], p90[] }                budget forecast (cur season)
-     pos[lg][sn]         = { pre:{tm:{1st,ucl,uel,conf,mid,rel,p50}}, cur:{...}, hist:[{probs:{tm:{p50}}}] }
+     pos[lg][sn]         = { pre:{tm:{1st,ucl,uel,conf,mid,rel,p50,traj[]}}, cur:{...}, hist:[{probs:{tm:{p50}}}] }
+        traj[i] = [gw, p50_gw]  mediana entera del rango tras la jornada gw (ADR-011; cur/pre temporada en curso)
      cumulative[lg][tm]  = overperformance record across seasons
      narratives[lg][tm]  = [en, es] bilingual outlook
      meta.wage_status[lg][sn] = "stale" | ...
