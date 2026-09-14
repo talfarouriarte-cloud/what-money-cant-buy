@@ -911,14 +911,40 @@ def _current_ranks_from_season(season_data, teams):
     return ranks
 
 
-def simulate_position_probs(teams, current_pts, match_list, n_sims=10000, lg=None, current_ranks=None):
+def _median_rank(counts, n_sims):
+    """Mediana entera del rango (1-indexed) a partir del vector de conteos por
+    posición (0-indexed). Suma acumulada hasta alcanzar n_sims/2 — misma regla
+    que el p50 histórico de simulate_position_probs (ADR-011: extraído a helper
+    para reutilizarlo en el tally final y en cada corte de jornada, sin cambio
+    numérico)."""
+    cum = 0
+    half = n_sims / 2.0
+    n = len(counts)
+    for r in range(n):
+        cum += counts[r]
+        if cum >= half:
+            return r + 1  # 1-indexed rank
+    return n  # fallback (== n_teams)
+
+
+def simulate_position_probs(teams, current_pts, match_list, n_sims=10000, lg=None, current_ranks=None, match_gws=None):
     """Core joint simulation. Returns {team: {cat: probability}} for position categories.
 
     Desempate (ADR-006): el orden dentro de cada rama es
     (puntos simulados desc, rank oficial actual asc). `current_ranks` es un
     dict {team: int} con el rank oficial (salida de compute_league_ranks sobre
     el estado REAL en el instante de referencia). Si es None (pretemporada,
-    0 jugados) se conserva el ruido aleatorio insesgado (ADR-006, caso frontera)."""
+    0 jugados) se conserva el ruido aleatorio insesgado (ADR-006, caso frontera).
+
+    `match_gws` (ADR-011): lista de enteros alineada 1:1 con `match_list`
+    (jornada de liga de cada partido; None o 0 = desconocida). Si es None, la
+    salida es IDÉNTICA a la histórica (sin clave `traj`). Si se pasa, cada
+    `result[team]` incorpora `"traj": [[g, p50_g], ...]` — la mediana entera del
+    rango tras cada jornada conocida, obtenida cortando la clasificación de cada
+    réplica tras el último partido de cada jornada (misma regla de desempate que
+    el tally final). Invariante: si todas las jornadas son conocidas,
+    `traj[-1][1] == result[team]["p50"]` (el corte de la última jornada ES el
+    tally final)."""
     n_teams = len(teams)
     n_matches = len(match_list)
 
@@ -946,6 +972,10 @@ def simulate_position_probs(teams, current_pts, match_list, n_sims=10000, lg=Non
     n_euro = n_ucl + n_uel + n_ucol
     n_mid = n_teams - n_euro - n_rel
     
+    # Trayectoria p50 por jornada (ADR-011): se rellena solo si se pasa
+    # `match_gws`. None = sin `traj` (salida histórica intacta).
+    traj_by_team = None
+
     if n_matches == 0:
         # Season complete — use actual final standings.
         # ADR-006: con rank oficial disponible, el orden ES ese rank (los puntos
@@ -957,10 +987,83 @@ def simulate_position_probs(teams, current_pts, match_list, n_sims=10000, lg=Non
         pos_counts = np.zeros((n_teams, n_teams), dtype=int)
         for rank, idx in enumerate(order):
             pos_counts[idx, rank] = n_sims
+        if match_gws is not None:
+            # 0 partidos pendientes ⇒ no hay jornadas que simular (ADR-011).
+            traj_by_team = {team: [] for team in teams}
+    elif match_gws is not None:
+        # ADR-011: en cada réplica, procesamos los partidos en orden ascendente
+        # de jornada (estable; jornada desconocida —0/None— al final) y cortamos
+        # la clasificación tras el último partido de cada jornada conocida, con
+        # la MISMA regla de desempate que el tally final (ADR-006).
+        def _gw_of(mi):
+            g = match_gws[mi] if mi < len(match_gws) else None
+            return g if (g is not None and g != 0) else None
+        order_idx = sorted(range(n_matches),
+                           key=lambda mi: (0, _gw_of(mi), mi) if _gw_of(mi) is not None
+                                          else (1, 0, mi))
+        # Última posición (en order_idx) de cada jornada conocida ⇒ punto de corte.
+        gw_last_pos = {}
+        for pos, mi in enumerate(order_idx):
+            g = _gw_of(mi)
+            if g is not None:
+                gw_last_pos[g] = pos
+        cut_gw_at = {pos: g for g, pos in gw_last_pos.items()}
+        known_gws = sorted(gw_last_pos.keys())
+        has_unknown = any(_gw_of(mi) is None for mi in range(n_matches))
+
+        traj_counts = {g: np.zeros((n_teams, n_teams), dtype=int) for g in known_gws}
+        final_counts = np.zeros((n_teams, n_teams), dtype=int)
+        rng = np.random.random((n_sims, n_matches))
+
+        for s in range(n_sims):
+            pts = current_pts.copy()
+            # Un único vector de ruido por réplica, reutilizado en todos los
+            # cortes (ADR-011): sin rank oficial (pretemporada) el desempate es
+            # ruido, pero coherente dentro de la misma réplica.
+            noise = None if rank_arr is not None else np.random.random(n_teams) * 0.001
+            for pos, mi in enumerate(order_idx):
+                h_idx, a_idx, ph, pd_ = match_list[mi]
+                r = rng[s, mi]
+                if r < ph:
+                    pts[h_idx] += 3
+                elif r < ph + pd_:
+                    pts[h_idx] += 1
+                    pts[a_idx] += 1
+                else:
+                    pts[a_idx] += 3
+                g = cut_gw_at.get(pos)
+                if g is not None:
+                    if rank_arr is not None:
+                        order = np.lexsort((rank_arr, -pts))
+                    else:
+                        order = np.argsort(-(pts + noise))
+                    tc = traj_counts[g]
+                    for rank, idx in enumerate(order):
+                        tc[idx, rank] += 1
+            if has_unknown:
+                # El tally final incluye TODOS los partidos (los de jornada
+                # desconocida quedaron tras el último corte): corte extra.
+                if rank_arr is not None:
+                    order = np.lexsort((rank_arr, -pts))
+                else:
+                    order = np.argsort(-(pts + noise))
+                for rank, idx in enumerate(order):
+                    final_counts[idx, rank] += 1
+
+        if has_unknown or not known_gws:
+            pos_counts = final_counts
+        else:
+            # Todas las jornadas conocidas ⇒ el corte de la última jornada ES el
+            # tally final; se reutiliza sin duplicar cómputo (invariante ADR-011).
+            pos_counts = traj_counts[known_gws[-1]]
+        traj_by_team = {}
+        for i, team in enumerate(teams):
+            traj_by_team[team] = [[g, _median_rank(traj_counts[g][i], n_sims)]
+                                  for g in known_gws]
     else:
         pos_counts = np.zeros((n_teams, n_teams), dtype=int)  # [team_idx, position] count
         rng = np.random.random((n_sims, n_matches))
-        
+
         for s in range(n_sims):
             pts = current_pts.copy()
             for m_idx, (h_idx, a_idx, ph, pd_) in enumerate(match_list):
@@ -981,20 +1084,14 @@ def simulate_position_probs(teams, current_pts, match_list, n_sims=10000, lg=Non
                 order = np.argsort(-(pts + noise))
             for rank, idx in enumerate(order):
                 pos_counts[idx, rank] += 1
-    
+
     # Convert to category probabilities using per-league spots
     result = {}
     for i, team in enumerate(teams):
         counts = pos_counts[i]
-        # p50 rank: median of the rank distribution. Cumulative sum until reaching n_sims/2.
-        cum = 0
-        half = n_sims / 2.0
-        p50_rank = n_teams  # fallback
-        for r in range(n_teams):
-            cum += counts[r]
-            if cum >= half:
-                p50_rank = r + 1  # 1-indexed rank
-                break
+        # p50 rank: mediana entera del rango (ADR-011: helper compartido con los
+        # cortes de jornada — misma suma acumulada hasta n_sims/2, sin cambio).
+        p50_rank = _median_rank(counts, n_sims)
         result[team] = {
             "1st": round(float(counts[0] / n_sims), 4),
             "ucl": round(float(counts[:n_ucl].sum() / n_sims), 4),
@@ -1004,15 +1101,23 @@ def simulate_position_probs(teams, current_pts, match_list, n_sims=10000, lg=Non
             "rel": round(float(counts[n_teams-n_rel:].sum() / n_sims), 4),
             "p50": p50_rank
         }
+        if traj_by_team is not None:
+            result[team]["traj"] = traj_by_team[team]
     return result
 
 
-def build_match_list(teams, wages, remaining_fixtures, beta, t1, t2):
-    """Build deduplicated match list with probabilities."""
+def build_match_list(teams, wages, remaining_fixtures, beta, t1, t2, with_gw=False):
+    """Build deduplicated match list with probabilities.
+
+    Con `with_gw=True` (ADR-011) devuelve `(match_list, gws)`, donde `gws[i]` es
+    la jornada de liga (índice 2 de la tupla `(opp, is_home, gw, date)` de
+    `remaining_fixtures`; 0 si falta) del partido que originó `match_list[i]`.
+    Con `False`, comportamiento actual intacto (llamadores existentes sin cambios)."""
     matches_seen = set()
     match_list = []
+    gws = []
     for t_idx, team in enumerate(teams):
-        for opp, is_home, *_ in remaining_fixtures.get(team, []):
+        for opp, is_home, *rest in remaining_fixtures.get(team, []):
             if opp not in teams:
                 continue
             o_idx = teams.index(opp)
@@ -1027,6 +1132,9 @@ def build_match_list(teams, wages, remaining_fixtures, beta, t1, t2):
                 ph = 1 - expit(t2 + beta * x)
                 pd_ = expit(t2 + beta * x) - expit(t1 + beta * x)
                 match_list.append((h_idx, a_idx, ph, pd_))
+                gws.append(rest[0] if rest else 0)  # gw = índice 2 de la tupla
+    if with_gw:
+        return match_list, gws
     return match_list
 
 
@@ -1034,14 +1142,15 @@ def simulate_current_positions(season_data, wages, beta, t1, t2, remaining_fixtu
     """Current season: lock in played results, simulate remaining."""
     teams = list(season_data.keys())
     current_pts = np.array([season_data[t]['a'][-1] if season_data[t]['a'] else 0 for t in teams])
-    match_list = build_match_list(teams, wages, remaining_fixtures, beta, t1, t2)
+    # ADR-011: with_gw=True para alimentar la trayectoria p50 por jornada.
+    match_list, match_gws = build_match_list(teams, wages, remaining_fixtures, beta, t1, t2, with_gw=True)
     # ADR-006: rank oficial actual como clave secundaria de desempate. El campo
     # 'rank' de season_data es la salida de compute_league_ranks (ADR-005) sobre
     # los partidos REALES jugados hasta ahora; los goles no se persisten en
     # data.json, así que se reutiliza ese rank ya calculado (idéntico resultado).
     current_ranks = _current_ranks_from_season(season_data, teams)
     return simulate_position_probs(teams, current_pts, match_list, n_sims, lg=lg,
-                                   current_ranks=current_ranks)
+                                   current_ranks=current_ranks, match_gws=match_gws)
 
 
 def compute_position_history(season_data, wages, beta, t1, t2, fixtures_cal, lg, sn, n_sims=2000, gw_step=1):
@@ -1145,16 +1254,23 @@ def compute_position_history(season_data, wages, beta, t1, t2, fixtures_cal, lg,
     return snapshots
 
 
-def simulate_preseason_positions(wages, beta, t1, t2, fixture_calendar, n_sims=10000, lg=None):
-    """Pre-season: simulate full season from scratch using fixture calendar."""
+def simulate_preseason_positions(wages, beta, t1, t2, fixture_calendar, n_sims=10000, lg=None, with_traj=False):
+    """Pre-season: simulate full season from scratch using fixture calendar.
+
+    Con `with_traj=True` (ADR-011) construye la lista de jornadas a partir de
+    `gw_data['gw']` del calendario y la pasa como `match_gws` al motor, que
+    emite la trayectoria p50 por jornada. Solo lo activa el camino de temporada
+    en curso con calendario real (compute_all_position_probs)."""
     teams = [t for t in wages.keys() if not t.startswith('_')]
     n_teams = len(teams)
     current_pts = np.zeros(n_teams)
-    
+
     # Build all matches from fixture calendar
     matches_seen = set()
     match_list = []
+    gws = []
     for gw_data in fixture_calendar:
+        gw_num = gw_data.get('gw', 0)
         for h, a in gw_data['matches']:
             h, a = fix_name(h), fix_name(a)
             if h not in teams or a not in teams:
@@ -1170,8 +1286,11 @@ def simulate_preseason_positions(wages, beta, t1, t2, fixture_calendar, n_sims=1
                 ph = 1 - expit(t2 + beta * x)
                 pd_ = expit(t2 + beta * x) - expit(t1 + beta * x)
                 match_list.append((h_idx, a_idx, ph, pd_))
-    
-    return simulate_position_probs(teams, current_pts, match_list, n_sims, lg=lg)
+                gws.append(gw_num)
+
+    match_gws = gws if with_traj else None
+    return simulate_position_probs(teams, current_pts, match_list, n_sims, lg=lg,
+                                   match_gws=match_gws)
 
 
 def generate_narratives_all(data):
@@ -1375,8 +1494,10 @@ def compute_all_position_probs(data, fixtures_cal):
             if sn == CURRENT_SEASON and fixtures_cal and lg in fixtures_cal and CURRENT_SEASON in fixtures_cal[lg]:
                 cal_data = fixtures_cal[lg][CURRENT_SEASON]
                 cal_list = cal_data.get('calendar', cal_data) if isinstance(cal_data, dict) else cal_data
-                pre = simulate_preseason_positions(wages, p['beta'], p['theta1'], p['theta2'], cal_list, lg=lg)
+                # ADR-011: temporada en curso con calendario real ⇒ trayectoria p50.
+                pre = simulate_preseason_positions(wages, p['beta'], p['theta1'], p['theta2'], cal_list, lg=lg, with_traj=True)
             else:
+                # Rama histórica (cal sintético gw:1): sin traj (ADR-011).
                 pre = simulate_preseason_positions(wages, p['beta'], p['theta1'], p['theta2'], cal, lg=lg)
             pos[lg][sn]['pre'] = pre
             
