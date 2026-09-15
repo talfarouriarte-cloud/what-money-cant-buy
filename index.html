@@ -2565,8 +2565,12 @@ function Tracker({
     const resL = f.mData ? f.res === 3 ? _t("w_short") : f.res === 1 ? _t("d_short") : _t("l_short") : null;
     // jornada real del punto: pasado m[4]; futuro r[5] si existe (no 0/ausente);
     // si no hay jornada real, se omite la etiqueta (no se pinta el índice gw como
-    // si fuera jornada) — #114.
-    const gwReal = f.mData && f.mData[4] != null ? f.mData[4] : f.rData && f.rData[5] ? f.rData[5] : null;
+    // si fuera jornada) — #114. m[4]===0 es el mismo sentinel «sin jornada» que
+    // r[5]===0 (update.py), así que ambas ramas usan veracidad, no != null.
+    const gwReal = f.mData && f.mData[4] ? f.mData[4] : f.rData && f.rData[5] ? f.rData[5] : null;
+    // etiqueta de cabecera: jornada real (si la hay) + resultado (si lo hay);
+    // vacío ⇒ no se pinta el span (evita flex-item vacío colgando su gap) — #114.
+    const gwLbl = [gwReal != null ? _t("col_gw") + gwReal : "", resL ? `(${resL})` : ""].filter(Boolean).join(" ");
     const mDiff = f.mData ? f.mData[2] - f.mData[3] : 0;
     const band = d[`uband_${name}`];
     return /*#__PURE__*/React.createElement("div", {
@@ -2590,13 +2594,13 @@ function Tracker({
     }, _t("vs")), " ", /*#__PURE__*/React.createElement(Crest, {
       name: f.awayN,
       size: 14
-    }), f.awayN, /*#__PURE__*/React.createElement("span", {
+    }), f.awayN, gwLbl ? /*#__PURE__*/React.createElement("span", {
       className: "text-mut",
       style: {
         fontWeight: 400,
         fontSize: "0.85em"
       }
-    }, gwReal != null ? _t("col_gw") : "", gwReal != null ? gwReal : "", resL ? ` (${resL})` : "")) : /*#__PURE__*/React.createElement("div", {
+    }, gwLbl) : null) : /*#__PURE__*/React.createElement("div", {
       style: {
         fontWeight: 700,
         marginBottom: 3,
@@ -2797,7 +2801,10 @@ function Tracker({
         fontWeight: 700,
         marginBottom: 4
       }
-    }, _t("col_gw"), " ", gw), /*#__PURE__*/React.createElement("div", {
+      // multi-equipo: gw es el índice del partido (d.gw = i+1), que mapea a
+      // jornadas distintas por equipo con aplazados; se etiqueta como «Partido N»
+      // (no como jornada) — la jornada real vive en el bloque single-team — #114.
+    }, _t("game"), " ", gw), /*#__PURE__*/React.createElement("div", {
       className: "col",
       style: {
         gap: 6
@@ -5484,6 +5491,12 @@ function BadRun({
       }
     }, _t("l_short"), " ", Math.round(d.pm[2] * 100), "%")) : null));
   };
+  // etiqueta de <option>: índice del partido g (eje X del funnel) con la jornada
+  // real como metadato entre paréntesis; si m[4] es 0/ausente se omite — #114.
+  const gwOptLabel = g => {
+    const jr = t.m[g - 1] && t.m[g - 1][4];
+    return jr ? `${g} (${_t("col_gw")}${jr})` : `${g}`;
+  };
   return /*#__PURE__*/React.createElement("div", {
     className: "col gap-4"
   }, /*#__PURE__*/React.createElement("div", {
@@ -5521,16 +5534,18 @@ function BadRun({
     style: {
       fontSize: 12
     }
-  }, _t("from"), " ", _t("col_gw"), /*#__PURE__*/React.createElement("select", {
+  }, _t("from"), /*#__PURE__*/React.createElement("select", {
     className: "field",
     value: lo,
     onChange: e => setFrom(+e.target.value)
+    // valor = índice del partido (mismo eje X que el funnel, ADR-011); la
+    // jornada real va como metadato entre paréntesis: «3 (J2)» — #114.
   }, Array.from({
     length: nP
   }, (_, i) => i + 1).map(g => /*#__PURE__*/React.createElement("option", {
     key: g,
     value: g
-  }, t.m[g - 1][4])))), /*#__PURE__*/React.createElement("label", {
+  }, gwOptLabel(g))))), /*#__PURE__*/React.createElement("label", {
     className: "flex center gap-2 text-mut",
     style: {
       fontSize: 12
@@ -5544,7 +5559,7 @@ function BadRun({
   }, (_, i) => i + 1).map(g => /*#__PURE__*/React.createElement("option", {
     key: g,
     value: g
-  }, t.m[g - 1][4])))), /*#__PURE__*/React.createElement("span", {
+  }, gwOptLabel(g))))), /*#__PURE__*/React.createElement("span", {
     className: "mono text-mut",
     style: {
       fontSize: 12
@@ -5566,12 +5581,14 @@ function BadRun({
     style: {
       fontWeight: 600
     }
+    // rango del titular por índice de partido (lo..hi), coherente con el eje X
+    // del funnel; con aplazados m[4] no forma un rango contiguo — #114.
   }, _tf("actual_vs_expected", {
     a: totA,
     e: totE.toFixed(1),
     n: nGames,
-    f: t.m[lo - 1][4],
-    t: t.m[hi - 1][4],
+    f: lo,
+    t: hi,
     total: totalRounds
   })), /*#__PURE__*/React.createElement("div", {
     className: "text-mut",
