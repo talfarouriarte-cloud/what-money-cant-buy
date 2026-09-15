@@ -2523,7 +2523,10 @@ function Tracker({
     const np = td.a.length;
     const isPast = gw <= np;
     const mData = isPast ? td.m[gw - 1] : null;
-    const rData = !isPast && td.r ? td.r.find(x => x[5] === gw) : null;
+    // futuro: fixture i-ésima restante por índice de partido (gw = i+1), no por
+    // jornada de liga — coherente con proj_ (#110) y la convención de la web
+    // (ADR-011). Buscar por r[5]===gw fallaba con aplazados (#114).
+    const rData = !isPast && td.r ? td.r[gw - np - 1] || null : null;
     const fx = mData || rData;
     const opp = fx ? fx[0] : null;
     const isH = fx ? fx[1] === 1 : true;
@@ -2560,6 +2563,10 @@ function Tracker({
     const f = fixtureOf(name, gw);
     if (!f) return null;
     const resL = f.mData ? f.res === 3 ? _t("w_short") : f.res === 1 ? _t("d_short") : _t("l_short") : null;
+    // jornada real del punto: pasado m[4]; futuro r[5] si existe (no 0/ausente);
+    // si no hay jornada real, se omite la etiqueta (no se pinta el índice gw como
+    // si fuera jornada) — #114.
+    const gwReal = f.mData && f.mData[4] != null ? f.mData[4] : f.rData && f.rData[5] ? f.rData[5] : null;
     const mDiff = f.mData ? f.mData[2] - f.mData[3] : 0;
     const band = d[`uband_${name}`];
     return /*#__PURE__*/React.createElement("div", {
@@ -2589,7 +2596,7 @@ function Tracker({
         fontWeight: 400,
         fontSize: "0.85em"
       }
-    }, _t("col_gw"), f.mData && f.mData[4] != null ? f.mData[4] : gw, resL ? ` (${resL})` : "")) : /*#__PURE__*/React.createElement("div", {
+    }, gwReal != null ? _t("col_gw") : "", gwReal != null ? gwReal : "", resL ? ` (${resL})` : "")) : /*#__PURE__*/React.createElement("div", {
       style: {
         fontWeight: 700,
         marginBottom: 3,
@@ -5346,6 +5353,10 @@ function BadRun({
         pm = isH ? pp : [pp[2], pp[1], pp[0]];
       }
       rows.push({
+        // i: índice absoluto del partido en la temporada del equipo (eje X del
+        // funnel, convención de la web ADR-011); gw: jornada real como metadato
+        // del tooltip — con aplazados divergen (#114).
+        i: k + 1,
         gw: m[4],
         act: +ca.toFixed(1),
         exp: +ce.toFixed(1),
@@ -5609,7 +5620,7 @@ function BadRun({
     strokeDasharray: "2 4",
     vertical: false
   }), /*#__PURE__*/React.createElement(Recharts.XAxis, {
-    dataKey: "gw",
+    dataKey: "i",
     tickLine: false,
     axisLine: false,
     tick: {
