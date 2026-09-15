@@ -13,6 +13,7 @@
 - [ADR-008](#adr-008-2026-07-12--cambio-de-temporada-el-15-de-julio) — Cambio de temporada el 15 de julio
 - [ADR-009](#adr-009-2026-07-12--mapa-de-nombres-único-con-capa-de-display) — Mapa de nombres único con capa de display
 - [ADR-010](#adr-010-2026-07-12--build-crests-encadenado-a-update-por-workflow_run) — build-crests encadenado a update por workflow_run
+- [ADR-011](#adr-011-2026-09-14--trayectoria-p50-de-posición-por-jornada-desde-la-simulación-conjunta) — Trayectoria p50 de posición por jornada desde la simulación conjunta
 
 ## ADR-001 (2026-07-11) — Fundación: proyecto existente entra en desarrollo agéntico
 
@@ -352,3 +353,37 @@ Elimina el único paso manual que quedaba del rollover con la superficie mínima
 ### Coste de revertir
 
 Trivial: eliminar el bloque `workflow_run` devuelve build-crests a dispatch puro; ninguna otra pieza depende del encadenado.
+
+## ADR-011 (2026-09-14) — Trayectoria p50 de posición por jornada desde la simulación conjunta
+
+### Contexto
+
+En la vista Position, el tramo futuro de «p50 projection» es una interpolación lineal en `index.html` entre el rango actual y `pos.cur[team].p50` (mediana del rango final). El motor `simulate_position_probs` simula cada partido restante de toda la liga en cada réplica (ADR-006 fija su desempate), pero solo tabula la clasificación final; las intermedias se descartan. La recta no es una salida del modelo y contradice el principio fact-based (spec §2.1).
+
+### Decisión
+
+Bloque de decisión del propietario (verbatim, sesión 2026-09-14):
+
+> el calculador de posiciones está fatal. Te dice la posición actual y luego una proyección lineal hasta llegar a tu posición esperada. Pero no es así como debe funcionar, sino que tiene que sortear cada partido y recalcular para todos los equipos cada jornada
+
+> Yo creo que p50
+
+> Tiene que ser partido i esimo. Esa era la convención para todos los gráficos de la web
+
+> la posición solo puede ser un entero
+
+Reglas: (1) por cada jornada restante `g`, el motor tabula en cada réplica el orden de la liga tras todos los partidos con jornada ≤ g, con la misma regla de desempate que el tally final (ADR-006), y emite `traj = [[g, mediana entera del rango]]`. (2) El frontend consume `traj` sin reconstruir nada; el eje X sigue siendo el partido i-ésimo del equipo, y cada punto futuro se busca en `traj` por la jornada de su fixture (`r[i][5]`); sin dato, no hay punto. (3) La línea es escalonada (`stepAfter`), coherente con una mediana entera. (4) `traj` vive en `pos.cur` y `pos.pre` de la temporada en curso; `hist` no la lleva.
+
+### Razón
+
+Es la salida real del modelo con el mismo coste conceptual (la simulación ya hace el trabajo); elimina un artefacto visual inventado por el frontend y mantiene la convención de eje de toda la web.
+
+### Alternativas descartadas
+
+- **Media de posición (float) para una línea suave**: la posición es un entero; una media fraccional no es una posición. Descartada por el propietario.
+- **Banda p10/p90 de posición**: el propietario eligió p50 solo; añadir la banda es otra decisión.
+- **Cambiar el eje del gráfico a jornada de liga**: rompe la convención de partido i-ésimo del resto de gráficos (ya señalado en ADR-005 como rediseño distinto).
+
+### Coste de revertir
+
+Bajo: eliminar `match_gws`/`traj` y restaurar la interpolación del frontend; ninguna otra salida del motor cambia.

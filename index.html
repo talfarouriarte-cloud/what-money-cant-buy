@@ -826,7 +826,8 @@ select.field {
         rk[i] = rango oficial ADR-005 tras el partido i-ésimo; rk[-1] === rank
      bands[lg][tm]       = { p10[], p50[], p90[] }                updated forecast (cur season)
      pre[lg][tm]         = { p10[], p50[], p90[] }                budget forecast (cur season)
-     pos[lg][sn]         = { pre:{tm:{1st,ucl,uel,conf,mid,rel,p50}}, cur:{...}, hist:[{probs:{tm:{p50}}}] }
+     pos[lg][sn]         = { pre:{tm:{1st,ucl,uel,conf,mid,rel,p50,traj[]}}, cur:{...}, hist:[{probs:{tm:{p50}}}] }
+        traj[i] = [gw, p50_gw]  mediana entera del rango tras la jornada gw (ADR-011; cur/pre temporada en curso)
      cumulative[lg][tm]  = overperformance record across seasons
      narratives[lg][tm]  = [en, es] bilingual outlook
      meta.wage_status[lg][sn] = "stale" | ...
@@ -2441,7 +2442,8 @@ function Tracker({
       return 1 + orderedByPts(i).findIndex(s => s.t === name);
     };
     const hist = posInfo && posInfo.hist || [];
-    const curOf = name => posInfo && posInfo.cur && posInfo.cur[name] && posInfo.cur[name].p50 || null;
+    // ADR-011: trayectoria p50 por jornada desde la simulación conjunta.
+    const trajOf = name => posInfo && posInfo.cur && posInfo.cur[name] && posInfo.cur[name].traj || null;
     const rows = [];
     for (let i = 0; i < totalRounds; i++) {
       const gw = i + 1;
@@ -2460,14 +2462,18 @@ function Tracker({
           // seed the projection at the last played GW so it connects to the actual line
           if (i === np - 1 && isCurrent) r[`proj_${name}`] = r[`p_${name}`];
         } else if (isCurrent) {
-          // future GW: linear interpolation current rank → pos.cur p50 final rank (original semantics)
-          const curP50 = curOf(name);
-          const startGW = np - 1,
-            endGW = totalRounds - 1;
-          if (curP50 != null && np > 0 && endGW > startGW) {
-            const startRank = rankAt(name, np - 1);
-            const frac = (i - startGW) / (endGW - startGW);
-            r[`proj_${name}`] = Math.round((startRank + (curP50 - startRank) * frac) * 10) / 10;
+          // ADR-011: futuro = mediana p50 de la simulación conjunta tras la
+          // jornada de liga de la fixture i-ésima restante del equipo. El eje X
+          // sigue siendo el partido i-ésimo (convención de la web); la jornada
+          // solo sirve para buscar en `traj`. Sin dato (traj ausente, jornada
+          // 0/null, o sin entrada para esa jornada) no se emite proj_ (sin
+          // reconstrucción, sin fallback lineal).
+          const traj = trajOf(name);
+          const rem = td.r && td.r[i - np];
+          const gwI = rem ? rem[5] : null;
+          if (traj && gwI) {
+            const entry = traj.find(e => e[0] === gwI);
+            if (entry) r[`proj_${name}`] = entry[1];
           }
         }
       });
@@ -3018,7 +3024,7 @@ function Tracker({
     connectNulls: true
   }) : null, compare.map((n, i) => /*#__PURE__*/React.createElement(Recharts.Line, {
     key: "proj_" + n,
-    type: "monotone",
+    type: "stepAfter",
     dataKey: `proj_${n}`,
     stroke: colors[i % colors.length],
     strokeOpacity: 0.45,
