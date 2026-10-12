@@ -27,6 +27,7 @@ Acceso vía PAT (vive en el proyecto de claude.ai, jamás en el repo). Antes de 
 
 1. **Gate humano:** issue suelto → OK explícito del humano POR issue antes de publicar. Épica (cadena) → el humano aprueba la SECUENCIA completa por adelantado; después autoencadena sin gate por issue.
 2. **Publicar = armar:** `@claude` en el body dispara al Creator al instante. Variante armado-por-el-humano: publicar SIN el literal y que el humano arme comentando.
+   **Desde AP-116 (2026-10-12) el arm pasa por el Critic:** el ping NO arranca al Creator si el issue no tiene `critica:lgtm`; el gate pone `critica:pendiente`, el Critic (`docs/agents/critic.md`, servido por el graft) critica el issue (y la ADR entera si es épica) en máximo 2 rondas y, con LGTM, arma él. Tú solo vigilas labels y corriges con `critica:hallazgos` (re-pingar = nueva ronda). Protocolo completo en el mandato común `vendored/docs-agents/architect.md` § 7 del central. Override `critica-na`: solo el humano.
 3. Tras publicar: confirmar número y URL en el chat.
 4. El Architect NO commitea código ni ficheros de producto: eso es del Creator vía PR.
 
