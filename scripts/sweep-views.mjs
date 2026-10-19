@@ -16,7 +16,8 @@
 //
 // After the generic sweep, a Trajectories case (#119) boots
 // #tab=trajectories&lg=l1&sel=Lyon&tm=diff&tj=20 and checks window.__FBM_TRAJ
-// against data.json (J, jmax, one row per Lyon season, diff, capped).
+// against data.json (J, jmax, one row per Lyon season, diff, capped); a second
+// case deep-links a historical L1 team (absent from the latest season).
 //
 // Exit 0 = all views green.
 import fs from "fs";
@@ -156,6 +157,28 @@ async function testTrajectories() {
 }
 try { results.push(await testTrajectories()); }
 catch (e) { results.push({ view: "trajectories:l1-lyon-j20", ok: false, notes: ["harness threw: " + e.message] }); }
+// Historical team deep link (#119 §2: candidates = every team of any season of lg):
+// a team absent from the latest L1 season must survive the initial load.
+async function testTrajectoriesHistorical() {
+  const out = { view: "trajectories:l1-historical", ok: true, notes: [] };
+  const L1 = (D.seasons && D.seasons.l1) || {};
+  const last = L1[Object.keys(L1).sort().pop()] || {};
+  const hist = Object.keys(L1).flatMap((sn) => Object.keys(L1[sn])).filter((t) => !last[t]).sort()[0];
+  if (!hist) { out.notes.push("no historical L1 team in data.json, skipped"); return out; }
+  const { win, errors } = await boot("#tab=trajectories&lg=l1&sel=" + encodeURIComponent(hist) + "&lang=en");
+  for (let i = 0; i < 100 && !win.__FBM_TRAJ; i++) await sleep(50);
+  await sleep(200);
+  const T = win.__FBM_TRAJ;
+  if (!T) { out.ok = false; out.notes.push("window.__FBM_TRAJ missing"); return out; }
+  const n = Object.keys(L1).filter((sn) => L1[sn][hist]).length;
+  if (T.team !== hist) { out.ok = false; out.notes.push("team=" + T.team + " (expected " + hist + ")"); }
+  else if (T.rows.length !== n) { out.ok = false; out.notes.push("rows=" + T.rows.length + " (expected " + n + ")"); }
+  out.notes.push(hist + ", " + T.rows.length + " seasons");
+  if (errors.length) { out.ok = false; out.notes.push(...errors.map((e) => "JS: " + e)); }
+  return out;
+}
+try { results.push(await testTrajectoriesHistorical()); }
+catch (e) { results.push({ view: "trajectories:l1-historical", ok: false, notes: ["harness threw: " + e.message] }); }
 
 let failed = 0;
 for (const r of results) {

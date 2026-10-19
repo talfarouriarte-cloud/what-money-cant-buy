@@ -7361,7 +7361,7 @@ function Trajectories({
     return h >= 1 && h <= jmax ? h : defaultJ;
   });
   const J = Math.min(Math.max(1, J0), jmax);
-  // hash write is debounced: dragging the slider/chart must not push one history entry per matchday
+  // hash write is debounced and uses replaceState: J is view state, not a navigation step
   const tjTimer = React.useRef(null);
   const setJ = v => {
     const n = Math.min(Math.max(1, Math.round(+v) || 1), jmax);
@@ -7369,6 +7369,8 @@ function Trajectories({
     clearTimeout(tjTimer.current);
     tjTimer.current = setTimeout(() => window.hashSet && window.hashSet({
       tj: n
+    }, {
+      replace: true
     }), 300);
   };
   React.useEffect(() => () => clearTimeout(tjTimer.current), []);
@@ -7396,7 +7398,8 @@ function Trajectories({
     }
     return out;
   }, [lg, team, mode, jmax]);
-  // one row per season at J; shorter seasons keep their last value (capped)
+  // one row per season at J; shorter seasons keep their last value (capped).
+  // A season with no match played yet (j=0) has no value: shown as "—", out of panel and mean.
   const rows = seasons.map(sn => {
     const d = lgSeasons[sn][team];
     const a = d.a || [],
@@ -7452,9 +7455,9 @@ function Trajectories({
   const fmtD = v => (v >= 0 ? "+" : "") + v.toFixed(1);
   const fmtMv = v => mode === "pts" ? String(v) : fmtD(v);
   const modeLabel = mode === "pts" ? _t("traj_mode_pts") : _t("traj_mode_diff");
-  const atMark = r => r.capped ? " " + _t("traj_at") + " J" + r.j : "";
+  const atMark = r => r.capped && r.j > 0 ? " " + _t("traj_at") + " J" + r.j : "";
   // panel: top 3 / bottom 3 by the mode value at J (≤ 6 seasons split without repeats)
-  const ranked = rows.slice().sort((x, y) => mv(y) - mv(x));
+  const ranked = rows.filter(r => r.j > 0).sort((x, y) => mv(y) - mv(x));
   const nTop = ranked.length <= 6 ? Math.ceil(ranked.length / 2) : 3;
   const top = ranked.slice(0, nTop);
   const bottom = ranked.length <= 6 ? ranked.slice(nTop) : ranked.slice(ranked.length - 3);
@@ -7523,7 +7526,9 @@ function Trajectories({
       whiteSpace: "nowrap"
     }
   }, label, sort.k === k ? sort.dir < 0 ? " ▾" : " ▴" : "");
-  const mean = k => rows.length ? r1(rows.reduce((s, r) => s + r[k], 0) / rows.length) : 0;
+  // mean only over seasons that reach J, so "at J<n>" is literal (capped/unstarted rows excluded)
+  const meanRows = rows.filter(r => !r.capped);
+  const mean = k => meanRows.length ? r1(meanRows.reduce((s, r) => s + r[k], 0) / meanRows.length) : 0;
   return /*#__PURE__*/React.createElement("div", {
     className: "col gap-4"
   }, /*#__PURE__*/React.createElement("div", {
@@ -7743,15 +7748,15 @@ function Trajectories({
     }
   }, atMark(r))), /*#__PURE__*/React.createElement("td", {
     className: "num"
-  }, r.pts), /*#__PURE__*/React.createElement("td", {
+  }, r.j > 0 ? r.pts : "—"), /*#__PURE__*/React.createElement("td", {
     className: "num text-mut"
-  }, r.exp.toFixed(1)), /*#__PURE__*/React.createElement("td", {
+  }, r.j > 0 ? r.exp.toFixed(1) : "—"), /*#__PURE__*/React.createElement("td", {
     className: "num",
     style: {
-      color: r.diff >= 0 ? "var(--pos)" : "var(--neg)",
+      color: r.j > 0 ? r.diff >= 0 ? "var(--pos)" : "var(--neg)" : null,
       fontWeight: 700
     }
-  }, fmtD(r.diff)), /*#__PURE__*/React.createElement("td", {
+  }, r.j > 0 ? fmtD(r.diff) : "—"), /*#__PURE__*/React.createElement("td", {
     className: "num text-mut"
   }, fmtMoney(r.w, L.cur))))), /*#__PURE__*/React.createElement("tfoot", null, /*#__PURE__*/React.createElement("tr", {
     style: {
@@ -7910,7 +7915,7 @@ function hashGet(k) {
   const m = location.hash.match(new RegExp("[#&]" + k + "=([^&]+)"));
   return m ? decodeURIComponent(m[1]) : null;
 }
-function hashSet(obj) {
+function hashSet(obj, opts) {
   const cur = {};
   location.hash.replace(/^#/, "").split("&").filter(Boolean).forEach(p => {
     const i = p.indexOf("=");
@@ -7920,8 +7925,10 @@ function hashSet(obj) {
     if (obj[k] == null || obj[k] === "") delete cur[k];else cur[k] = encodeURIComponent(obj[k]);
   });
   const s = Object.keys(cur).map(k => k + "=" + cur[k]).join("&");
+  if ("#" + s === location.hash) return;
   try {
-    history.pushState(null, "", "#" + s);
+    // replace: fine-grained view state (e.g. Trajectories J) must not stack history entries
+    if (opts && opts.replace) history.replaceState(null, "", "#" + s);else history.pushState(null, "", "#" + s);
   } catch (e) {}
 }
 window.hashGet = hashGet;
@@ -8169,7 +8176,9 @@ function App() {
       // con el default de liga; `c.lg === lg` evita mezclar par liga/equipo.
       const c = readCtx();
       const hsel = hashGet("sel") || hashGet("br") || hashGet("h2a") || (hashGet("ex") || "").split(",")[0] || c && c.lg === lg && c.sel;
-      if (sd && hsel && sd[hsel]) setTeam(hsel);else {
+      // Trajectories (#119 §2) offers every team of any season of the league
+      const anySn = tabFromHash() === "trajectories" && hsel && Object.values(d.seasons[lg] || {}).some(s => s[hsel]);
+      if (sd && hsel && (sd[hsel] || anySn)) setTeam(hsel);else {
         const defT = window.FBM_LEAGUES[lg].def;
         if (sd && sd[defT]) setTeam(defT);else if (sd) setTeam(Object.keys(sd)[0]);
       }
@@ -8184,13 +8193,15 @@ function App() {
     if (!data) return;
     const sd = data.seasons[lg]?.[sn] || data.seasons[lg]?.[data.currentSeason];
     if (!sd) return;
+    // Trajectories may hold a historical team (#119 §2); leaving the view restores coherence
+    if (tab === "trajectories" && Object.values(data.seasons[lg] || {}).some(s => s[team])) return;
     if (!sd[team]) {
       const def = window.FBM_LEAGUES[lg].def;
       const _rk = officialRanks(sd); // ADR-005: equipos por rank oficial
       const teams = Object.keys(sd).filter(t => sd[t].w > 0).sort((a, b) => (_rk[a] || 99) - (_rk[b] || 99));
       setTeam(sd[def] ? def : teams[0] || "");
     }
-  }, [lg, sn, data]);
+  }, [lg, sn, data, tab]);
 
   // expose currentTeam
   useEffect(() => {
