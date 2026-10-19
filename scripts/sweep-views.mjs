@@ -230,7 +230,12 @@ async function testTrajectoriesProjection() {
   let { T, errors } = await bootTraj("pl", team, "pts", L);
   if (!T) { fail("window.__FBM_TRAJ missing"); return out; }
   const all = [...errors];
-  if (L > np) checkProjRow(fail, T.rows.find((r) => r.sn === CUR), B, P, L);
+  if (L > np) {
+    checkProjRow(fail, T.rows.find((r) => r.sn === CUR), B, P, L);
+    // the projected row stays out of the table mean: only seasons that really reach J=L count
+    const reach = Object.keys(PL).filter((sn) => sn !== CUR && PL[sn][team] && (PL[sn][team].a || []).length >= L).length;
+    if (T.meanN !== reach) fail("tj=L: meanN=" + T.meanN + " (expected " + reach + ", projected row excluded)");
+  }
   ({ T, errors } = await bootTraj("pl", team, "pts", 1));
   all.push(...errors);
   const r1 = T.rows.find((r) => r.sn === CUR);

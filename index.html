@@ -7347,7 +7347,9 @@ function Trajectories({
   // budget projection of the current season (precomputed, spec §3bis.4): bands.p50 = real + expected per remaining match
   const B = lgSeasons[CUR] && lgSeasons[CUR][team] && D.bands[lg] && D.bands[lg][team] || null;
   const PRE = B && D.pre[lg] && D.pre[lg][team] || null;
-  const BL = B ? B.p50.length : 0;
+  // single guard for chart, table and panel: the projection needs both bands and pre
+  const PROJ = !!(B && PRE);
+  const BL = PROJ ? B.p50.length : 0;
   const jmax = Math.max(1, BL, ...seasons.map(sn => (lgSeasons[sn][team].a || []).length));
   const defaultJ = curLen > 0 ? curLen : jmax;
   const [mode, setMode0] = useState(() => {
@@ -7399,7 +7401,7 @@ function Trajectories({
         r[sn] = i <= (d.a || []).length ? valAt(d, i) : null;
       });
       // projection joins the last real point (row np-1); the band starts at the first unplayed matchday
-      if (mode === "pts" && B && i - 1 < BL) {
+      if (mode === "pts" && PROJ && i - 1 < BL) {
         if (i - 1 >= Math.max(curLen - 1, 0)) r.traj_proj = B.p50[i - 1];
         if (i - 1 >= curLen) r.traj_band = [B.p10[i - 1], B.p90[i - 1]];
       }
@@ -7412,7 +7414,7 @@ function Trajectories({
   // Current season with J beyond the played matchdays: projected values (proj), capped at its last matchday.
   const rows = seasons.map(sn => {
     const d = lgSeasons[sn][team];
-    if (sn === CUR && PRE && J > curLen) {
+    if (sn === CUR && PROJ && J > curLen) {
       const jp = Math.min(J, BL);
       const pts = B.p50[jp - 1],
         exp = r1(PRE.p50[jp - 1]);
@@ -7458,6 +7460,7 @@ function Trajectories({
         exp: r.exp,
         diff: r.diff
       })),
+      meanN: meanRows.length,
       chart: {
         mode,
         projRows: chartData.filter(r => "traj_proj" in r).length,
@@ -7489,7 +7492,7 @@ function Trajectories({
   const modeLabel = mode === "pts" ? _t("traj_mode_pts") : _t("traj_mode_diff");
   const atMark = r => r.capped && r.j > 0 ? " " + _t("traj_at") + " J" + r.j : "";
   const projMark = r => r.proj ? /*#__PURE__*/React.createElement("sup", {
-    title: _t("tip_cur_proj"),
+    title: _t("tip_traj_proj"),
     style: {
       fontSize: 9,
       marginLeft: 1
@@ -7565,8 +7568,8 @@ function Trajectories({
       whiteSpace: "nowrap"
     }
   }, label, sort.k === k ? sort.dir < 0 ? " ▾" : " ▴" : "");
-  // mean only over seasons that reach J, so "at J<n>" is literal (capped/unstarted rows excluded)
-  const meanRows = rows.filter(r => !r.capped);
+  // mean only over seasons that reach J, so "at J<n>" is literal (capped/unstarted/projected rows excluded)
+  const meanRows = rows.filter(r => !r.capped && !r.proj);
   const mean = k => meanRows.length ? r1(meanRows.reduce((s, r) => s + r[k], 0) / meanRows.length) : 0;
   return /*#__PURE__*/React.createElement("div", {
     className: "col gap-4"
@@ -7670,7 +7673,7 @@ function Trajectories({
       fill: "var(--muted)",
       fontSize: 10
     }
-  }), mode === "pts" && B ? /*#__PURE__*/React.createElement(Recharts.Area, {
+  }), mode === "pts" && PROJ ? /*#__PURE__*/React.createElement(Recharts.Area, {
     dataKey: "traj_band",
     fill: "var(--accent)",
     fillOpacity: 0.12,
@@ -7688,7 +7691,7 @@ function Trajectories({
     dot: false,
     activeDot: false,
     isAnimationActive: false
-  })), mode === "pts" && B ? /*#__PURE__*/React.createElement(Recharts.Line, {
+  })), mode === "pts" && PROJ ? /*#__PURE__*/React.createElement(Recharts.Line, {
     dataKey: "traj_proj",
     stroke: "var(--accent)",
     strokeWidth: 2,
@@ -7764,7 +7767,7 @@ function Trajectories({
       fontWeight: sn === CUR ? 700 : 500,
       opacity: opa(sn)
     }
-  }, swatch(sn), sn)), mode === "pts" && B ? /*#__PURE__*/React.createElement("span", {
+  }, swatch(sn), sn)), mode === "pts" && PROJ ? /*#__PURE__*/React.createElement("span", {
     style: {
       fontWeight: 700
     }
