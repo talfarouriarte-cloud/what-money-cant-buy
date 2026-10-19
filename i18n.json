@@ -1468,8 +1468,8 @@
     "Trayectorias"
   ],
   "info_trajectories": [
-    "Every season of one team overlaid on the matchday axis. Each line is the team's cumulative points (or, in 'vs budget' mode, actual points minus the points expected from its wage bill) after each matchday. Move the slider, or hover/drag over the chart, to pick a matchday J: the panel shows the top and bottom 3 seasons at J and the table lists every season's cumulative points, expected points and difference at J. Seasons with fewer matchdays than J (current, shortened or 34-game seasons) show their last value, marked 'at J<n>'; the table mean only counts seasons that reach J.",
-    "Todas las temporadas de un equipo superpuestas en el eje de jornadas. Cada línea son los puntos acumulados del equipo (o, en modo 'vs presupuesto', los puntos reales menos los esperados por su masa salarial) tras cada jornada. Mueve el deslizador, o pasa el ratón/arrastra sobre el gráfico, para elegir una jornada J: el panel muestra las 3 mejores y las 3 peores temporadas a J y la tabla lista los puntos acumulados, los esperados y la diferencia de cada temporada a J. Las temporadas con menos jornadas que J (la actual, las recortadas o las de 34 partidos) muestran su último valor, marcado 'a J<n>'; la media de la tabla solo cuenta las temporadas que llegan a J."
+    "Every season of one team overlaid on the matchday axis. Each line is the team's cumulative points (or, in 'vs budget' mode, actual points minus the points expected from its wage bill) after each matchday. Move the slider, or hover/drag over the chart, to pick a matchday J: the panel shows the top and bottom 3 seasons at J and the table lists every season's cumulative points, expected points and difference at J. Seasons with fewer matchdays than J (current, shortened or 34-game seasons) show their last value, marked 'at J<n>'; the table mean only counts seasons that reach J. In Points mode the current season is extended with a dashed line: real points so far plus the points expected from the wage bill in each remaining match, with the p10–p90 band of the simulation around it. When you pick a matchday the current season has not reached yet, the table and the panel show those projected values, marked 'P' and left out of the table mean. In 'vs budget' mode the projection is not drawn: by construction it would be flat.",
+    "Todas las temporadas de un equipo superpuestas en el eje de jornadas. Cada línea son los puntos acumulados del equipo (o, en modo 'vs presupuesto', los puntos reales menos los esperados por su masa salarial) tras cada jornada. Mueve el deslizador, o pasa el ratón/arrastra sobre el gráfico, para elegir una jornada J: el panel muestra las 3 mejores y las 3 peores temporadas a J y la tabla lista los puntos acumulados, los esperados y la diferencia de cada temporada a J. Las temporadas con menos jornadas que J (la actual, las recortadas o las de 34 partidos) muestran su último valor, marcado 'a J<n>'; la media de la tabla solo cuenta las temporadas que llegan a J. En modo Puntos la temporada actual se prolonga con una línea discontinua: los puntos reales hasta hoy más los esperados por presupuesto en cada partido restante, con la banda p10–p90 de la simulación alrededor. Si eliges una jornada a la que la temporada actual aún no ha llegado, la tabla y el panel muestran esos valores proyectados, marcados con 'P' y fuera de la media de la tabla. En modo 'vs presupuesto' no se dibuja la proyección: por construcción sería plana."
   ],
   "traj_mode_pts": [
     "Points",
@@ -1486,6 +1486,18 @@
   "traj_of": [
     "of",
     "de"
+  ],
+  "proj_mark": [
+    "P",
+    "P"
+  ],
+  "tip_traj_proj": [
+    "Projected: real points so far + points expected from the wage bill in the remaining matches",
+    "Proyectado: puntos reales hasta hoy + puntos esperados por masa salarial en los partidos restantes"
+  ],
+  "traj_proj_legend": [
+    "budget projection",
+    "proyección budget"
   ],
   "traj_at": [
     "at",
