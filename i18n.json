@@ -1462,5 +1462,65 @@
   "h2h_from_perspective": [
     "results for",
     "resultados de"
+  ],
+  "tab_trajectories": [
+    "Trajectories",
+    "Trayectorias"
+  ],
+  "info_trajectories": [
+    "Every season of one team overlaid on the matchday axis. Each line is the team's cumulative points (or, in 'vs budget' mode, actual points minus the points expected from its wage bill) after each matchday. Move the slider, or hover/drag over the chart, to pick a matchday J: the panel shows the top and bottom 3 seasons at J and the table lists every season's cumulative points, expected points and difference at J. Seasons with fewer matchdays than J (current, shortened or 34-game seasons) show their last value, marked 'at J<n>'.",
+    "Todas las temporadas de un equipo superpuestas en el eje de jornadas. Cada línea son los puntos acumulados del equipo (o, en modo 'vs presupuesto', los puntos reales menos los esperados por su masa salarial) tras cada jornada. Mueve el deslizador, o pasa el ratón/arrastra sobre el gráfico, para elegir una jornada J: el panel muestra las 3 mejores y las 3 peores temporadas a J y la tabla lista los puntos acumulados, los esperados y la diferencia de cada temporada a J. Las temporadas con menos jornadas que J (la actual, las recortadas o las de 34 partidos) muestran su último valor, marcado 'a J<n>'."
+  ],
+  "traj_mode_pts": [
+    "Points",
+    "Puntos"
+  ],
+  "traj_mode_diff": [
+    "vs budget",
+    "vs presupuesto"
+  ],
+  "traj_cum_at": [
+    "Cumulative at matchday",
+    "Acumulado a la jornada"
+  ],
+  "traj_of": [
+    "of",
+    "de"
+  ],
+  "traj_at": [
+    "at",
+    "a"
+  ],
+  "traj_top": [
+    "Top",
+    "Mejores"
+  ],
+  "traj_bottom": [
+    "Bottom",
+    "Peores"
+  ],
+  "traj_mean": [
+    "Mean",
+    "Media"
+  ],
+  "traj_seasons": [
+    "seasons",
+    "temporadas"
+  ],
+  "traj_col_pts": [
+    "Pts",
+    "Pts"
+  ],
+  "traj_col_exp": [
+    "Expected",
+    "Esperados"
+  ],
+  "traj_col_diff": [
+    "Diff",
+    "Dif."
+  ],
+  "traj_col_wages": [
+    "Wages",
+    "Salarios"
   ]
 }

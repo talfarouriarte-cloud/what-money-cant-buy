@@ -14,6 +14,10 @@
 //   FBM_DEPS=/tmp/fbm-sweep/node_modules \
 //     node /path/to/repo/scripts/sweep-views.mjs /path/to/repo
 //
+// After the generic sweep, a Trajectories case (#119) boots
+// #tab=trajectories&lg=l1&sel=Lyon&tm=diff&tj=20 and checks window.__FBM_TRAJ
+// against data.json (J, jmax, one row per Lyon season, diff, capped).
+//
 // Exit 0 = all views green.
 import fs from "fs";
 import path from "path";
@@ -53,7 +57,7 @@ const localFor = (url) => {
   return null;
 };
 
-const VIEWS = ["home", "tracker", "matches", "predictions", "badrun", "h2h", "overperformance", "history", "calc", "data", "method"];
+const VIEWS = ["home", "tracker", "matches", "predictions", "badrun", "h2h", "overperformance", "trajectories", "history", "calc", "data", "method"];
 const D = JSON.parse(files["data.json"]);
 const OLDEST_PL = Object.keys((D.seasons && D.seasons.pl) || {}).sort()[0];
 const ALT_LEAGUE = Object.keys(D.seasons || {}).find((k) => k !== "pl") || "pl";
@@ -120,6 +124,39 @@ for (const v of VIEWS) {
   try { results.push(await testView(v)); }
   catch (e) { results.push({ view: v, ok: false, notes: ["harness threw: " + e.message] }); }
 }
+// Trajectories semantics (#119): Lyon / L1 / diff mode / J=20, read from window.__FBM_TRAJ.
+async function testTrajectories() {
+  const out = { view: "trajectories:l1-lyon-j20", ok: true, notes: [] };
+  const fail = (m) => { out.ok = false; out.notes.push(m); };
+  const { win, errors } = await boot("#tab=trajectories&lg=l1&sel=Lyon&tm=diff&tj=20&lang=en");
+  for (let i = 0; i < 100 && !win.__FBM_TRAJ; i++) await sleep(50);
+  const T = win.__FBM_TRAJ;
+  if (!T) { fail("window.__FBM_TRAJ missing"); return out; }
+  const L1 = (D.seasons && D.seasons.l1) || {};
+  const sns = Object.keys(L1).filter((sn) => L1[sn].Lyon).sort();
+  if (T.J !== 20) fail("J=" + T.J + " (expected 20)");
+  if (T.mode !== "diff") fail("mode=" + T.mode + " (expected diff)");
+  const jmax = Math.max(...sns.map((sn) => L1[sn].Lyon.a.length));
+  if (T.jmax !== jmax) fail("jmax=" + T.jmax + " (expected " + jmax + ")");
+  const got = T.rows.map((r) => r.sn).sort();
+  if (got.join(",") !== sns.join(",")) fail("rows " + got.join(",") + " != seasons " + sns.join(","));
+  for (const sn of sns) {
+    const r = T.rows.find((x) => x.sn === sn);
+    if (!r) continue;
+    const { a, e } = L1[sn].Lyon;
+    const j = Math.min(20, a.length);
+    const diff = Math.round((a[j - 1] - e[j - 1]) * 10) / 10;
+    if (r.j !== j) fail(sn + ": j=" + r.j + " (expected " + j + ")");
+    if (r.diff !== diff) fail(sn + ": diff=" + r.diff + " (expected " + diff + ")");
+    if (r.capped !== (a.length < 20)) fail(sn + ": capped=" + r.capped);
+  }
+  out.notes.push(sns.length + " seasons, jmax=" + T.jmax + ", capped=" + T.rows.filter((r) => r.capped).map((r) => r.sn).join(","));
+  if (errors.length) { out.ok = false; out.notes.push(...errors.map((e) => "JS: " + e)); }
+  return out;
+}
+try { results.push(await testTrajectories()); }
+catch (e) { results.push({ view: "trajectories:l1-lyon-j20", ok: false, notes: ["harness threw: " + e.message] }); }
+
 let failed = 0;
 for (const r of results) {
   console.log(`${r.ok ? "PASS" : "FAIL"}  ${r.view}${r.notes.length ? "  — " + r.notes.join(" | ") : ""}`);
