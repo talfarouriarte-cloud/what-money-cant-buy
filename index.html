@@ -7043,7 +7043,7 @@ function History({
       dp: n ? d / n * 100 : 0,
       lp: n ? l / n * 100 : 0
     };
-  }, [lg, periodSeasons]);
+  }, [lg, periodSeasons, venue]);
   const allTeams = useMemo(() => {
     const set = new Set();
     periodSeasons.forEach(s => Object.keys(D.seasons[lg][s] || {}).forEach(t => set.add(t)));
