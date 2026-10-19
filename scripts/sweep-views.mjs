@@ -18,6 +18,9 @@
 // #tab=trajectories&lg=l1&sel=Lyon&tm=diff&tj=20 and checks window.__FBM_TRAJ
 // against data.json (J, jmax, one row per Lyon season, diff, capped); a second
 // case deep-links a historical L1 team (absent from the latest season).
+// Budget projection (#127): a PL team with bands (pts/diff, tj=L and tj=1) and
+// L1/PSG at tj=38 (> 34 matchdays of the current season) check the projected
+// row (proj) and window.__FBM_TRAJ.chart (projRows/bandRows).
 //
 // Exit 0 = all views green.
 import fs from "fs";
@@ -63,6 +66,9 @@ const D = JSON.parse(files["data.json"]);
 const OLDEST_PL = Object.keys((D.seasons && D.seasons.pl) || {}).sort()[0];
 const ALT_LEAGUE = Object.keys(D.seasons || {}).find((k) => k !== "pl") || "pl";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const round1 = (v) => Math.round(v * 10) / 10;
+// current season = latest season key across leagues (same derivation as the app)
+const CUR = Object.values(D.seasons || {}).flatMap((s) => Object.keys(s)).sort().pop();
 
 async function boot(hash) {
   const errors = [];
@@ -144,6 +150,16 @@ async function testTrajectories() {
   for (const sn of sns) {
     const r = T.rows.find((x) => x.sn === sn);
     if (!r) continue;
+    if (r.proj) {
+      const B = D.bands.l1.Lyon, P = D.pre.l1.Lyon;
+      if (sn !== CUR) fail(sn + ": proj on a non-current season");
+      if (r.j !== 20) fail(sn + ": proj j=" + r.j + " (expected 20)");
+      if (r.capped !== false) fail(sn + ": proj capped=" + r.capped);
+      if (r.pts !== B.p50[19]) fail(sn + ": proj pts=" + r.pts + " (expected " + B.p50[19] + ")");
+      if (r.exp !== P.p50[19]) fail(sn + ": proj exp=" + r.exp + " (expected " + P.p50[19] + ")");
+      if (r.diff !== round1(r.pts - r.exp)) fail(sn + ": proj diff=" + r.diff);
+      continue;
+    }
     const { a, e } = L1[sn].Lyon;
     const j = Math.min(20, a.length);
     const diff = Math.round((a[j - 1] - e[j - 1]) * 10) / 10;
@@ -179,6 +195,80 @@ async function testTrajectoriesHistorical() {
 }
 try { results.push(await testTrajectoriesHistorical()); }
 catch (e) { results.push({ view: "trajectories:l1-historical", ok: false, notes: ["harness threw: " + e.message] }); }
+
+// Budget projection (#127). Returns the current-season row and the chart observable.
+async function bootTraj(lg, team, tm, tj) {
+  const { win, errors } = await boot("#tab=trajectories&lg=" + lg + "&sel=" + encodeURIComponent(team) + "&tm=" + tm + "&tj=" + tj + "&lang=en");
+  for (let i = 0; i < 100 && !(win.__FBM_TRAJ && win.__FBM_TRAJ.team === team); i++) await sleep(50);
+  return { T: win.__FBM_TRAJ, errors };
+}
+function checkProjRow(fail, r, B, P, J) {
+  const jp = Math.min(J, B.p50.length);
+  if (!r) return fail("no current-season row");
+  if (r.proj !== true) fail("proj=" + r.proj + " (expected true)");
+  if (r.j !== jp) fail("j=" + r.j + " (expected " + jp + ")");
+  if (r.capped !== (J > B.p50.length)) fail("capped=" + r.capped);
+  if (r.pts !== B.p50[jp - 1]) fail("pts=" + r.pts + " (expected " + B.p50[jp - 1] + ")");
+  if (r.exp !== P.p50[jp - 1]) fail("exp=" + r.exp + " (expected " + P.p50[jp - 1] + ")");
+  if (r.diff !== round1(r.pts - r.exp)) fail("diff=" + r.diff + " (expected " + round1(r.pts - r.exp) + ")");
+}
+function checkChart(fail, T, B, np, pts) {
+  const L = B.p50.length;
+  const ep = pts ? L - Math.max(np - 1, 0) : 0, eb = pts ? L - np : 0;
+  if (!T.chart) return fail("__FBM_TRAJ.chart missing");
+  if (T.chart.projRows !== ep) fail(T.mode + ": projRows=" + T.chart.projRows + " (expected " + ep + ")");
+  if (T.chart.bandRows !== eb) fail(T.mode + ": bandRows=" + T.chart.bandRows + " (expected " + eb + ")");
+}
+async function testTrajectoriesProjection() {
+  const out = { view: "trajectories:pl-projection", ok: true, notes: [] };
+  const fail = (m) => { out.ok = false; out.notes.push(m); };
+  const PL = D.seasons.pl || {};
+  const team = Object.keys((D.bands && D.bands.pl) || {}).filter((t) => PL[CUR] && PL[CUR][t] && D.pre.pl && D.pre.pl[t]).sort()[0];
+  if (!team) { out.notes.push("no PL team with bands, skipped"); return out; }
+  const B = D.bands.pl[team], P = D.pre.pl[team], L = B.p50.length;
+  const a = PL[CUR][team].a || [], np = a.length;
+  let { T, errors } = await bootTraj("pl", team, "pts", L);
+  if (!T) { fail("window.__FBM_TRAJ missing"); return out; }
+  const all = [...errors];
+  if (L > np) checkProjRow(fail, T.rows.find((r) => r.sn === CUR), B, P, L);
+  ({ T, errors } = await bootTraj("pl", team, "pts", 1));
+  all.push(...errors);
+  const r1 = T.rows.find((r) => r.sn === CUR);
+  if (np >= 1) {
+    if (!r1 || r1.proj !== false) fail("tj=1: proj=" + (r1 && r1.proj) + " (expected false)");
+    else if (r1.pts !== a[0]) fail("tj=1: pts=" + r1.pts + " (expected " + a[0] + ")");
+  }
+  checkChart(fail, T, B, np, true);
+  ({ T, errors } = await bootTraj("pl", team, "diff", L));
+  all.push(...errors);
+  checkChart(fail, T, B, np, false);
+  out.notes.push(team + ", np=" + np + ", L=" + L);
+  if (all.length) { out.ok = false; out.notes.push(...all.map((e) => "JS: " + e)); }
+  return out;
+}
+try { results.push(await testTrajectoriesProjection()); }
+catch (e) { results.push({ view: "trajectories:pl-projection", ok: false, notes: ["harness threw: " + e.message] }); }
+// J beyond the current season's length (L1: 34 now, 38 in older seasons): projected final row, capped.
+async function testTrajectoriesProjectionCapped() {
+  const out = { view: "trajectories:l1-projection-j38", ok: true, notes: [] };
+  const fail = (m) => { out.ok = false; out.notes.push(m); };
+  const L1 = D.seasons.l1 || {};
+  const ok = (t) => D.bands.l1 && D.bands.l1[t] && D.pre.l1 && D.pre.l1[t] && L1[CUR] && L1[CUR][t] &&
+    Object.keys(L1).some((sn) => L1[sn][t] && (L1[sn][t].a || []).length === 38);
+  const team = ok("PSG") ? "PSG" : Object.keys((D.bands && D.bands.l1) || {}).sort().find(ok);
+  if (!team) { out.notes.push("no L1 team with bands and a 38-matchday season, skipped"); return out; }
+  const B = D.bands.l1[team], P = D.pre.l1[team], np = (L1[CUR][team].a || []).length;
+  const { T, errors } = await bootTraj("l1", team, "pts", 38);
+  if (!T) { fail("window.__FBM_TRAJ missing"); return out; }
+  if (T.J !== 38) fail("J=" + T.J + " (expected 38)");
+  checkProjRow(fail, T.rows.find((r) => r.sn === CUR), B, P, 38);
+  checkChart(fail, T, B, np, true);
+  out.notes.push(team + ", np=" + np + ", L=" + B.p50.length);
+  if (errors.length) { out.ok = false; out.notes.push(...errors.map((e) => "JS: " + e)); }
+  return out;
+}
+try { results.push(await testTrajectoriesProjectionCapped()); }
+catch (e) { results.push({ view: "trajectories:l1-projection-j38", ok: false, notes: ["harness threw: " + e.message] }); }
 
 let failed = 0;
 for (const r of results) {

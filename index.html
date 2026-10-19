@@ -7343,8 +7343,12 @@ function Trajectories({
     return Object.keys(s).sort((a, b) => a.localeCompare(b));
   }, [lg]);
   const colorOf = sn => sn === CUR ? "var(--accent)" : TRAJ_PALETTE[lgSeasonsAsc.indexOf(sn) % TRAJ_PALETTE.length];
-  const jmax = Math.max(1, ...seasons.map(sn => (lgSeasons[sn][team].a || []).length));
   const curLen = lgSeasons[CUR] && lgSeasons[CUR][team] ? (lgSeasons[CUR][team].a || []).length : 0;
+  // budget projection of the current season (precomputed, spec §3bis.4): bands.p50 = real + expected per remaining match
+  const B = lgSeasons[CUR] && lgSeasons[CUR][team] && D.bands[lg] && D.bands[lg][team] || null;
+  const PRE = B && D.pre[lg] && D.pre[lg][team] || null;
+  const BL = B ? B.p50.length : 0;
+  const jmax = Math.max(1, BL, ...seasons.map(sn => (lgSeasons[sn][team].a || []).length));
   const defaultJ = curLen > 0 ? curLen : jmax;
   const [mode, setMode0] = useState(() => {
     const h = window.hashGet && window.hashGet("tm");
@@ -7394,14 +7398,35 @@ function Trajectories({
         const d = lgSeasons[sn][team];
         r[sn] = i <= (d.a || []).length ? valAt(d, i) : null;
       });
+      // projection joins the last real point (row np-1); the band starts at the first unplayed matchday
+      if (mode === "pts" && B && i - 1 < BL) {
+        if (i - 1 >= Math.max(curLen - 1, 0)) r.traj_proj = B.p50[i - 1];
+        if (i - 1 >= curLen) r.traj_band = [B.p10[i - 1], B.p90[i - 1]];
+      }
       out.push(r);
     }
     return out;
   }, [lg, team, mode, jmax]);
   // one row per season at J; shorter seasons keep their last value (capped).
   // A season with no match played yet (j=0) has no value: shown as "—", out of panel and mean.
+  // Current season with J beyond the played matchdays: projected values (proj), capped at its last matchday.
   const rows = seasons.map(sn => {
     const d = lgSeasons[sn][team];
+    if (sn === CUR && PRE && J > curLen) {
+      const jp = Math.min(J, BL);
+      const pts = B.p50[jp - 1],
+        exp = r1(PRE.p50[jp - 1]);
+      return {
+        sn,
+        j: jp,
+        capped: J > BL,
+        proj: true,
+        pts,
+        exp,
+        diff: r1(pts - exp),
+        w: d.w
+      };
+    }
     const a = d.a || [],
       e = d.e || [];
     const j = Math.min(J, a.length);
@@ -7410,6 +7435,7 @@ function Trajectories({
       sn,
       j,
       capped: a.length < J,
+      proj: false,
       pts: ok ? a[j - 1] : 0,
       exp: ok ? r1(e[j - 1]) : 0,
       diff: ok ? r1(a[j - 1] - e[j - 1]) : 0,
@@ -7427,10 +7453,16 @@ function Trajectories({
         sn: r.sn,
         j: r.j,
         capped: r.capped,
+        proj: r.proj,
         pts: r.pts,
         exp: r.exp,
         diff: r.diff
-      }))
+      })),
+      chart: {
+        mode,
+        projRows: chartData.filter(r => "traj_proj" in r).length,
+        bandRows: chartData.filter(r => "traj_band" in r).length
+      }
     };
   });
   const [sort, setSort] = useState({
@@ -7456,6 +7488,13 @@ function Trajectories({
   const fmtMv = v => mode === "pts" ? String(v) : fmtD(v);
   const modeLabel = mode === "pts" ? _t("traj_mode_pts") : _t("traj_mode_diff");
   const atMark = r => r.capped && r.j > 0 ? " " + _t("traj_at") + " J" + r.j : "";
+  const projMark = r => r.proj ? /*#__PURE__*/React.createElement("sup", {
+    title: _t("tip_cur_proj"),
+    style: {
+      fontSize: 9,
+      marginLeft: 1
+    }
+  }, _t("proj_mark")) : null;
   // panel: top 3 / bottom 3 by the mode value at J (≤ 6 seasons split without repeats)
   const ranked = rows.filter(r => r.j > 0).sort((x, y) => mv(y) - mv(x));
   const nTop = ranked.length <= 6 ? Math.ceil(ranked.length / 2) : 3;
@@ -7517,7 +7556,7 @@ function Trajectories({
     style: mode === "diff" ? {
       color: r.diff >= 0 ? "var(--pos)" : "var(--neg)"
     } : null
-  }, fmtMv(mv(r))));
+  }, fmtMv(mv(r)), projMark(r)));
   const th = (k, label, num) => /*#__PURE__*/React.createElement("th", {
     className: num ? "num" : null,
     onClick: () => sortBy(k),
@@ -7584,7 +7623,7 @@ function Trajectories({
       height: 380,
       "--chart-h": "380px"
     }
-  }, /*#__PURE__*/React.createElement(Recharts.ResponsiveContainer, null, /*#__PURE__*/React.createElement(Recharts.LineChart, {
+  }, /*#__PURE__*/React.createElement(Recharts.ResponsiveContainer, null, /*#__PURE__*/React.createElement(Recharts.ComposedChart, {
     data: chartData,
     margin: {
       top: 10,
@@ -7631,7 +7670,15 @@ function Trajectories({
       fill: "var(--muted)",
       fontSize: 10
     }
-  }), seasons.map(sn => /*#__PURE__*/React.createElement(Recharts.Line, {
+  }), mode === "pts" && B ? /*#__PURE__*/React.createElement(Recharts.Area, {
+    dataKey: "traj_band",
+    fill: "var(--accent)",
+    fillOpacity: 0.12,
+    stroke: "none",
+    dot: false,
+    activeDot: false,
+    isAnimationActive: false
+  }) : null, seasons.map(sn => /*#__PURE__*/React.createElement(Recharts.Line, {
     key: sn,
     dataKey: sn,
     stroke: colorOf(sn),
@@ -7641,7 +7688,16 @@ function Trajectories({
     dot: false,
     activeDot: false,
     isAnimationActive: false
-  })))), /*#__PURE__*/React.createElement("div", {
+  })), mode === "pts" && B ? /*#__PURE__*/React.createElement(Recharts.Line, {
+    dataKey: "traj_proj",
+    stroke: "var(--accent)",
+    strokeWidth: 2,
+    strokeDasharray: "5 4",
+    connectNulls: false,
+    dot: false,
+    activeDot: false,
+    isAnimationActive: false
+  }) : null)), /*#__PURE__*/React.createElement("div", {
     ref: panelRef,
     className: "recharts-tooltip-wrapper traj-panel charttip",
     style: {
@@ -7708,7 +7764,20 @@ function Trajectories({
       fontWeight: sn === CUR ? 700 : 500,
       opacity: opa(sn)
     }
-  }, swatch(sn), sn)))), /*#__PURE__*/React.createElement("div", {
+  }, swatch(sn), sn)), mode === "pts" && B ? /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontWeight: 700
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "inline-block",
+      width: 14,
+      height: 0,
+      borderTop: "2px dashed var(--accent)",
+      marginRight: 6,
+      verticalAlign: "middle"
+    }
+  }), CUR, " \xB7 ", _t("traj_proj_legend")) : null), /*#__PURE__*/React.createElement("div", {
     className: "card",
     style: {
       padding: 0,
@@ -7748,7 +7817,7 @@ function Trajectories({
     }
   }, atMark(r))), /*#__PURE__*/React.createElement("td", {
     className: "num"
-  }, r.j > 0 ? r.pts : "—"), /*#__PURE__*/React.createElement("td", {
+  }, r.j > 0 ? r.pts : "—", projMark(r)), /*#__PURE__*/React.createElement("td", {
     className: "num text-mut"
   }, r.j > 0 ? r.exp.toFixed(1) : "—"), /*#__PURE__*/React.createElement("td", {
     className: "num",
@@ -7756,7 +7825,7 @@ function Trajectories({
       color: r.j > 0 ? r.diff >= 0 ? "var(--pos)" : "var(--neg)" : null,
       fontWeight: 700
     }
-  }, r.j > 0 ? fmtD(r.diff) : "—"), /*#__PURE__*/React.createElement("td", {
+  }, r.j > 0 ? fmtD(r.diff) : "—", projMark(r)), /*#__PURE__*/React.createElement("td", {
     className: "num text-mut"
   }, fmtMoney(r.w, L.cur))))), /*#__PURE__*/React.createElement("tfoot", null, /*#__PURE__*/React.createElement("tr", {
     style: {
