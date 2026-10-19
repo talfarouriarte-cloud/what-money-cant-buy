@@ -7320,6 +7320,459 @@ function History({
     }, x.n));
   })))));
 }
+/* Legacy · Trajectories (#119): one team, every season on the matchday axis.
+   Single J state drives the reference line, the anchored panel and the table. */
+const TRAJ_PALETTE = ["#6B4C9A", "#2A6F97", "#2E8B8B", "#3F8F3F", "#8C9A2A", "#B8860B", "#C77A2A", "#A05050", "#7A5C3C", "#4C6B8A", "#5A7D6A", "#8A6A9A", "#9A7A4C"];
+function Trajectories({
+  lg,
+  team,
+  setTeam,
+  setLg
+}) {
+  const D = window.__FBM.data;
+  const CUR = D.currentSeason;
+  const L = window.FBM_LEAGUES[lg];
+  const lgSeasons = D.seasons[lg] || {};
+  const lgSeasonsAsc = useMemo(() => Object.keys(lgSeasons).sort(), [lg]);
+  const seasons = useMemo(() => lgSeasonsAsc.filter(sn => lgSeasons[sn][team]), [lg, team]);
+  const allTeams = useMemo(() => {
+    const s = {};
+    lgSeasonsAsc.forEach(sn => Object.keys(lgSeasons[sn]).forEach(t => {
+      s[t] = 1;
+    }));
+    return Object.keys(s).sort((a, b) => a.localeCompare(b));
+  }, [lg]);
+  const colorOf = sn => sn === CUR ? "var(--accent)" : TRAJ_PALETTE[lgSeasonsAsc.indexOf(sn) % TRAJ_PALETTE.length];
+  const jmax = Math.max(1, ...seasons.map(sn => (lgSeasons[sn][team].a || []).length));
+  const curLen = lgSeasons[CUR] && lgSeasons[CUR][team] ? (lgSeasons[CUR][team].a || []).length : 0;
+  const defaultJ = curLen > 0 ? curLen : jmax;
+  const [mode, setMode0] = useState(() => {
+    const h = window.hashGet && window.hashGet("tm");
+    return ["pts", "diff"].indexOf(h) >= 0 ? h : "pts";
+  }); // pts | diff
+  const setMode = v => {
+    setMode0(v);
+    window.hashSet && window.hashSet({
+      tm: v
+    });
+  };
+  const [J0, setJ0] = useState(() => {
+    const h = parseInt(window.hashGet && window.hashGet("tj"), 10);
+    return h >= 1 && h <= jmax ? h : defaultJ;
+  });
+  const J = Math.min(Math.max(1, J0), jmax);
+  // hash write is debounced and uses replaceState: J is view state, not a navigation step
+  const tjTimer = React.useRef(null);
+  const setJ = v => {
+    const n = Math.min(Math.max(1, Math.round(+v) || 1), jmax);
+    setJ0(n);
+    clearTimeout(tjTimer.current);
+    tjTimer.current = setTimeout(() => window.hashSet && window.hashSet({
+      tj: n
+    }, {
+      replace: true
+    }), 300);
+  };
+  React.useEffect(() => () => clearTimeout(tjTimer.current), []);
+  const firstCtx = React.useRef(true);
+  React.useEffect(() => {
+    if (firstCtx.current) {
+      firstCtx.current = false;
+      return;
+    }
+    setJ(defaultJ);
+  }, [lg, team]);
+  const r1 = v => Math.round(v * 10) / 10;
+  const valAt = (d, i) => mode === "pts" ? d.a[i - 1] : r1(d.a[i - 1] - d.e[i - 1]);
+  const chartData = useMemo(() => {
+    const out = [];
+    for (let i = 1; i <= jmax; i++) {
+      const r = {
+        j: i
+      };
+      seasons.forEach(sn => {
+        const d = lgSeasons[sn][team];
+        r[sn] = i <= (d.a || []).length ? valAt(d, i) : null;
+      });
+      out.push(r);
+    }
+    return out;
+  }, [lg, team, mode, jmax]);
+  // one row per season at J; shorter seasons keep their last value (capped).
+  // A season with no match played yet (j=0) has no value: shown as "—", out of panel and mean.
+  const rows = seasons.map(sn => {
+    const d = lgSeasons[sn][team];
+    const a = d.a || [],
+      e = d.e || [];
+    const j = Math.min(J, a.length);
+    const ok = j > 0;
+    return {
+      sn,
+      j,
+      capped: a.length < J,
+      pts: ok ? a[j - 1] : 0,
+      exp: ok ? r1(e[j - 1]) : 0,
+      diff: ok ? r1(a[j - 1] - e[j - 1]) : 0,
+      w: d.w
+    };
+  });
+  React.useEffect(() => {
+    window.__FBM_TRAJ = {
+      lg,
+      team,
+      mode,
+      J,
+      jmax,
+      rows: rows.slice().reverse().map(r => ({
+        sn: r.sn,
+        j: r.j,
+        capped: r.capped,
+        pts: r.pts,
+        exp: r.exp,
+        diff: r.diff
+      }))
+    };
+  });
+  const [sort, setSort] = useState({
+    k: "sn",
+    dir: -1
+  });
+  const sortBy = k => setSort(s => s.k === k ? {
+    k,
+    dir: -s.dir
+  } : {
+    k,
+    dir: -1
+  });
+  const sorted = rows.slice().sort((x, y) => {
+    const a = x[sort.k],
+      b = y[sort.k];
+    return (a < b ? -1 : a > b ? 1 : 0) * sort.dir;
+  });
+  const [hl, setHl] = useState(null);
+  const opa = sn => hl && sn !== hl && sn !== CUR ? 0.25 : 1;
+  const mv = r => mode === "pts" ? r.pts : r.diff;
+  const fmtD = v => (v >= 0 ? "+" : "") + v.toFixed(1);
+  const fmtMv = v => mode === "pts" ? String(v) : fmtD(v);
+  const modeLabel = mode === "pts" ? _t("traj_mode_pts") : _t("traj_mode_diff");
+  const atMark = r => r.capped && r.j > 0 ? " " + _t("traj_at") + " J" + r.j : "";
+  // panel: top 3 / bottom 3 by the mode value at J (≤ 6 seasons split without repeats)
+  const ranked = rows.filter(r => r.j > 0).sort((x, y) => mv(y) - mv(x));
+  const nTop = ranked.length <= 6 ? Math.ceil(ranked.length / 2) : 3;
+  const top = ranked.slice(0, nTop);
+  const bottom = ranked.length <= 6 ? ranked.slice(nTop) : ranked.slice(ranked.length - 3);
+  const boxRef = React.useRef(null);
+  const panelRef = React.useRef(null);
+  const [pos, setPos] = useState(null);
+  React.useEffect(() => {
+    const box = boxRef.current;
+    if (!box) return;
+    const measure = () => {
+      const g = box.querySelector(".recharts-cartesian-grid-horizontal line");
+      if (!g) return;
+      const x1 = parseFloat(g.getAttribute("x1")),
+        x2 = parseFloat(g.getAttribute("x2"));
+      if (!isFinite(x1) || !isFinite(x2)) return;
+      const x = jmax > 1 ? x1 + (J - 1) / (jmax - 1) * (x2 - x1) : x1;
+      const pw = panelRef.current ? panelRef.current.offsetWidth : 170;
+      const left = x + 10 + pw <= box.clientWidth ? x + 10 : Math.max(0, x - 10 - pw);
+      setPos(p => p === left ? p : left);
+    };
+    measure();
+    const ro = window.ResizeObserver ? new ResizeObserver(measure) : null;
+    if (ro) ro.observe(box);
+    const mo = window.MutationObserver ? new MutationObserver(measure) : null;
+    if (mo) mo.observe(box, {
+      childList: true,
+      subtree: true
+    });
+    return () => {
+      if (ro) ro.disconnect();
+      if (mo) mo.disconnect();
+    };
+  }, [J, jmax, mode, lg, team]);
+  const onChartMove = st => {
+    if (st && st.activeLabel != null) setJ(st.activeLabel);
+  };
+  const swatch = sn => /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "inline-block",
+      width: 14,
+      height: 3,
+      borderRadius: 2,
+      background: colorOf(sn),
+      marginRight: 6,
+      verticalAlign: "middle"
+    }
+  });
+  const panelRow = r => /*#__PURE__*/React.createElement("div", {
+    key: r.sn,
+    className: "flex between center gap-2"
+  }, /*#__PURE__*/React.createElement("span", null, swatch(r.sn), r.sn, /*#__PURE__*/React.createElement("span", {
+    className: "text-mut",
+    style: {
+      fontSize: 10
+    }
+  }, atMark(r))), /*#__PURE__*/React.createElement("b", {
+    style: mode === "diff" ? {
+      color: r.diff >= 0 ? "var(--pos)" : "var(--neg)"
+    } : null
+  }, fmtMv(mv(r))));
+  const th = (k, label, num) => /*#__PURE__*/React.createElement("th", {
+    className: num ? "num" : null,
+    onClick: () => sortBy(k),
+    style: {
+      cursor: "pointer",
+      whiteSpace: "nowrap"
+    }
+  }, label, sort.k === k ? sort.dir < 0 ? " ▾" : " ▴" : "");
+  // mean only over seasons that reach J, so "at J<n>" is literal (capped/unstarted rows excluded)
+  const meanRows = rows.filter(r => !r.capped);
+  const mean = k => meanRows.length ? r1(meanRows.reduce((s, r) => s + r[k], 0) / meanRows.length) : 0;
+  return /*#__PURE__*/React.createElement("div", {
+    className: "col gap-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-head"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sh-title"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "eyebrow"
+  }, L.name), /*#__PURE__*/React.createElement("h2", null, _t("tab_trajectories")), /*#__PURE__*/React.createElement(AboutTab, {
+    infoKey: "info_trajectories"
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-3 center",
+    style: {
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "flex gap-2 center"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "eyebrow"
+  }, _t("select_teams")), /*#__PURE__*/React.createElement("select", {
+    className: "field",
+    value: team,
+    onChange: e => setTeam(e.target.value),
+    style: {
+      minWidth: 170
+    }
+  }, allTeams.map(t => /*#__PURE__*/React.createElement("option", {
+    key: t,
+    value: t
+  }, t)))), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1"
+  }, [["pts", _t("traj_mode_pts")], ["diff", _t("traj_mode_diff")]].map(([k, l]) => /*#__PURE__*/React.createElement("button", {
+    key: k,
+    onClick: () => setMode(k),
+    className: "chip " + (mode === k ? "is-active" : "")
+  }, l))), /*#__PURE__*/React.createElement("span", {
+    className: "text-mut",
+    style: {
+      marginLeft: "auto",
+      fontSize: 12
+    }
+  }, seasons.length, " ", _t("traj_seasons"))), seasons.length ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "card",
+    style: {
+      padding: 18
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    ref: boxRef,
+    className: "chartbox",
+    style: {
+      position: "relative",
+      width: "100%",
+      height: 380,
+      "--chart-h": "380px"
+    }
+  }, /*#__PURE__*/React.createElement(Recharts.ResponsiveContainer, null, /*#__PURE__*/React.createElement(Recharts.LineChart, {
+    data: chartData,
+    margin: {
+      top: 10,
+      right: 24,
+      bottom: 10,
+      left: 0
+    },
+    onMouseMove: onChartMove,
+    onTouchMove: onChartMove
+  }, /*#__PURE__*/React.createElement(Recharts.CartesianGrid, {
+    stroke: "var(--hair)",
+    strokeDasharray: "2 4",
+    vertical: false
+  }), /*#__PURE__*/React.createElement(Recharts.XAxis, {
+    dataKey: "j",
+    tickLine: false,
+    axisLine: false,
+    tick: {
+      fill: "var(--muted)",
+      fontSize: 10
+    },
+    interval: 2
+  }), /*#__PURE__*/React.createElement(Recharts.YAxis, {
+    tickLine: false,
+    axisLine: false,
+    tick: {
+      fill: "var(--muted)",
+      fontSize: 10
+    },
+    width: 32
+  }), /*#__PURE__*/React.createElement(Recharts.Tooltip, {
+    content: () => null,
+    cursor: false
+  }), mode === "diff" ? /*#__PURE__*/React.createElement(Recharts.ReferenceLine, {
+    y: 0,
+    stroke: "var(--hair-strong)"
+  }) : null, /*#__PURE__*/React.createElement(Recharts.ReferenceLine, {
+    x: J,
+    stroke: "var(--hair-strong)",
+    strokeDasharray: "3 3",
+    label: {
+      value: "J" + J,
+      position: "top",
+      fill: "var(--muted)",
+      fontSize: 10
+    }
+  }), seasons.map(sn => /*#__PURE__*/React.createElement(Recharts.Line, {
+    key: sn,
+    dataKey: sn,
+    stroke: colorOf(sn),
+    strokeWidth: sn === CUR ? 3 : 1.3,
+    strokeOpacity: opa(sn),
+    connectNulls: false,
+    dot: false,
+    activeDot: false,
+    isAnimationActive: false
+  })))), /*#__PURE__*/React.createElement("div", {
+    ref: panelRef,
+    className: "recharts-tooltip-wrapper traj-panel charttip",
+    style: {
+      position: "absolute",
+      top: 10,
+      left: pos == null ? 0 : pos,
+      visibility: pos == null ? "hidden" : undefined,
+      pointerEvents: "auto",
+      minWidth: 150,
+      zIndex: 5
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      marginBottom: 4
+    }
+  }, "J", J, " \xB7 ", modeLabel), /*#__PURE__*/React.createElement("div", {
+    className: "eyebrow",
+    style: {
+      fontSize: 9
+    }
+  }, _t("traj_top")), top.map(panelRow), bottom.length ? /*#__PURE__*/React.createElement("div", {
+    className: "eyebrow",
+    style: {
+      fontSize: 9,
+      marginTop: 4
+    }
+  }, _t("traj_bottom")) : null, bottom.map(panelRow))), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2 center",
+    style: {
+      marginTop: 10
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    id: "traj-j",
+    type: "range",
+    min: 1,
+    max: jmax,
+    value: J,
+    onChange: e => setJ(e.target.value),
+    style: {
+      flex: 1,
+      width: "100%"
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-mut",
+    style: {
+      fontSize: 12,
+      whiteSpace: "nowrap"
+    }
+  }, "J", J, " / ", jmax)), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2",
+    style: {
+      flexWrap: "wrap",
+      marginTop: 10,
+      fontSize: 11.5
+    }
+  }, seasons.map(sn => /*#__PURE__*/React.createElement("span", {
+    key: sn,
+    onMouseEnter: () => setHl(sn),
+    onMouseLeave: () => setHl(null),
+    onClick: () => setHl(h => h === sn ? null : sn),
+    style: {
+      cursor: "pointer",
+      fontWeight: sn === CUR ? 700 : 500,
+      opacity: opa(sn)
+    }
+  }, swatch(sn), sn)))), /*#__PURE__*/React.createElement("div", {
+    className: "card",
+    style: {
+      padding: 0,
+      overflow: "hidden"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "eyebrow",
+    style: {
+      padding: 16,
+      borderBottom: "1px solid var(--hair)"
+    }
+  }, _t("traj_cum_at"), " J", J, " ", _t("traj_of"), " ", jmax), /*#__PURE__*/React.createElement("div", {
+    style: {
+      overflowX: "auto"
+    }
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "fbm"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, th("sn", _t("season")), th("pts", _t("traj_col_pts") + " @J" + J, true), th("exp", _t("traj_col_exp") + " @J" + J, true), th("diff", _t("traj_col_diff") + " @J" + J, true), th("w", _t("traj_col_wages"), true))), /*#__PURE__*/React.createElement("tbody", null, sorted.map(r => /*#__PURE__*/React.createElement("tr", {
+    key: r.sn,
+    onMouseEnter: () => setHl(r.sn),
+    onMouseLeave: () => setHl(null),
+    onClick: () => setHl(h => h === r.sn ? null : r.sn),
+    style: {
+      fontWeight: r.sn === CUR ? 700 : null,
+      background: hl === r.sn ? "var(--bg-sunken)" : null,
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement("td", {
+    style: {
+      whiteSpace: "nowrap"
+    }
+  }, swatch(r.sn), r.sn, /*#__PURE__*/React.createElement("span", {
+    className: "text-mut",
+    style: {
+      fontSize: 10,
+      fontWeight: 400
+    }
+  }, atMark(r))), /*#__PURE__*/React.createElement("td", {
+    className: "num"
+  }, r.j > 0 ? r.pts : "—"), /*#__PURE__*/React.createElement("td", {
+    className: "num text-mut"
+  }, r.j > 0 ? r.exp.toFixed(1) : "—"), /*#__PURE__*/React.createElement("td", {
+    className: "num",
+    style: {
+      color: r.j > 0 ? r.diff >= 0 ? "var(--pos)" : "var(--neg)" : null,
+      fontWeight: 700
+    }
+  }, r.j > 0 ? fmtD(r.diff) : "—"), /*#__PURE__*/React.createElement("td", {
+    className: "num text-mut"
+  }, fmtMoney(r.w, L.cur))))), /*#__PURE__*/React.createElement("tfoot", null, /*#__PURE__*/React.createElement("tr", {
+    style: {
+      fontWeight: 700
+    }
+  }, /*#__PURE__*/React.createElement("td", null, _t("traj_mean")), /*#__PURE__*/React.createElement("td", {
+    className: "num"
+  }, mean("pts").toFixed(1)), /*#__PURE__*/React.createElement("td", {
+    className: "num"
+  }, mean("exp").toFixed(1)), /*#__PURE__*/React.createElement("td", {
+    className: "num",
+    style: {
+      color: mean("diff") >= 0 ? "var(--pos)" : "var(--neg)"
+    }
+  }, fmtD(mean("diff"))), /*#__PURE__*/React.createElement("td", null))))))) : null);
+}
 Object.assign(window, {
   Predictions,
   Matches,
@@ -7329,9 +7782,10 @@ Object.assign(window, {
   Calculator,
   Methodology,
   DataSources,
-  History
+  History,
+  Trajectories
 });
-Object.assign(window, { _extends, FBM_SIG, fbmExcl, ProbCell, Predictions, EvolutionChart, Matches, MatchTip, H2H, fbmNormCDF, fbmRunVerdict, fbmProjPts, BadRun, EmptyState, fbmPval, Overperformance, Calculator, Methodology, DataSources, WageEvolution, SourceCard, History });
+Object.assign(window, { _extends, FBM_SIG, fbmExcl, ProbCell, Predictions, EvolutionChart, Matches, MatchTip, H2H, fbmNormCDF, fbmRunVerdict, fbmProjPts, BadRun, EmptyState, fbmPval, Overperformance, Calculator, Methodology, DataSources, WageEvolution, SourceCard, History, Trajectories, TRAJ_PALETTE });
 })();
 </script>
 
@@ -7392,6 +7846,10 @@ const GROUPS = [{
     label: "Overperformance",
     i18n: "tab_explorer"
   }, {
+    id: "trajectories",
+    label: "Trajectories",
+    i18n: "tab_trajectories"
+  }, {
     id: "history",
     label: "History",
     i18n: "tab_history"
@@ -7445,7 +7903,8 @@ const LEGACY_TAB_MAP = {
   calc: "calc",
   method: "method",
   data: "data",
-  history: "history"
+  history: "history",
+  trajectories: "trajectories"
 };
 function tabFromHash() {
   const m = location.hash.match(/tab=([a-z0-9]+)/);
@@ -7456,7 +7915,7 @@ function hashGet(k) {
   const m = location.hash.match(new RegExp("[#&]" + k + "=([^&]+)"));
   return m ? decodeURIComponent(m[1]) : null;
 }
-function hashSet(obj) {
+function hashSet(obj, opts) {
   const cur = {};
   location.hash.replace(/^#/, "").split("&").filter(Boolean).forEach(p => {
     const i = p.indexOf("=");
@@ -7466,8 +7925,10 @@ function hashSet(obj) {
     if (obj[k] == null || obj[k] === "") delete cur[k];else cur[k] = encodeURIComponent(obj[k]);
   });
   const s = Object.keys(cur).map(k => k + "=" + cur[k]).join("&");
+  if ("#" + s === location.hash) return;
   try {
-    history.pushState(null, "", "#" + s);
+    // replace: fine-grained view state (e.g. Trajectories J) must not stack history entries
+    if (opts && opts.replace) history.replaceState(null, "", "#" + s);else history.pushState(null, "", "#" + s);
   } catch (e) {}
 }
 window.hashGet = hashGet;
@@ -7657,6 +8118,8 @@ function App() {
   // Tap on any open Recharts tooltip dismisses it; it can reappear on the next hover/touch
   useEffect(() => {
     const restore = e => {
+      // touch devices emit an emulated mousemove right after a tap: it would undo the dismiss instantly
+      if (e.type === "mousemove" && window.matchMedia && window.matchMedia("(hover: none)").matches) return;
       document.querySelectorAll(".recharts-tooltip-wrapper").forEach(w => {
         if (w.style.visibility === "hidden" && !w.contains(e.target)) w.style.visibility = "";
       });
@@ -7713,7 +8176,9 @@ function App() {
       // con el default de liga; `c.lg === lg` evita mezclar par liga/equipo.
       const c = readCtx();
       const hsel = hashGet("sel") || hashGet("br") || hashGet("h2a") || (hashGet("ex") || "").split(",")[0] || c && c.lg === lg && c.sel;
-      if (sd && hsel && sd[hsel]) setTeam(hsel);else {
+      // Trajectories (#119 §2) offers every team of any season of the league
+      const anySn = tabFromHash() === "trajectories" && hsel && Object.values(d.seasons[lg] || {}).some(s => s[hsel]);
+      if (sd && hsel && (sd[hsel] || anySn)) setTeam(hsel);else {
         const defT = window.FBM_LEAGUES[lg].def;
         if (sd && sd[defT]) setTeam(defT);else if (sd) setTeam(Object.keys(sd)[0]);
       }
@@ -7728,13 +8193,15 @@ function App() {
     if (!data) return;
     const sd = data.seasons[lg]?.[sn] || data.seasons[lg]?.[data.currentSeason];
     if (!sd) return;
+    // Trajectories may hold a historical team (#119 §2); leaving the view restores coherence
+    if (tab === "trajectories" && Object.values(data.seasons[lg] || {}).some(s => s[team])) return;
     if (!sd[team]) {
       const def = window.FBM_LEAGUES[lg].def;
       const _rk = officialRanks(sd); // ADR-005: equipos por rank oficial
       const teams = Object.keys(sd).filter(t => sd[t].w > 0).sort((a, b) => (_rk[a] || 99) - (_rk[b] || 99));
       setTeam(sd[def] ? def : teams[0] || "");
     }
-  }, [lg, sn, data]);
+  }, [lg, sn, data, tab]);
 
   // expose currentTeam
   useEffect(() => {
@@ -7822,7 +8289,7 @@ function App() {
     style: {
       padding: "20px 20px 60px"
     }
-  }, tab === "home" ? /*#__PURE__*/React.createElement(Home, tabProps) : tab === "tracker" ? /*#__PURE__*/React.createElement(Tracker, tabProps) : tab === "matches" ? /*#__PURE__*/React.createElement(Matches, tabProps) : tab === "predictions" ? /*#__PURE__*/React.createElement(Predictions, tabProps) : tab === "badrun" ? /*#__PURE__*/React.createElement(BadRun, tabProps) : tab === "h2h" ? /*#__PURE__*/React.createElement(H2H, tabProps) : tab === "overperformance" ? /*#__PURE__*/React.createElement(Overperformance, tabProps) : tab === "calc" ? /*#__PURE__*/React.createElement(Calculator, tabProps) : tab === "method" ? /*#__PURE__*/React.createElement(Methodology, null) : tab === "data" ? /*#__PURE__*/React.createElement(DataSources, tabProps) : tab === "history" ? /*#__PURE__*/React.createElement(History, tabProps) : null), /*#__PURE__*/React.createElement(Footer, {
+  }, tab === "home" ? /*#__PURE__*/React.createElement(Home, tabProps) : tab === "tracker" ? /*#__PURE__*/React.createElement(Tracker, tabProps) : tab === "matches" ? /*#__PURE__*/React.createElement(Matches, tabProps) : tab === "predictions" ? /*#__PURE__*/React.createElement(Predictions, tabProps) : tab === "badrun" ? /*#__PURE__*/React.createElement(BadRun, tabProps) : tab === "h2h" ? /*#__PURE__*/React.createElement(H2H, tabProps) : tab === "overperformance" ? /*#__PURE__*/React.createElement(Overperformance, tabProps) : tab === "calc" ? /*#__PURE__*/React.createElement(Calculator, tabProps) : tab === "method" ? /*#__PURE__*/React.createElement(Methodology, null) : tab === "data" ? /*#__PURE__*/React.createElement(DataSources, tabProps) : tab === "history" ? /*#__PURE__*/React.createElement(History, tabProps) : tab === "trajectories" ? /*#__PURE__*/React.createElement(Trajectories, tabProps) : null), /*#__PURE__*/React.createElement(Footer, {
     deferredPrompt: deferredPrompt,
     onInstall: () => {
       if (deferredPrompt) {
@@ -7991,6 +8458,7 @@ const VIEW_INFO = {
   h2h: "info_h2h",
   overperformance: "info_explorer",
   history: "info_history",
+  trajectories: "info_trajectories",
   calc: "info_calc"
 };
 /* Full ⓘ explainer composition per tab: ordered blocks of [paragraphKey] or
