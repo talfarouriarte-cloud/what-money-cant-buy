@@ -3,7 +3,7 @@
 name: Opus Reviewer
 on:
   pull_request:
-    types: [opened, labeled]
+    types: [opened, ready_for_review, labeled]
 permissions:
   contents: read
   pull-requests: write
@@ -16,8 +16,6 @@ jobs:
     uses: talfarouriarte-cloud/agent-pipeline/.github/workflows/reviewer.yml@main
     with:
       runner: ubuntu-latest
-      reviewer_max_turns: 50
-      timeout_minutes: 15
       agent_branch_prefix: claude/
       review_context: ""
     secrets:
