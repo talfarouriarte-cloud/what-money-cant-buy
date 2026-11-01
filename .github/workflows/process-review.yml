@@ -3,6 +3,11 @@ name: Process Reviewer
 on:
   issues:
     types: [labeled]
+  # AP-098 (central#279): revisión de proceso POR LOTES. El cron diario es el
+  # umbral de tiempo (14 días desde el último lote).  = lote forzado.
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
 permissions:
   contents: read
   issues: write
